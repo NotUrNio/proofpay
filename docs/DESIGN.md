@@ -172,3 +172,4 @@ We audited our plan against the 9 prohibited generic defaults:
 | **8. Fade-and-slide-up on every single section** | **REJECTED** | Eliminated entrance scroll animations. Content is rendered immediately without opacity delays, reducing CLS to near zero. |
 | **9. Single accented/colored word in headlines** | **REJECTED** | Headlines are unified, authoritative prose in single solid colors (e.g. "Autonomous milestone escrow that pays freelancers the second work passes."). |
 | **Signature Element Boldness** | **SPENT IN ONE PLACE** | The **Signature Checkpoint Route**: an interactive horizontal money-conduit showing funds moving from Escrow Lockbox $\to$ Deterministic Gate $\to$ Multimodal Gate $\to$ PayPal Instant Settlement. All surrounding UI is calm, legible, and functional. |
+

@@ -98,3 +98,4 @@ Audits recorded using Chrome Headless with mobile screen emulation (390x844, 4x 
 
 ### Eval Benchmark (`/eval`)
 - **Raw Metric Display**: Lacks clear Wilson confidence intervals, explicit $N=28$ sample size caveats, and transparent model metadata (`gemini-3.8-flash`).
+

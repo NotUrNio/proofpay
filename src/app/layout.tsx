@@ -1,93 +1,186 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
-import { ShieldAlert, ShieldCheck, Zap } from "lucide-react";
+import { Shield, Zap, ChevronDown, FlaskConical, Lock, ShieldCheck } from "lucide-react";
 import { MoneyFlowStrip } from "@/components/layout/MoneyFlowStrip";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
+import { CommandPalette } from "@/components/layout/CommandPalette";
+import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
-  title: "ProofPay ⚡ AI-Verified Escrow & Instant Payouts",
-  description: "Autonomous escrow and milestone settlement engine for freelancers powered by PayPal and Google Gemini",
+  title: "ProofPay — Autonomous Milestone Escrow & Instant Settlement",
+  description:
+    "Autonomous milestone escrow for freelancers and clients powered by PayPal Orders & Payouts and pure TypeScript Policy Guard.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const isMock = process.env.PAYPAL_MOCK === "true";
+  const cookieStore = await cookies();
+  const roleCookie = cookieStore.get("proofpay_role")?.value || "client";
+  const currentRole = roleCookie as "client" | "freelancer" | "reviewer";
 
   return (
     <html lang="en">
-      <body className="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col">
-        {/* Prominent MOCK MODE Banner if PAYPAL_MOCK=true */}
-        {isMock && (
-          <div className="bg-amber-500 text-slate-950 font-bold px-4 py-2.5 text-center text-sm shadow-sm flex items-center justify-center gap-2 tracking-wide border-b border-amber-600">
-            <ShieldAlert className="w-5 h-5 text-slate-950" />
-            <span>⚠️ MOCK MODE ACTIVE: Running in simulated sandbox mode. Real PayPal network calls are bypassed. Spike scripts and final demo require real credentials.</span>
-          </div>
-        )}
+      <body className="bg-[#0D1117] text-[#F0F6FC] antialiased min-h-screen flex flex-col selection:bg-blue-600/30">
+        {/* Universal Honesty Banner */}
+        <div className="bg-[#161B22] border-b border-[#30363D] text-slate-300 px-4 py-1.5 text-center text-[11px] font-medium tracking-wide flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-blue-400" />
+          <span>
+            <strong>Sandbox demo, no real money moves.</strong> All transactions run on PayPal Sandbox with simulated or test accounts.
+          </span>
+        </div>
 
-        {/* Global Money-Flow Strip at Top */}
-        <MoneyFlowStrip />
-
-        {/* Global Navigation Header */}
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Global Navigation Header (Single unified bar) */}
+        <header className="bg-[#161B22] border-b border-[#30363D] sticky top-0 z-40 backdrop-blur">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+            {/* Brand Logo */}
             <div className="flex items-center gap-6">
-              <Link href="/" className="flex items-center gap-2 font-black text-xl text-blue-700 tracking-tight">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 text-white flex items-center justify-center shadow-sm">
-                  <Zap className="w-5 h-5 fill-current" />
+              <Link href="/" className="flex items-center gap-2.5 font-bold text-base text-white tracking-tight">
+                <div className="w-7 h-7 rounded-lg bg-[#0070BA] text-white flex items-center justify-center font-black shadow-sm">
+                  <Zap className="w-4 h-4 fill-current text-white" />
                 </div>
                 <span>ProofPay</span>
-                <span className="text-xs bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full border border-blue-200 ml-1">
-                  PayPal AI Hackathon
+                <span className="hidden sm:inline text-[11px] text-slate-400 font-normal border-l border-slate-700 pl-2 ml-0.5">
+                  Escrow & Settlement
                 </span>
               </Link>
-              <nav className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-600">
-                <Link href="/" className="hover:text-blue-600 transition-colors">
-                  Dashboard
+
+              {/* Role-Aware Nav Items */}
+              <nav className="hidden md:flex items-center gap-1 text-xs font-medium text-slate-300">
+                <Link
+                  href="/"
+                  className="px-2.5 py-1.5 rounded-md hover:text-white hover:bg-[#21262D] transition-colors"
+                >
+                  Overview
                 </Link>
-                <Link href="/inbox" className="hover:text-blue-600 transition-colors">
-                  Review Inbox
+
+                {currentRole === "client" && (
+                  <Link
+                    href="/jobs/new"
+                    className="px-2.5 py-1.5 rounded-md hover:text-white hover:bg-[#21262D] transition-colors"
+                  >
+                    Fund Milestone
+                  </Link>
+                )}
+
+                {currentRole === "reviewer" && (
+                  <Link
+                    href="/inbox"
+                    className="px-2.5 py-1.5 rounded-md hover:text-white hover:bg-[#21262D] transition-colors"
+                  >
+                    Review Inbox
+                  </Link>
+                )}
+
+                <Link
+                  href="/ledger"
+                  className="px-2.5 py-1.5 rounded-md hover:text-white hover:bg-[#21262D] transition-colors"
+                >
+                  Audit Ledger
                 </Link>
-                <Link href="/policy" className="hover:text-blue-600 transition-colors">
-                  Policy Guard
-                </Link>
-                <Link href="/chaos" className="hover:text-rose-600 text-rose-700 font-semibold transition-colors">
-                  Chaos Drills
-                </Link>
-                <Link href="/studio" className="hover:text-blue-600 transition-colors text-indigo-600 font-semibold">
-                  AG Studio
-                </Link>
+
+                {/* Under the Hood / Lab Dropdown Group */}
+                <div className="relative group ml-1">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-slate-400 hover:text-white hover:bg-[#21262D] transition-colors"
+                  >
+                    <FlaskConical className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Under the hood</span>
+                    <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-transform" />
+                  </button>
+
+                  <div className="absolute left-0 mt-1 w-56 rounded-xl bg-[#161B22] border border-[#30363D] shadow-2xl p-1.5 hidden group-hover:block group-focus-within:block z-50">
+                    <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 border-b border-[#30363D] mb-1">
+                      VERIFICATION & AUDIT LAB
+                    </div>
+                    <Link
+                      href="/policy"
+                      className="block px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-[#21262D] rounded-md transition-colors"
+                    >
+                      Policy Guard & Replay
+                    </Link>
+                    <Link
+                      href="/chaos"
+                      className="block px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-[#21262D] rounded-md transition-colors"
+                    >
+                      Reliability Chaos Drills
+                    </Link>
+                    <Link
+                      href="/studio"
+                      className="block px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-[#21262D] rounded-md transition-colors"
+                    >
+                      AG Studio Analytics
+                    </Link>
+                    <Link
+                      href="/eval"
+                      className="block px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-[#21262D] rounded-md transition-colors"
+                    >
+                      Benchmark Evals (N=28)
+                    </Link>
+                  </div>
+                </div>
               </nav>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Right Side: Command Palette + Demo as Switcher + Action CTA */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <CommandPalette />
               <RoleSwitcher />
-              <span className="text-xs font-mono bg-slate-100 border border-slate-200 text-slate-600 px-2.5 py-1 rounded-md hidden sm:flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Zero-LLM Guard: Active
-              </span>
-              <Link
-                href="/jobs/new"
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition-all flex items-center gap-1.5"
-              >
-                <span>+ New Milestone</span>
-              </Link>
+
+              {currentRole === "client" ? (
+                <Link
+                  href="/jobs/new"
+                  className="bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <span>+ Fund Milestone</span>
+                </Link>
+              ) : currentRole === "reviewer" ? (
+                <Link
+                  href="/inbox"
+                  className="bg-[#D29922] hover:bg-[#BB8009] text-black text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <span>Triage Inbox</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/"
+                  className="bg-[#2EA043] hover:bg-[#238636] text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <span>View Payouts</span>
+                </Link>
+              )}
             </div>
           </div>
         </header>
 
+        {/* Global Money-Flow Strip */}
+        <MoneyFlowStrip />
+
         {/* Main Content Area */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {children}
         </main>
 
-        {/* Footer */}
-        <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
-          <div className="max-w-7xl mx-auto px-4">
-            <p>ProofPay Autonomous Milestone Escrow • PayPal AI Hackathon 2026 • MIT Licensed</p>
+        {/* Institutional Minimal Footer */}
+        <footer className="bg-[#161B22] border-t border-[#30363D] py-6 text-xs text-slate-400">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-300">ProofPay</span>
+              <span>•</span>
+              <span>PayPal AI Hackathon 2026</span>
+              <span>•</span>
+              <span>MIT Licensed</span>
+            </div>
+            <div className="flex items-center gap-4 text-[11px] text-slate-400">
+              <Link href="/policy" className="hover:text-slate-200">Policy Guard</Link>
+              <Link href="/chaos" className="hover:text-slate-200">Chaos Lab</Link>
+              <Link href="/eval" className="hover:text-slate-200">Evaluations (N=28)</Link>
+              <Link href="/ledger" className="hover:text-slate-200">Tamper-evident Ledger</Link>
+            </div>
           </div>
         </footer>
       </body>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { DollarSign, Shield, ArrowRight, RefreshCw, AlertCircle, Sparkles, Building2, UserCheck } from "lucide-react";
+import { ShieldCheck, Lock, CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
 
 interface MoneyFlowData {
   clientDeposited: string;
@@ -11,20 +11,22 @@ interface MoneyFlowData {
   pendingReviewsCount: number;
   activeJobsCount: number;
   currency: string;
-  businessAccount: string;
-  freelancerAccount: string;
 }
 
 export function MoneyFlowStrip() {
   const [data, setData] = useState<MoneyFlowData | null>(null);
   const [loading, setLoading] = useState(true);
+  const prevValuesRef = useRef<MoneyFlowData | null>(null);
 
   const fetchStats = async () => {
     try {
       const res = await fetch("/api/stats/money-flow");
       if (res.ok) {
         const json = await res.json();
-        setData(json);
+        setData((prev) => {
+          prevValuesRef.current = prev;
+          return json;
+        });
       }
     } catch (err) {
       console.error("Failed to load money flow:", err);
@@ -35,95 +37,73 @@ export function MoneyFlowStrip() {
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 5000);
+    const interval = setInterval(fetchStats, 6000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="bg-slate-900 border-b border-slate-800 text-white shadow-inner">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-xs">
-          {/* Left: Escrow Money Flow Counters */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
-                PayPal Escrow Ledger:
-              </span>
+    <div className="bg-[#11161D] border-b border-[#30363D] text-slate-300 text-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
+          {/* Left: Escrow Checkpoint Metrics */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1.5 text-slate-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+              <span className="text-[11px] font-semibold text-slate-300">Escrow Ledger</span>
             </div>
 
-            {/* 1. Client Deposits */}
-            <div className="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/60">
-              <Building2 className="w-3.5 h-3.5 text-blue-400" />
-              <span className="text-slate-400">Client Funded:</span>
-              <span className="font-mono font-bold text-blue-300">
-                ${data ? data.clientDeposited : "..."} USD
-              </span>
+            {/* Checkpoint 1: Client Funded */}
+            <div className="flex items-center gap-1.5 bg-[#161B22] px-2.5 py-1 rounded border border-[#30363D]">
+              <span className="text-slate-400 text-[11px]">Funded by clients:</span>
+              {loading || !data ? (
+                <span className="inline-block w-14 h-3.5 rounded skeleton-shimmer align-middle" />
+              ) : (
+                <span className="font-mono font-semibold text-blue-400">
+                  ${parseFloat(data.clientDeposited).toFixed(2)}
+                </span>
+              )}
             </div>
 
-            {/* 2. Platform Escrow Balance */}
-            <div className="flex items-center gap-1.5 bg-indigo-950/80 px-2.5 py-1 rounded-md border border-indigo-700/60">
-              <Shield className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="text-indigo-200">In Platform Escrow:</span>
-              <span className="font-mono font-bold text-amber-400">
-                ${data ? data.escrowBalance : "..."} USD
-              </span>
+            {/* Checkpoint 2: Held in Escrow */}
+            <div className="flex items-center gap-1.5 bg-[#161B22] px-2.5 py-1 rounded border border-[#30363D]">
+              <Lock className="w-3 h-3 text-amber-400" />
+              <span className="text-slate-400 text-[11px]">Held safely until work is approved:</span>
+              {loading || !data ? (
+                <span className="inline-block w-14 h-3.5 rounded skeleton-shimmer align-middle" />
+              ) : (
+                <span className="font-mono font-semibold text-amber-300">
+                  ${parseFloat(data.escrowBalance).toFixed(2)}
+                </span>
+              )}
             </div>
 
-            {/* 3. Freelancer Settled */}
-            <div className="flex items-center gap-1.5 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-700/60">
-              <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-200">Settled to Priya:</span>
-              <span className="font-mono font-bold text-emerald-400">
-                ${data ? data.freelancerSettled : "..."} USD
-              </span>
+            {/* Checkpoint 3: Paid out instantly */}
+            <div className="flex items-center gap-1.5 bg-[#161B22] px-2.5 py-1 rounded border border-[#30363D]">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <span className="text-slate-400 text-[11px]">Paid out instantly:</span>
+              {loading || !data ? (
+                <span className="inline-block w-14 h-3.5 rounded skeleton-shimmer align-middle" />
+              ) : (
+                <span className="font-mono font-semibold text-emerald-400">
+                  ${parseFloat(data.freelancerSettled).toFixed(2)}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Right: Review Queue Badge & Quick Navigation */}
-          <div className="flex items-center gap-3">
-            {data && data.pendingReviewsCount > 0 && (
-              <Link
-                href="/inbox"
-                className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-0.5 rounded-full text-[11px] transition-colors shadow-sm"
-              >
-                <AlertCircle className="w-3.5 h-3.5 text-slate-950" />
-                <span>{data.pendingReviewsCount} Review Queue</span>
-              </Link>
-            )}
-
-            <Link
-              href="/policy"
-              className="text-slate-300 hover:text-white text-[11px] font-medium transition-colors"
-            >
-              Policy Rules
-            </Link>
-
+          {/* Right: Human Review queue count if > 0 */}
+          {data && data.pendingReviewsCount > 0 && (
             <Link
               href="/inbox"
-              className="text-slate-300 hover:text-white text-[11px] font-medium transition-colors"
+              className="flex items-center gap-1.5 bg-amber-950/60 border border-amber-800/80 px-2.5 py-1 rounded text-amber-300 text-[11px] font-medium hover:bg-amber-900/60 transition-colors"
             >
-              Review Inbox
+              <AlertTriangle className="w-3 h-3 text-amber-400" />
+              <span>{data.pendingReviewsCount} milestone awaiting human triage</span>
+              <ArrowRight className="w-3 h-3 text-amber-400" />
             </Link>
-
-            <Link
-              href="/chaos"
-              className="text-rose-300 hover:text-rose-200 text-[11px] font-medium transition-colors flex items-center gap-1"
-            >
-              <span>Chaos Drills</span>
-            </Link>
-
-            <Link
-              href="/studio"
-              className="text-indigo-300 hover:text-indigo-200 text-[11px] font-medium transition-colors flex items-center gap-1"
-            >
-              <Sparkles className="w-3 h-3 text-indigo-400" />
-              <span>AG Studio</span>
-            </Link>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
