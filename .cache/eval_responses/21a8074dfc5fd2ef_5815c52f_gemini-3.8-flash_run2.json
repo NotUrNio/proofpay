@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE SUNRISE EDITION",
+  "dominant_color_description": "Vibrant warm orange background with slightly lighter orange circular design elements.",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast white text against a vibrant orange background makes all elements crisp and easy to read.",
+  "layout_notes": "Centered typography with a clean, minimalist layout featuring geometric circular shapes in the top left and bottom right corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.99,
+      "evidence": "The background consists of vibrant warm orange and amber tones, fully matching summer brand aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "White text on orange background is legible and maintains clear hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The banner successfully fulfills both criteria, featuring a warm summer color palette and legible white typography against an orange background.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 346,
+  "total_tokens": 1672
+}

@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE BURNT COPPER",
+  "dominant_color_description": "Warm gradient of amber, burnt orange, and copper tones",
+  "legibility": 0.95,
+  "legibility_reason": "White bold sans-serif text against the dark warm gradient background provides strong contrast and clear readability.",
+  "layout_notes": "Centered clean modern layout featuring geometric subtle circular elements in the corners, consistent with warm seasonal themes.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The banner uses a warm gradient of amber, orange, and copper tones characteristic of a warm summer sunset or palette."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "White text on the dark warm background is crisp, legible, and properly centered with a clean hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.96,
+  "reasoning": "The image successfully aligns with both the warm summer palette requirements and the professional typography standards with no security or injection risks detected.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 346,
+  "total_tokens": 1672
+}

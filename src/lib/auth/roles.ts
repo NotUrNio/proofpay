@@ -10,12 +10,12 @@ export interface SessionUser {
 
 export const DEMO_USERS: Record<UserRole, SessionUser> = {
   client: {
-    email: "sb-dmohp53303471@business.example.com",
+    email: "alice@proofpay.io",
     name: "Alice (Client)",
     role: "client",
   },
   freelancer: {
-    email: "sb-ft17i53364262@personal.example.com",
+    email: "priya@proofpay.io",
     name: "Priya (Freelancer)",
     role: "freelancer",
   },
@@ -101,3 +101,4 @@ export function checkRateLimit(key: string, limit: number = 5, windowMs: number 
   entry.count++;
   return { allowed: true, remaining: limit - entry.count };
 }
+

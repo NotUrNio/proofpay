@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE EARTHEN TONES",
+  "dominant_color_description": "Deep rust and earthy terracotta brown tones with subtle circular geometric shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "White text against dark terracotta brown provides strong contrast and clear readability.",
+  "layout_notes": "Centered minimalist layout featuring geometric circles in the background corners and clean sans-serif typography.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": false,
+      "confidence": 0.9,
+      "evidence": "The palette uses deep earthy terracotta and brown tones rather than warm vibrant summer colors like coral, amber, and yellow."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "The text is sharp, well-contrasted white sans-serif, highly legible and cleanly organized."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.95,
+  "reasoning": "The banner exhibits clean typography and high legibility, but fails the warm summer palette rubric due to its dark earthy brown and terracotta color scheme.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 366,
+  "total_tokens": 1692
+}

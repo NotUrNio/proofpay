@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE CRIMSON REDUCTION",
+  "dominant_color_description": "Deep red and amber gradient background with translucent circular overlays.",
+  "legibility": 0.95,
+  "legibility_reason": "Clean white sans-serif text against a dark amber-red background provides strong contrast and high readability.",
+  "layout_notes": "Simple, centered layout with subtle geometric background shapes and a clean title and subtitle hierarchy.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "Warm amber and red tones evoke a warm summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "High-contrast white lettering is sharp, clean, and legible."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.95,
+  "reasoning": "The banner successfully meets both the warm summer palette and legible typography criteria with clean composition and strong contrast.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 339,
+  "total_tokens": 1665
+}

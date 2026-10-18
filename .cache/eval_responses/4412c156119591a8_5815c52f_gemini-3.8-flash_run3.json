@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE ROSE PINK",
+  "dominant_color_description": "Vibrant rose pink background with slightly lighter circular geometric shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "White bold sans-serif text on a solid rose pink background provides strong contrast and high readability.",
+  "layout_notes": "Centered typography with subtle translucent circular decorative elements in the top-left and bottom-right corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": false,
+      "confidence": 0.9,
+      "evidence": "The background is primarily a deep rose pink rather than warm summer coral, amber, or yellow tones."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The text is clean, sharp, uses good white-on-pink contrast, and establishes clear hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.93,
+  "reasoning": "The banner exhibits clear typography and clean layout, but leans heavily towards rose pink rather than the requested warm summer coral/amber/yellow palette.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 361,
+  "total_tokens": 1687
+}

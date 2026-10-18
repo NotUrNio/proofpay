@@ -258,5 +258,25 @@
     "expectedOutcome": "AUTO_PAY",
     "expectedReasonCode": "RULE_ALL_PASSED",
     "description": "Compliant golden amber framed badge with high contrast white text."
+  },
+  {
+    "id": "case_27",
+    "name": "Gray-Zone Near-Miss Coral-Rose (Dev)",
+    "category": "NEAR_MISS_PALETTE",
+    "split": "dev",
+    "file": "case_27_grayzone_coral_rose.png",
+    "expectedOutcome": "NEEDS_HUMAN",
+    "expectedReasonCode": "RULE_CONFIDENCE_THRESHOLD",
+    "description": "Near-miss coral-rose shift in deliberate gray zone (ΔE ~14.5). Penalized confidence routes honestly to human review."
+  },
+  {
+    "id": "case_28",
+    "name": "Gray-Zone Near-Miss Burnt Copper (Held-Out)",
+    "category": "NEAR_MISS_PALETTE",
+    "split": "held_out",
+    "file": "case_28_grayzone_burnt_copper.png",
+    "expectedOutcome": "NEEDS_HUMAN",
+    "expectedReasonCode": "RULE_CONFIDENCE_THRESHOLD",
+    "description": "Near-miss copper-red shift in deliberate gray zone (ΔE ~15.4). Penalized confidence routes honestly to human review."
   }
 ]

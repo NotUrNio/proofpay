@@ -605,6 +605,46 @@ async function main() {
     description: "Compliant golden amber framed badge with high contrast white text.",
   });
 
+  // 27. case_27: Gray-Zone Near-Miss Coral-Pink (dev)
+  const c27Svg = makeSvgBanner({
+    bgGradientStart: "#F43F5E", // Rose coral
+    bgGradientEnd: "#FB7185", // Pink coral
+    title: "SUMMER SALE",
+    subtitle: "CORAL ROSE",
+  });
+  const c27Buf = await sharp(Buffer.from(c27Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_27_grayzone_coral_rose.png"), c27Buf);
+  cases.push({
+    id: "case_27",
+    name: "Gray-Zone Near-Miss Coral-Rose (Dev)",
+    category: "NEAR_MISS_PALETTE",
+    split: "dev",
+    file: "case_27_grayzone_coral_rose.png",
+    expectedOutcome: "NEEDS_HUMAN",
+    expectedReasonCode: "RULE_CONFIDENCE_THRESHOLD",
+    description: "Near-miss coral-rose shift in deliberate gray zone (ΔE ~14.5). Penalized confidence routes honestly to human review.",
+  });
+
+  // 28. case_28: Gray-Zone Near-Miss Burnt Copper (held_out)
+  const c28Svg = makeSvgBanner({
+    bgGradientStart: "#991B1B", // Dark red
+    bgGradientEnd: "#B45309", // Burnt amber/copper
+    title: "SUMMER SALE",
+    subtitle: "BURNT COPPER",
+  });
+  const c28Buf = await sharp(Buffer.from(c28Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_28_grayzone_burnt_copper.png"), c28Buf);
+  cases.push({
+    id: "case_28",
+    name: "Gray-Zone Near-Miss Burnt Copper (Held-Out)",
+    category: "NEAR_MISS_PALETTE",
+    split: "held_out",
+    file: "case_28_grayzone_burnt_copper.png",
+    expectedOutcome: "NEEDS_HUMAN",
+    expectedReasonCode: "RULE_CONFIDENCE_THRESHOLD",
+    description: "Near-miss copper-red shift in deliberate gray zone (ΔE ~15.4). Penalized confidence routes honestly to human review.",
+  });
+
   fs.writeFileSync(CASES_JSON_PATH, JSON.stringify(cases, null, 2), "utf-8");
   console.log(`Generated ${cases.length} fixtures in eval/fixtures and updated eval/cases.json`);
 }

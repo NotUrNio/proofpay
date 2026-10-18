@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE CORAL ROSE",
+  "dominant_color_description": "Vibrant coral pink background with lighter pink geometric circle accents.",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast white sans-serif text against a solid coral pink background makes the text extremely clear and easy to read.",
+  "layout_notes": "Clean minimal layout featuring centered bold typography and subtle circular graphic shapes in the corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The banner uses a warm coral rose tone which fits vibrant summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Typography is sharp, clean, and perfectly legible with strong white-on-coral contrast."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.96,
+  "reasoning": "The image successfully fulfills both the warm summer palette rubric and the legible professional typography rubric without any security or prompt injection issues.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 349,
+  "total_tokens": 1675
+}

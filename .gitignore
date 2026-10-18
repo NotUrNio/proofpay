@@ -36,4 +36,5 @@ pnpm-debug.log*
 .data/
 data/
 postgres-data/
-.cache/
+.cache/*
+!.cache/eval_responses/

@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE EARTHEN TONES",
+  "dominant_color_description": "Deep earthy red-brown background with slightly darker rust-colored circular geometric accents.",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast white sans-serif text against the dark brown background makes the copy extremely sharp and easy to read.",
+  "layout_notes": "Centered clean layout with geometric circle elements in the top left and bottom right corners. The color scheme focuses on earthy tones rather than vibrant warm summer coral or yellows.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": false,
+      "confidence": 0.9,
+      "evidence": "The palette relies heavily on deep earthy brown and rust tones rather than warm vibrant summer tones like coral, amber, or bright yellow."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Clean sans-serif typography with excellent white-on-dark contrast and clear visual hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.94,
+  "reasoning": "The banner features clean legible typography but fails the summer palette rubric due to its dark earthy brown color scheme.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 386,
+  "total_tokens": 1712
+}

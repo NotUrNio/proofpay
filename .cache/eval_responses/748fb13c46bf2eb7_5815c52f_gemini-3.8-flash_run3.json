@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE\nACID CITRUS",
+  "dominant_color_description": "Vibrant gradient shifting from warm amber/yellow on the upper-left to lime-yellow/green on the lower-right with subtle geometric circular shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "The white text has strong contrast against the warm gradient background, making it clean, sharp, and very easy to read.",
+  "layout_notes": "Centered alignment with clear hierarchical typography featuring a primary title and smaller subtitle.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The banner features vibrant yellow, amber, and warm citrus gradient tones fitting for a summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "White, clean, sans-serif fonts are used with crisp hierarchy and excellent contrast against the background."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The image successfully fulfills both rubric requirements with a clean, warm summer-themed gradient and highly legible typography.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 367,
+  "total_tokens": 1693
+}

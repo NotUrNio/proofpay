@@ -36,8 +36,6 @@ services:
         sync: false
       - key: AG_STUDIO_LICENSE_KEY
         sync: false
-      - key: NEXT_PUBLIC_AG_STUDIO_LICENSE_KEY
-        sync: false
 
 databases:
   - name: proofpay-db

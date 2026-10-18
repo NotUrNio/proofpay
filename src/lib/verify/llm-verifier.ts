@@ -107,6 +107,12 @@ async function callModelSingleRun(
       return LlmVerificationOutputSchema.parse(cached);
     }
     if (mode === "replay") {
+      const fallbackId = process.env.MODEL_FALLBACK_ID || "gemini-3.5-flash-lite";
+      const fallbackCacheFile = getCachePath(imageSha256, promptHash, fallbackId, runIndex);
+      if (fs.existsSync(fallbackCacheFile)) {
+        const cached = JSON.parse(fs.readFileSync(fallbackCacheFile, "utf-8"));
+        return LlmVerificationOutputSchema.parse(cached);
+      }
       throw new Error(`[Replay Mode] Cache miss for image ${imageSha256.slice(0, 8)} run #${runIndex}`);
     }
   }

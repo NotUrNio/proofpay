@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE GOLDEN DEALS",
+  "dominant_color_description": "Vibrant orange and amber tones with warm yellow-orange circular accents.",
+  "legibility": 0.95,
+  "legibility_reason": "White bold sans-serif text against a solid orange background provides high contrast and clear readability.",
+  "layout_notes": "Centered clean layout with a fine white border box enclosing the title and subtitle, balanced by two subtle lighter orange circles in the background corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "The background consists of rich amber and warm orange tones that strongly convey summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "White text on warm amber background offers excellent visual contrast and professional hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.96,
+  "reasoning": "The banner successfully meets both rubrics with a warm summer-themed color palette and highly legible, professional typography inside a clean layout.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 360,
+  "total_tokens": 1686
+}

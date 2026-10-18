@@ -7,16 +7,6 @@ import dynamic from "next/dynamic";
 const DynamicStudio = dynamic(
   async () => {
     const { AgStudio } = await import("ag-studio-react");
-    const { AgStudioLicenseManager } = await import("ag-studio");
-
-    const key = process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE_KEY;
-    if (key) {
-      try {
-        AgStudioLicenseManager.setLicenseKey(key);
-      } catch (err) {
-        console.warn("[AG Studio] License key initialization notice:", err);
-      }
-    }
 
     return function StudioInner(props: { style?: React.CSSProperties }) {
       return <AgStudio style={props.style || { width: "100%", height: "100%" }} />;

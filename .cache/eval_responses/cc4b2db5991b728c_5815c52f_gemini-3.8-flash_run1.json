@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE CRIMSON REDUCTION",
+  "dominant_color_description": "Deep red, orange, and crimson gradient background with subtle darker circular graphical elements",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast white bold sans-serif text against the dark red/orange gradient provides excellent readability and clear visual hierarchy.",
+  "layout_notes": "Centered minimalist banner with a clean title and subtitle over a gradient background with large translucent circles.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "The background uses warm orange-red and crimson gradient tones fitting a summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "Clear white text with good sizing hierarchy makes it fully legible."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.95,
+  "reasoning": "The banner successfully meets both the palette and typography rubrics with a clean layout and clear warm tones.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 353,
+  "total_tokens": 1679
+}

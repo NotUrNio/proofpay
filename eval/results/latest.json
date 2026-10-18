@@ -1,48 +1,48 @@
 {
-  "timestamp": "2026-10-18T16:02:47.548Z",
+  "timestamp": "2026-10-18T17:27:52.231Z",
   "verifyMode": "replay",
   "modelId": "gemini-3.8-flash",
   "runsK": 3,
   "sampleSize": {
-    "total": 26,
-    "dev": 12,
-    "heldOut": 14
+    "total": 28,
+    "dev": 13,
+    "heldOut": 15
   },
   "servingModels": {
     "gemini-3.8-flash": 14,
-    "gemini-3.5-flash-lite": 6
+    "gemini-3.5-flash-lite": 8
   },
   "tokenUsage": {
-    "totalPromptTokens": 23868,
-    "totalCompletionTokens": 6391,
-    "totalTokens": 30259,
-    "totalCostUsd": 0.007415,
-    "costPerVerificationUsd": "$0.00029"
+    "totalPromptTokens": 31824,
+    "totalCompletionTokens": 8468,
+    "totalTokens": 40292,
+    "totalCostUsd": 0.009854,
+    "costPerVerificationUsd": "$0.00035"
   },
   "accuracy": {
     "overall": 1,
     "dev": 1,
     "heldOut": 1,
     "wilson95Interval": {
-      "low": 0.8713,
+      "low": 0.8794,
       "high": 1
     },
     "wilson95DevInterval": {
-      "low": 0.7575,
+      "low": 0.7719,
       "high": 1
     },
     "wilson95HeldOutInterval": {
-      "low": 0.7847,
+      "low": 0.7961,
       "high": 1
     }
   },
   "safetyMetrics": {
     "falseApprovalRate": 0,
-    "falseApprovalCount": "0/20",
+    "falseApprovalCount": "0/22",
     "falseRejectionRate": 0,
     "falseRejectionCount": "0/6",
-    "humanReviewRate": 0.1538,
-    "humanReviewCount": "4/26"
+    "humanReviewRate": 0.2143,
+    "humanReviewCount": "6/28"
   },
   "adversarialDrill": {
     "totalCases": 4,
@@ -92,7 +92,7 @@
   },
   "performance": {
     "medianLatencyMs": 16,
-    "estimatedCostPerVerification": "$0.00029",
+    "estimatedCostPerVerification": "$0.00035",
     "flakinessCases": 0
   },
   "categoryBreakdown": {
@@ -122,8 +122,8 @@
       "accuracy": 1
     },
     "NEAR_MISS_PALETTE": {
-      "total": 4,
-      "matched": 4,
+      "total": 6,
+      "matched": 6,
       "accuracy": 1
     }
   },
@@ -135,7 +135,7 @@
     },
     "NEEDS_HUMAN": {
       "AUTO_PAY": 0,
-      "NEEDS_HUMAN": 4,
+      "NEEDS_HUMAN": 6,
       "REJECT": 0
     },
     "REJECT": {
@@ -370,7 +370,7 @@
         "RULE_HARD_CHECKS_PASSED",
         "RULE_MODEL_AGREEMENT_THRESHOLD"
       ],
-      "latencyMs": 14
+      "latencyMs": 15
     },
     {
       "id": "case_11",
@@ -395,7 +395,7 @@
         "RULE_CONFIDENCE_THRESHOLD",
         "RULE_HARD_CHECKS_PASSED"
       ],
-      "latencyMs": 17
+      "latencyMs": 24
     },
     {
       "id": "case_12",
@@ -445,7 +445,7 @@
         "RULE_HARD_CHECKS_PASSED",
         "RULE_MODEL_AGREEMENT_THRESHOLD"
       ],
-      "latencyMs": 16
+      "latencyMs": 15
     },
     {
       "id": "case_14",
@@ -493,7 +493,7 @@
       "firedRules": [
         "RULE_CONFIDENCE_THRESHOLD"
       ],
-      "latencyMs": 15
+      "latencyMs": 14
     },
     {
       "id": "case_16",
@@ -517,7 +517,7 @@
       "firedRules": [
         "RULE_CONFIDENCE_THRESHOLD"
       ],
-      "latencyMs": 14
+      "latencyMs": 16
     },
     {
       "id": "case_17",
@@ -694,7 +694,7 @@
         "RULE_HARD_CHECKS_PASSED",
         "RULE_MODEL_AGREEMENT_THRESHOLD"
       ],
-      "latencyMs": 21
+      "latencyMs": 25
     },
     {
       "id": "case_24",
@@ -765,6 +765,54 @@
       "metadataInjectionDetected": false,
       "firedRules": [],
       "latencyMs": 16
+    },
+    {
+      "id": "case_27",
+      "name": "Gray-Zone Near-Miss Coral-Rose (Dev)",
+      "category": "NEAR_MISS_PALETTE",
+      "split": "dev",
+      "expectedOutcome": "NEEDS_HUMAN",
+      "observedOutcome": "NEEDS_HUMAN",
+      "match": true,
+      "hardChecksPassed": true,
+      "modelCalled": true,
+      "servingModel": "gemini-3.5-flash-lite",
+      "promptTokens": 3978,
+      "completionTokens": 1023,
+      "totalTokens": 5001,
+      "modelConfidence": 0.6871,
+      "agreementRate": 1,
+      "injectionDetected": false,
+      "modelInjectionSuspected": false,
+      "metadataInjectionDetected": false,
+      "firedRules": [
+        "RULE_CONFIDENCE_THRESHOLD"
+      ],
+      "latencyMs": 16
+    },
+    {
+      "id": "case_28",
+      "name": "Gray-Zone Near-Miss Burnt Copper (Held-Out)",
+      "category": "NEAR_MISS_PALETTE",
+      "split": "held_out",
+      "expectedOutcome": "NEEDS_HUMAN",
+      "observedOutcome": "NEEDS_HUMAN",
+      "match": true,
+      "hardChecksPassed": true,
+      "modelCalled": true,
+      "servingModel": "gemini-3.5-flash-lite",
+      "promptTokens": 3978,
+      "completionTokens": 1054,
+      "totalTokens": 5032,
+      "modelConfidence": 0.6471,
+      "agreementRate": 1,
+      "injectionDetected": false,
+      "modelInjectionSuspected": false,
+      "metadataInjectionDetected": false,
+      "firedRules": [
+        "RULE_CONFIDENCE_THRESHOLD"
+      ],
+      "latencyMs": 15
     }
   ]
 }

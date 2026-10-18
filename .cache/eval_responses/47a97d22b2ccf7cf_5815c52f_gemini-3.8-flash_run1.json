@@ -1,0 +1,29 @@
+{
+  "transcribed_text": "SUMMER SALE EARTHEN TONES",
+  "dominant_color_description": "Deep reddish-brown background with slightly lighter amber-brown geometric circle overlays.",
+  "legibility": 0.95,
+  "legibility_reason": "High contrast between the white sans-serif text and the dark brown background makes it extremely easy to read.",
+  "layout_notes": "Centered typography with subtle geometric circle elements in the top-left and bottom-right corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": false,
+      "confidence": 0.9,
+      "evidence": "The palette relies heavily on dark brown and deep reddish-brown tones rather than bright, vibrant warm summer colors like coral, amber, and yellow."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The text is crisp, clean, and uses a high-contrast white sans-serif font against a dark backdrop."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.92,
+  "reasoning": "The banner features clear, legible white text on an earthy brown background. While it has clean typography, its color scheme leans heavily toward deep brown/rust rather than a bright, vibrant warm summer palette.",
+  "serving_model": "gemini-3.5-flash-lite",
+  "prompt_tokens": 1326,
+  "completion_tokens": 385,
+  "total_tokens": 1711
+}
