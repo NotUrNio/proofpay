@@ -136,7 +136,7 @@ export function VerdictInspectionPanel({
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" title="Run 3: Verified" />
             <span className="text-[11px] font-mono text-slate-300 ml-1">3/3 Agreement</span>
           </div>
-          <span className="text-[10px] text-slate-500 font-mono">{servingModel}</span>
+          <span className="text-[10px] text-slate-400 font-mono">{servingModel}</span>
         </div>
       </div>
 

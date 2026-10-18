@@ -4,7 +4,8 @@ import { appendLedgerEvent } from "@/db/ledger";
 import { verifySubmission, CriterionDefinition, SubmissionData } from "@/lib/verifier";
 import { evaluatePolicyGuard, SignedMandate } from "@/lib/guard";
 import { createPayout, isPayPalMock } from "@/lib/paypal";
-import { assertAuthorizedRole, checkRateLimit } from "@/lib/auth/roles";
+import { assertAuthorizedRole } from "@/lib/auth/roles";
+import { checkDemoRateLimits } from "@/lib/rate-limit";
 import { eq, sum } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -18,15 +19,26 @@ export async function POST(
     return auth.errorResponse;
   }
 
-  // Rate limiting to protect Gemini API quota (5 submissions per minute)
-  const clientIp = req.headers.get("x-forwarded-for") || "local_client";
-  const rateLimit = checkRateLimit(`submit_${clientIp}`, 5, 60000);
+  // Rate limiting to protect Gemini API quota (10/min per IP, 100/day global)
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "127.0.0.1";
+  const rateLimit = checkDemoRateLimits(clientIp);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
-        error: "Rate limit exceeded. Submissions are limited to 5 per minute to protect Gemini API quota.",
+        error: rateLimit.reason || "Rate limit exceeded to protect Gemini API quota.",
+        limits: {
+          ipRemaining: rateLimit.ipLimit.remaining,
+          globalDailyRemaining: rateLimit.globalDailyLimit.remaining,
+        },
       },
-      { status: 429 }
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "60",
+          "X-RateLimit-IP-Remaining": rateLimit.ipLimit.remaining.toString(),
+          "X-RateLimit-Global-Remaining": rateLimit.globalDailyLimit.remaining.toString(),
+        },
+      }
     );
   }
 

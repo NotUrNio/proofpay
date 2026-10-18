@@ -248,6 +248,10 @@ export function GuidedDemoScenarios() {
                   <img
                     src={scenario.imageSrc}
                     alt={scenario.title}
+                    width={320}
+                    height={180}
+                    loading="lazy"
+                    decoding="async"
                     className="max-h-full max-w-full object-contain"
                   />
                 </div>
@@ -352,3 +356,4 @@ export function GuidedDemoScenarios() {
     </div>
   );
 }
+

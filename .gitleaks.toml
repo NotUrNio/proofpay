@@ -1,0 +1,12 @@
+[allowlist]
+description = "Ignore build artifacts and test fixtures"
+paths = [
+  '''.next/.*''',
+  '''node_modules/.*''',
+  '''test/.*''',
+  '''tests/.*''',
+  '''eval/fixtures/.*'''
+]
+regexes = [
+  '''test_signing_secret_at_least_32_characters_long_12345''',
+]

@@ -71,7 +71,7 @@ export default function StudioPage() {
           <div className="text-xl sm:text-2xl font-bold font-mono text-blue-400 mt-1">
             ${stats ? parseFloat(stats.clientDeposited).toFixed(2) : "0.00"}
           </div>
-          <div className="text-[10px] text-slate-500 mt-0.5">PayPal Orders v2 Total</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">PayPal Orders v2 Total</div>
         </div>
 
         <div className="p-4 rounded-xl bg-[#161B22] border border-[#30363D]">
@@ -79,7 +79,7 @@ export default function StudioPage() {
           <div className="text-xl sm:text-2xl font-bold font-mono text-amber-300 mt-1">
             ${stats ? parseFloat(stats.escrowBalance).toFixed(2) : "0.00"}
           </div>
-          <div className="text-[10px] text-slate-500 mt-0.5">Awaiting Deliverable Check</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">Awaiting Deliverable Check</div>
         </div>
 
         <div className="p-4 rounded-xl bg-[#161B22] border border-[#30363D]">
@@ -87,7 +87,7 @@ export default function StudioPage() {
           <div className="text-xl sm:text-2xl font-bold font-mono text-emerald-400 mt-1">
             ${stats ? parseFloat(stats.freelancerSettled).toFixed(2) : "0.00"}
           </div>
-          <div className="text-[10px] text-slate-500 mt-0.5">PayPal Payouts Dispatched</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">PayPal Payouts Dispatched</div>
         </div>
 
         <div className="p-4 rounded-xl bg-[#161B22] border border-[#30363D]">
@@ -95,7 +95,7 @@ export default function StudioPage() {
           <div className="text-xl sm:text-2xl font-bold font-mono text-purple-400 mt-1">
             {stats ? stats.pendingReviewsCount : 0}
           </div>
-          <div className="text-[10px] text-slate-500 mt-0.5">Gray-Zone Deliverables</div>
+          <div className="text-[10px] text-slate-400 mt-0.5">Gray-Zone Deliverables</div>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ export default function StudioPage() {
             AG Studio Community Workspace active. All chart visualizations, pivot tables, and data sources are connected to PostgreSQL.
           </span>
         </div>
-        <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+        <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
           ag-studio v3.0.0
         </span>
       </div>

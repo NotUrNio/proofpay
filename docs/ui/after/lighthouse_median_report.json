@@ -1,0 +1,166 @@
+{
+  "measuredAt": "2026-10-18T20:44:15.952Z",
+  "environment": {
+    "mode": "production",
+    "command": "next build && next start",
+    "url": "http://localhost:3000",
+    "throttling": "Simulated Mobile 4G (4x CPU slowdown, 1.638 Mbps, 150ms RTT)",
+    "screenEmulation": "390x844 (Mobile)",
+    "runs": 5
+  },
+  "targets": {
+    "performance": ">= 85",
+    "accessibility": ">= 95",
+    "bestPractices": ">= 90",
+    "seo": ">= 90",
+    "cls": "< 0.10",
+    "fcp": "< 1.8 s",
+    "lcp": "< 2.5 s"
+  },
+  "home": {
+    "url": "http://localhost:3000/",
+    "individualRuns": [
+      {
+        "run": 1,
+        "performance": 98,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 91,
+        "cls": 0.0306,
+        "fcp": 0.75,
+        "lcp": 2.47
+      },
+      {
+        "run": 2,
+        "performance": 98,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 91,
+        "cls": 0.0313,
+        "fcp": 0.75,
+        "lcp": 2.45
+      },
+      {
+        "run": 3,
+        "performance": 95,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 91,
+        "cls": 0.0313,
+        "fcp": 0.75,
+        "lcp": 2.91
+      },
+      {
+        "run": 4,
+        "performance": 98,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 91,
+        "cls": 0.0313,
+        "fcp": 0.75,
+        "lcp": 2.3
+      },
+      {
+        "run": 5,
+        "performance": 98,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 91,
+        "cls": 0.0313,
+        "fcp": 0.75,
+        "lcp": 2.46
+      }
+    ],
+    "median": {
+      "performance": 98,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 91,
+      "cls": 0.0313,
+      "fcp": 0.75,
+      "lcp": 2.46
+    },
+    "verdicts": {
+      "performance": "PASS",
+      "accessibility": "PASS",
+      "bestPractices": "PASS",
+      "seo": "PASS",
+      "cls": "PASS",
+      "fcp": "PASS",
+      "lcp": "PASS"
+    }
+  },
+  "job": {
+    "url": "http://localhost:3000/jobs/6ea724dd-e839-45d4-8dfc-d57e83ad8a04",
+    "individualRuns": [
+      {
+        "run": 1,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 90,
+        "cls": 0.0317,
+        "fcp": 0.75,
+        "lcp": 2.1
+      },
+      {
+        "run": 2,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 90,
+        "cls": 0.0317,
+        "fcp": 0.75,
+        "lcp": 2.11
+      },
+      {
+        "run": 3,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 90,
+        "cls": 0.0313,
+        "fcp": 0.75,
+        "lcp": 2.1
+      },
+      {
+        "run": 4,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 90,
+        "cls": 0.0317,
+        "fcp": 0.75,
+        "lcp": 2.11
+      },
+      {
+        "run": 5,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 90,
+        "cls": 0.0317,
+        "fcp": 0.75,
+        "lcp": 2.1
+      }
+    ],
+    "median": {
+      "performance": 99,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 90,
+      "cls": 0.0317,
+      "fcp": 0.75,
+      "lcp": 2.1
+    },
+    "verdicts": {
+      "performance": "PASS",
+      "accessibility": "PASS",
+      "bestPractices": "PASS",
+      "seo": "PASS",
+      "cls": "PASS",
+      "fcp": "PASS",
+      "lcp": "PASS"
+    }
+  }
+}

@@ -75,9 +75,9 @@ export function SignatureCheckpointRoute({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#30363D] pb-3 mb-5">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-          <h3 className="font-bold text-sm text-white tracking-wide">
+          <h2 className="font-bold text-sm text-white tracking-wide">
             THE CHECKPOINT ROUTE
-          </h3>
+          </h2>
           <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
             • Fail-Closed Settlement Conduit
           </span>
@@ -115,7 +115,7 @@ export function SignatureCheckpointRoute({
                       ? "bg-emerald-500 text-black"
                       : isActive
                       ? "bg-blue-500 text-white animate-pulse"
-                      : "bg-[#21262D] text-slate-500"
+                      : "bg-[#21262D] text-slate-400"
                   }`}
                 >
                   {isComplete ? <Check className="w-3 h-3 stroke-[3]" /> : idx + 1}
@@ -135,3 +135,4 @@ export function SignatureCheckpointRoute({
     </div>
   );
 }
+

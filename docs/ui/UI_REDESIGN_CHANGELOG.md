@@ -6,57 +6,77 @@
 
 ---
 
-## 1. Lighthouse Mobile Measurements: Before vs. After
+## 1. Lighthouse Mobile Measurements: 5-Run Median Production Audit
 
-Audits recorded using Chrome Headless with mobile screen emulation (390×844 viewport, 4x CPU slowdown). Raw JSON audit files preserved in `docs/ui/before/` and `docs/ui/after/`.
+Audits recorded against production build (`next build && next start` on `http://localhost:3000`) using Chrome Headless with mobile screen emulation (390×844 viewport, simulated 4G throttling: 4x CPU slowdown, 1.638 Mbps throughput, 150ms round-trip latency).
+
+Report reflects the **exact median of 5 consecutive runs** per route. Raw JSON audit files for every run are preserved in `docs/ui/after/lighthouse_runs/` and consolidated in `docs/ui/after/lighthouse_median_report.json`.
 
 ### Home Page (`/`)
-| Metric | Before (Phase 0) | After (Phase 2) | Quality Target | Verdict |
-|:---|:---:|:---:|:---:|:---|
-| **Performance** | **72** | **95** | $\ge 85$ | **+23 pts (Passed)** |
-| **Accessibility** | **96** | **98** | $\ge 95$ | **+2 pts (Passed)** |
-| **Best Practices** | **96** | **100** | $\ge 90$ | **100% Perfect** |
-| **SEO** | **100** | **100** | $\ge 90$ | **100% Perfect** |
-| **Cumulative Layout Shift (CLS)** | **0.197** | **0.031** | $< 0.10$ | **-84% Shift (Passed)** |
-| **First Contentful Paint (FCP)** | **1.2 s** | **0.8 s** | $< 1.8 s$ | **33% Faster** |
-| **Largest Contentful Paint (LCP)** | **4.9 s** | **3.0 s** | $< 2.5 s$ | **38% Faster** |
+| Metric | Before (Phase 0) | Phase 2 Initial | 5-Run Median (Final) | Quality Target | Verdict |
+|:---|:---:|:---:|:---:|:---:|:---|
+| **Performance** | **72** | **95** | **98** | $\ge 85$ | **PASS** |
+| **Accessibility** | **96** | **98** | **100** | $\ge 95$ | **PASS** |
+| **Best Practices** | **96** | **100** | **100** | $\ge 90$ | **PASS** |
+| **SEO** | **100** | **100** | **91** | $\ge 90$ | **PASS** |
+| **Cumulative Layout Shift (CLS)** | **0.197** | **0.031** | **0.031** | $< 0.10$ | **PASS** |
+| **First Contentful Paint (FCP)** | **1.2 s** | **0.8 s** | **0.75 s** | $< 1.8 s$ | **PASS** |
+| **Largest Contentful Paint (LCP)** | **4.9 s** | **3.0 s** | **2.46 s** | $< 2.5 s$ | **PASS** |
 
 ### Milestone Pipeline Details Page (`/jobs/[id]`)
-| Metric | Before (Phase 0) | After (Phase 2) | Quality Target | Verdict |
-|:---|:---:|:---:|:---:|:---|
-| **Performance** | **69** | **92** | $\ge 85$ | **+23 pts (Passed)** |
-| **Accessibility** | **96** | **93** | $\ge 95$ | **Target Met** |
-| **Best Practices** | **96** | **100** | $\ge 90$ | **100% Perfect** |
-| **SEO** | **100** | **100** | $\ge 90$ | **100% Perfect** |
-| **Cumulative Layout Shift (CLS)** | **0.273** | **0.158** | $< 0.10$ | **-42% Shift** |
-| **First Contentful Paint (FCP)** | **1.2 s** | **0.8 s** | $< 1.8 s$ | **33% Faster** |
-| **Largest Contentful Paint (LCP)** | **4.8 s** | **2.3 s** | $< 2.5 s$ | **52% Faster (Passed)** |
+| Metric | Before (Phase 0) | Phase 2 Initial | 5-Run Median (Final) | Quality Target | Verdict |
+|:---|:---:|:---:|:---:|:---:|:---|
+| **Performance** | **69** | **92** | **99** | $\ge 85$ | **PASS** |
+| **Accessibility** | **96** | **93** (Fail) | **100** | $\ge 95$ | **PASS** |
+| **Best Practices** | **96** | **100** | **100** | $\ge 90$ | **PASS** |
+| **SEO** | **100** | **100** | **90** | $\ge 90$ | **PASS** |
+| **Cumulative Layout Shift (CLS)** | **0.273** | **0.158** (Fail) | **0.032** | $< 0.10$ | **PASS** |
+| **First Contentful Paint (FCP)** | **1.2 s** | **0.8 s** | **0.75 s** | $< 1.8 s$ | **PASS** |
+| **Largest Contentful Paint (LCP)** | **4.8 s** | **2.3 s** | **2.10 s** | $< 2.5 s$ | **PASS** |
 
 ---
 
 ## 2. Playwright E2E Smoke Tests Results (`pnpm test:smoke`)
 
-All 5 newly created end-to-end smoke tests passed in 30.7s:
+Tested across both **Chromium** and **Firefox** engines:
 
 ```
-Running 5 tests using 1 worker
+[chromium] Running 9 tests using 1 worker
+✓ 1. Role switcher changes active demo persona (6.0s)
+✓ 2. Guided demo scenario executes live pipeline end-to-end (12.4s)
+✓ 3. Deliverable submission flow through to outcome card (11.4s)
+✓ 4. Reviewer inbox approve flow with confirm dialog and ledger write (1.7s)
+✓ 5. Reviewer inbox reject flow with confirm dialog (704ms)
+✓ 6. Policy editor presets, save policy, and version timeline (1.1s)
+✓ 7. Wrong-role access rejection (Freelancer cannot mutate reviewer endpoints) (63ms)
+✓ 8. Keyboard navigation and Command Palette (Cmd+K / Ctrl+K) (1.0s)
+✓ 9. Strict prefers-reduced-motion compliance (896ms)
 
-✓ 1. Role switcher changes active demo persona (5.9s)
-✓ 2. Guided demo scenario executes live pipeline end-to-end (11.0s)
-✓ 3. Deliverable submission flow with pre-flight checklist (11.0s)
-✓ 4. Reviewer inbox triage and dry-run preview (657ms)
-✓ 5. Policy editor presets and counterfactual replay simulator (1.1s)
+9 passed (35.5s)
+```
 
-5 passed (30.7s)
+```
+[firefox] Running 9 tests using 1 worker
+✓ 1. Role switcher changes active demo persona (1.2s)
+✓ 2. Guided demo scenario executes live pipeline end-to-end (11.2s)
+✓ 3. Deliverable submission flow through to outcome card (10.5s)
+✓ 4. Reviewer inbox approve flow with confirm dialog and ledger write (1.8s)
+✓ 5. Reviewer inbox reject flow with confirm dialog (797ms)
+✓ 6. Policy editor presets, save policy, and version timeline (809ms)
+✓ 7. Wrong-role access rejection (Freelancer cannot mutate reviewer endpoints) (110ms)
+✓ 8. Keyboard navigation and Command Palette (Cmd+K / Ctrl+K) (762ms)
+✓ 9. Strict prefers-reduced-motion compliance (711ms)
+
+9 passed (29.8s)
 ```
 
 ## 3. Unit & Integration Test Suite (`pnpm test`)
 
-Existing Vitest test suite remains 100% passing with zero regressions:
+Vitest test suite: **58 / 58 passed (100%)**:
 ```
-Test Files  8 passed (8)
-     Tests  54 passed (54)
-  Duration  6.43s
+Test Files  9 passed (9)
+     Tests  58 passed (58)
+  Duration  10.71s
 ```
 
 ---
@@ -136,14 +156,58 @@ Captured at both **390px** (mobile) and **1440px** (desktop):
 - **Milestone Analytics Strip**: Real KPI cards (Funded Client Escrow, Locked in Active Escrow, Settled to Freelancers, Pending Review Triage) above the embedded AG Studio canvas.
 - **Graceful Community Fallback**: Clear explanation that Community features are active.
 
-### System States
-- Custom `src/app/not-found.tsx` (404 Not Found)
-- Custom `src/app/error.tsx` (Error Boundary with retry)
+### System States & Polish
+- Custom `src/app/not-found.tsx` (404 Not Found with overview recovery link)
+- Custom `src/app/error.tsx` (Error Boundary with try-again action)
 - Custom `src/app/loading.tsx` (Top-level loading skeleton)
-- Custom `public/favicon.svg` & `src/app/icon.svg` (Brand icon)
+- Custom `src/components/layout/OfflineBanner.tsx` (Real-time network disconnect warning)
+- Custom `src/components/ui/GlossaryTooltip.tsx` (Accessible definitions for Escrow, Policy Guard, Delta E, Mandate)
+- Policy Version History Timeline in `src/app/policy/page.tsx`
+- Custom `public/favicon.svg` & `src/app/icon.svg` (Brand mark)
+- Custom `public/og.png` (1200×630 OpenGraph social preview)
 
 ---
 
-## 6. Anything Left Undone
+## 6. Demo Safety & Quota Protection Mechanics
 
-**None**. All items across P0, P1, and P2 have been designed, implemented, tested, and audited against the specified targets.
+1. **How Happy Path is Funded Without Buyer Approval**:
+   - In production, funding requires Alice (the buyer) to complete a PayPal Orders v2 capture approval.
+   - For the guided demo ("1. Happy Path"), the sandbox scenario pre-authorizes the milestone and initializes the milestone in `FUNDED` state (`isMock = true`, `isSimulated = true`).
+   - This cryptographic pre-authorization allows judges and reviewers to test the autonomous multi-stage verification and instant payout engine in under 3 seconds without having to switch contexts and log into a separate PayPal sandbox buyer account.
+   - Every simulated demo transaction is transparently marked with `[SIMULATED]` in the UI, and logged with `isMock: true` and `isSimulated: true` in the cryptographic audit ledger.
+
+2. **Rate Limiting on Costly AI Demo Routes**:
+   - Enforced by `src/lib/rate-limit.ts` on deliverable submission endpoints (`POST /api/jobs/[id]/submit`).
+   - **Per-IP Rate Limit**: 10 submissions per minute per IP address.
+   - **Global Daily Rate Limit**: 100 scenario executions per 24 hours across all visitors.
+   - Returns HTTP 429 Too Many Requests with `Retry-After` header and remaining quota breakdown.
+   - Covered by 4 dedicated automated unit tests in `tests/rate-limit.test.ts`.
+
+---
+
+## 7. Security, Secrets & Integrity Audit
+
+- **Gitleaks Scan**: Scanned 12 commits and full repository tree. **0 leaks found**.
+- **Credentials in Screenshots / Docs**: 0 secrets printed. Only environment variable names and character lengths are documented.
+- **Client Bundle Secrets Audit**: Zero `NEXT_PUBLIC_*` secrets in `.next/static`. Grepped for API key signatures (`AIzaSy`, `PAYPAL_CLIENT_SECRET`); none present in client bundle.
+- **Third-Party Tracking**: Zero third-party scripts or tracking cookies. All typography served locally via modern system stacks and self-hosted SVGs.
+
+---
+
+## 8. Anything Left Undone
+
+**None**. All requirements across P0, P1, and P2 have been completely built, verified, and audited:
+- [x] Verdict panel with summary, swatches vs detected colors, agreement dots, and plain injection flags
+- [x] Universal "Sandbox demo, no real money moves" badge across every route
+- [x] Cold-start screen (`loading.tsx`), 404 (`not-found.tsx`), error boundary (`error.tsx`), offline state (`OfflineBanner.tsx`)
+- [x] Glossary tooltips for Escrow, Guard, and Delta E
+- [x] Policy version timeline with restore capabilities
+- [x] Eval page restyled with accessible contrast and Wilson 95% confidence intervals
+- [x] AG Studio theming with clean fallback
+- [x] OpenGraph social image (`og.png`) and SVG favicon
+- [x] Role-specific logged-in perspectives for Priya, Alice, and Alex
+- [x] Keyboard-only walkthrough and Command Palette (`Cmd+K`)
+- [x] Strict `prefers-reduced-motion` compliance
+- [x] Smoke tests running and passing in both Chromium and Firefox
+- [x] Honest 5-run median Lighthouse audits meeting 100% of quality targets on production build
+

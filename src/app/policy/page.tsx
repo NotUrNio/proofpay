@@ -12,13 +12,26 @@ import {
   Sparkles,
   ArrowRight,
   Save,
-  RotateCcw,
-  Play,
-  History,
   Layers,
   ArrowRightLeft,
   ChevronRight,
+  GitCommit,
+  Check,
+  RotateCcw,
+  Play,
 } from "lucide-react";
+import { GlossaryTooltip } from "@/components/ui/GlossaryTooltip";
+
+interface PolicyVersion {
+  version: string;
+  timestamp: string;
+  author: string;
+  threshold: number;
+  maxJob: number;
+  maxDaily: number;
+  active: boolean;
+  notes: string;
+}
 
 interface EvalCase {
   id: string;
@@ -72,6 +85,52 @@ export default function PolicyEditorPage() {
   const [threshold, setThreshold] = useState(0.85);
   const [activePreset, setActivePreset] = useState<"cautious" | "balanced" | "fast">("balanced");
   const [benchmarkCases, setBenchmarkCases] = useState<EvalCase[]>([]);
+
+  // Policy Version History Timeline
+  const [versions, setVersions] = useState<PolicyVersion[]>([
+    {
+      version: "v1.2.0",
+      timestamp: "Today, 01:45 UTC",
+      author: "Alex (Lead Reviewer)",
+      threshold: 0.85,
+      maxJob: 500,
+      maxDaily: 1000,
+      active: true,
+      notes: "Balanced operating preset for standard milestone flow",
+    },
+    {
+      version: "v1.1.0",
+      timestamp: "Yesterday, 18:20 UTC",
+      author: "Alice (Client Admin)",
+      threshold: 0.90,
+      maxJob: 250,
+      maxDaily: 750,
+      active: false,
+      notes: "Strict threshold during initial test cohort",
+    },
+    {
+      version: "v1.0.0",
+      timestamp: "3 days ago",
+      author: "System (Genesis)",
+      threshold: 0.95,
+      maxJob: 100,
+      maxDaily: 500,
+      active: false,
+      notes: "Initial security baseline with maximum fail-closed stance",
+    },
+  ]);
+
+  const handleRestoreVersion = (ver: PolicyVersion) => {
+    setThreshold(ver.threshold);
+    setMaxJob(ver.maxJob);
+    setMaxDaily(ver.maxDaily);
+    setVersions(
+      versions.map((v) => ({
+        ...v,
+        active: v.version === ver.version,
+      }))
+    );
+  };
 
   // Replay State
   const [historicalJobs, setHistoricalJobs] = useState<JobOption[]>([]);
@@ -174,6 +233,17 @@ export default function PolicyEditorPage() {
           minConfidenceThreshold: threshold.toString(),
         }),
       });
+      const newVersion: PolicyVersion = {
+        version: `v1.${versions.length + 1}.0`,
+        timestamp: "Just now",
+        author: "Alex (Reviewer)",
+        threshold,
+        maxJob,
+        maxDaily,
+        active: true,
+        notes: `Updated threshold (${(threshold * 100).toFixed(0)}% conf, $${maxJob} job cap)`,
+      };
+      setVersions([newVersion, ...versions.map((v) => ({ ...v, active: false }))]);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -333,6 +403,71 @@ export default function PolicyEditorPage() {
                 onChange={(e) => setMaxDaily(parseInt(e.target.value))}
                 className="w-full accent-emerald-500 cursor-pointer"
               />
+            </div>
+          </div>
+
+          {/* Policy Version History Timeline */}
+          <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-5 space-y-4 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <GitCommit className="w-4 h-4 text-blue-400" />
+                <h3 className="font-bold text-xs text-slate-300">
+                  POLICY VERSION TIMELINE
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                {versions.length} versions
+              </span>
+            </div>
+
+            <div className="space-y-3 relative before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-[2px] before:bg-[#21262D]">
+              {versions.map((ver) => (
+                <div key={ver.version} className="relative pl-7 group">
+                  {/* Timeline dot */}
+                  <div
+                    className={`absolute left-1 top-1.5 w-3.5 h-3.5 rounded-full border-2 transition-colors flex items-center justify-center ${
+                      ver.active
+                        ? "bg-blue-500 border-blue-400 ring-2 ring-blue-500/20"
+                        : "bg-[#0D1117] border-[#30363D] group-hover:border-slate-400"
+                    }`}
+                  >
+                    {ver.active && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+
+                  <div className="bg-[#0D1117] border border-[#21262D] rounded-xl p-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-bold text-white">
+                          {ver.version}
+                        </span>
+                        {ver.active && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded">
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400">{ver.timestamp}</span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-300 leading-tight">
+                      {ver.notes}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-[#21262D] text-[10px] text-slate-400">
+                      <span>By: {ver.author}</span>
+                      {!ver.active && (
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreVersion(ver)}
+                          className="text-blue-400 hover:text-blue-300 font-medium underline"
+                        >
+                          Restore
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

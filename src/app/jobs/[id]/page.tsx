@@ -149,13 +149,23 @@ export default function JobDetailPage({
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto space-y-6" aria-busy="true">
+      <div className="max-w-5xl mx-auto space-y-6 min-h-[1400px]" aria-busy="true">
+        {/* Top bar skeleton */}
         <div className="flex items-center justify-between">
+          <div className="h-4 w-32 rounded skeleton-shimmer" />
           <div className="h-4 w-28 rounded skeleton-shimmer" />
-          <div className="h-4 w-24 rounded skeleton-shimmer" />
         </div>
-        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-52 skeleton-shimmer" />
-        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-36 skeleton-shimmer" />
+        {/* Hero milestone card skeleton */}
+        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-56 skeleton-shimmer" />
+        {/* Checkpoint route skeleton */}
+        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-44 skeleton-shimmer" />
+        {/* Verdict / Inspection panel skeleton */}
+        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-96 skeleton-shimmer" />
+        {/* Rules & Mandate cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-72 skeleton-shimmer" />
+          <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-72 skeleton-shimmer" />
+        </div>
       </div>
     );
   }
@@ -207,7 +217,7 @@ export default function JobDetailPage({
   const latestSubmission = submissions && submissions.length > 0 ? submissions[0] : null;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6" aria-live="polite">
+    <div className="max-w-5xl mx-auto space-y-6 min-h-[1400px]" aria-live="polite">
       {/* Back Link */}
       <div className="flex items-center justify-between">
         <Link
@@ -334,7 +344,7 @@ export default function JobDetailPage({
             <div className="text-[11px] text-slate-400 truncate">
               {mandate.signature}
             </div>
-            <div className="text-[10px] text-slate-500 font-sans">
+            <div className="text-[10px] text-slate-400 font-sans">
               Cap: ${mandate.maxAmount} {mandate.currency} • Payee: {mandate.payeeEmail}
             </div>
           </div>
@@ -359,10 +369,10 @@ export default function JobDetailPage({
               {payments && payments.length > 0 ? (
                 <span>{payments[0].type}: {payments[0].paypalId}</span>
               ) : (
-                <span className="text-slate-500">Awaiting payment capture</span>
+                <span className="text-slate-400">Awaiting payment capture</span>
               )}
             </div>
-            <div className="text-[10px] text-slate-500 font-sans">
+            <div className="text-[10px] text-slate-400 font-sans">
               Linked via custom_id / sender_item_id
             </div>
           </div>

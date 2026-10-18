@@ -5,12 +5,42 @@ import { Shield, Zap, ChevronDown, FlaskConical, Lock, ShieldCheck } from "lucid
 import { MoneyFlowStrip } from "@/components/layout/MoneyFlowStrip";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import { OfflineBanner } from "@/components/layout/OfflineBanner";
 import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://proofpay-68qi.onrender.com"),
   title: "ProofPay — Autonomous Milestone Escrow & Instant Settlement",
   description:
     "Autonomous milestone escrow for freelancers and clients powered by PayPal Orders & Payouts and pure TypeScript Policy Guard.",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
+  openGraph: {
+    title: "ProofPay — Autonomous Milestone Escrow & Instant Settlement",
+    description:
+      "Autonomous milestone escrow for freelancers and clients powered by PayPal Orders & Payouts and pure TypeScript Policy Guard.",
+    url: "https://proofpay-68qi.onrender.com",
+    siteName: "ProofPay",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "ProofPay — Autonomous Milestone Escrow & Instant Settlement",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ProofPay — Autonomous Milestone Escrow & Instant Settlement",
+    description:
+      "Autonomous milestone escrow for freelancers and clients powered by PayPal Orders & Payouts and pure TypeScript Policy Guard.",
+    images: ["/og.png"],
+  },
 };
 
 export default async function RootLayout({
@@ -25,6 +55,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="bg-[#0D1117] text-[#F0F6FC] antialiased min-h-screen flex flex-col selection:bg-blue-600/30">
+        {/* Offline Banner */}
+        <OfflineBanner />
+
         {/* Universal Honesty Banner */}
         <div className="bg-[#161B22] border-b border-[#30363D] text-slate-300 px-4 py-1.5 text-center text-[11px] font-medium tracking-wide flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-blue-400" />

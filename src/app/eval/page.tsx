@@ -57,7 +57,7 @@ export default function EvalPage() {
           <p className="text-slate-300 leading-relaxed">
             All 28 fixtures were partitioned into Dev (14) and Held-Out (14) before threshold tuning. Color tolerance threshold (&Delta;E &le; 14.0) and confidence threshold (0.85) were derived strictly from the Dev split and evaluated without modification on Held-Out.
           </p>
-          <p className="text-slate-500 text-[11px]">
+          <p className="text-slate-400 text-[11px]">
             Sample size caveat: With N=28 fixtures, the Wilson 95% confidence interval for 100% accuracy is [87.9%, 100.0%].
           </p>
         </div>
@@ -75,7 +75,7 @@ export default function EvalPage() {
                 <div className="text-2xl font-bold font-mono text-white mt-1">
                   {(data.accuracy.overall * 100).toFixed(1)}%
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                   Wilson CI: [{(data.accuracy.wilson95Interval.low * 100).toFixed(1)}%, {(data.accuracy.wilson95Interval.high * 100).toFixed(1)}%]
                 </div>
               </div>
@@ -85,7 +85,7 @@ export default function EvalPage() {
                 <div className="text-2xl font-bold font-mono mt-1">
                   {(data.safetyMetrics.falseApprovalRate * 100).toFixed(1)}%
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                   Target: 0% ({data.safetyMetrics.falseApprovalCount} false approvals)
                 </div>
               </div>
@@ -95,7 +95,7 @@ export default function EvalPage() {
                 <div className="text-2xl font-bold font-mono text-blue-400 mt-1">
                   {(data.accuracy.dev * 100).toFixed(1)}%
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                   14 / 14 Fixtures
                 </div>
               </div>
@@ -105,7 +105,7 @@ export default function EvalPage() {
                 <div className="text-2xl font-bold font-mono text-purple-400 mt-1">
                   {(data.accuracy.heldOut * 100).toFixed(1)}%
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                   14 / 14 Fixtures
                 </div>
               </div>
@@ -131,12 +131,12 @@ export default function EvalPage() {
                             {c.split}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-500 truncate">{c.notes}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{c.notes}</p>
                       </div>
 
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="text-right">
-                          <div className="text-[10px] text-slate-500">Expected: {c.expectedOutcome}</div>
+                          <div className="text-[10px] text-slate-400">Expected: {c.expectedOutcome}</div>
                           <div className="font-mono font-semibold text-white">Actual: {c.actualOutcome}</div>
                         </div>
                         <span
