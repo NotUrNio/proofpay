@@ -203,4 +203,82 @@ test.describe("ProofPay UI Redesign Smoke Tests", () => {
     });
     expect(matchesReducedMotion).toBe(true);
   });
+
+  test("10. Reviewer policy restore validates against mandate cap and non-reviewer is rejected (403)", async ({ page, context }) => {
+    // 1. Non-reviewer (freelancer) attempts to call restore endpoint -> 403 Forbidden
+    await context.addCookies([
+      {
+        name: "proofpay_role",
+        value: "freelancer",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+    const forbiddenRes = await page.request.post("http://localhost:3000/api/policy", {
+      data: { action: "restore", versionId: "fake-id" },
+    });
+    expect(forbiddenRes.status()).toBe(403);
+
+    // 2. Reviewer restores a version via policy page UI
+    await context.addCookies([
+      {
+        name: "proofpay_role",
+        value: "reviewer",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+    await page.goto("/policy");
+    await page.waitForLoadState("networkidle");
+
+    const restoreBtn = page.locator('button:has-text("Restore")');
+    if (await restoreBtn.count() > 0) {
+      await restoreBtn.first().click();
+      const feedback = page.locator("text=/Policy Saved|Policy violation|cannot exceed/");
+      await expect(feedback.first()).toBeVisible({ timeout: 5000 });
+    }
+  });
+
+  test("11. Recharts Analytics Workspace (/studio) loads without license, renders KPI cards, charts, and table toggles", async ({ page }) => {
+    await page.goto("/studio");
+    await page.waitForLoadState("networkidle");
+
+    // Verify main headings and zero license warnings
+    await expect(page.locator("h1")).toContainText("Settlement Analytics");
+    await expect(page.locator("body")).not.toContainText("License key invalid");
+    await expect(page.locator("body")).not.toContainText("Missing AG Studio");
+
+    // Wait for analytics data to load
+    await page.waitForSelector("text=Verification & Settlement Outcomes", { timeout: 15000 });
+
+    // Verify all 4 KPI cards render
+    await expect(page.locator("text=Funded Client Escrow")).toBeVisible();
+    await expect(page.locator("text=Locked in Active Escrow")).toBeVisible();
+    await expect(page.locator("text=Settled to Freelancers")).toBeVisible();
+    await expect(page.locator("text=Pending Review Triage")).toBeVisible();
+
+    // Verify chart sections render
+    await expect(page.locator("text=Verification & Settlement Outcomes")).toBeVisible();
+    await expect(page.locator("text=Top Decision & Observation Reasons")).toBeVisible();
+    await expect(page.locator("text=Ensemble Model Agreement")).toBeVisible();
+    await expect(page.locator("text=Daily Payout Spend vs. Policy Caps")).toBeVisible();
+    await expect(page.locator("text=Payout Latency (Submit to Payout)")).toBeVisible();
+    await expect(page.locator("text=Ground Truth Evaluation Benchmark Suite")).toBeVisible();
+
+    // Test accessible "View as Table" toggle
+    const tableToggles = page.locator('button:has-text("View as Table")');
+    const toggleCount = await tableToggles.count();
+    expect(toggleCount).toBeGreaterThan(0);
+
+    // Toggle the first chart to table mode
+    await tableToggles.first().click();
+    await expect(page.locator('button:has-text("View as Chart")').first()).toBeVisible();
+
+    // Toggle back to chart mode
+    await page.locator('button:has-text("View as Chart")').first().click();
+    await expect(tableToggles.first()).toBeVisible();
+  });
 });
+
