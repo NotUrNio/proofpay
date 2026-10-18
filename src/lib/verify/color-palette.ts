@@ -166,12 +166,12 @@ export const WARM_BRAND_PALETTE: LabColor[] = [
 /**
  * Extract dominant colors from sanitized image buffer using sharp quantization,
  * and compute minimal CIEDE2000 distance to target brand palette.
- * Threshold: minDeltaE <= 25.0 considered compatible.
+ * Calibrated threshold: minDeltaE <= 16.0 considered compatible.
  */
 export async function evaluatePaletteInCode(
   imageBuffer: Buffer,
   palette: LabColor[] = WARM_BRAND_PALETTE,
-  thresholdDeltaE = 25.0
+  thresholdDeltaE = 16.0
 ): Promise<{ matches: boolean; minDistance: number; dominantHex: string }> {
   // Downsample to 32x32 to quickly capture aggregate dominant pixels, removing alpha for consistent 3-channel RGB
   const { data, info } = await sharp(imageBuffer)

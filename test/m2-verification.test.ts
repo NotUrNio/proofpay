@@ -95,12 +95,33 @@ describe("Milestone 2: Verification Engine & Deterministic Hard Checks", () => {
       const warmBuf = fs.readFileSync(path.join(fixturesDir, "case_01_compliant_warm_grid.png"));
       const warmRes = await evaluatePaletteInCode(warmBuf);
       expect(warmRes.matches).toBe(true);
-      expect(warmRes.minDistance).toBeLessThanOrEqual(25.0);
+      expect(warmRes.minDistance).toBeLessThanOrEqual(16.0);
 
       const blueBuf = fs.readFileSync(path.join(fixturesDir, "case_10_rubric_offbrand_blue_palette.png"));
       const blueRes = await evaluatePaletteInCode(blueBuf);
       expect(blueRes.matches).toBe(false);
-      expect(blueRes.minDistance).toBeGreaterThan(25.0);
+      expect(blueRes.minDistance).toBeGreaterThan(16.0);
+    });
+
+    it("should separate near-miss cases: dev calibration and routing", async () => {
+      // Dev compliant sunrise peach: minDistance <= 11.5
+      const peachBuf = fs.readFileSync(path.join(fixturesDir, "case_25_compliant_sunrise_peach.png"));
+      const peachRes = await evaluatePaletteInCode(peachBuf);
+      expect(peachRes.matches).toBe(true);
+      expect(peachRes.minDistance).toBeLessThanOrEqual(11.5);
+
+      // Dev near-miss crimson red: falls in borderline penalty zone (11.5, 16.0]
+      const crimsonBuf = fs.readFileSync(path.join(fixturesDir, "case_21_nearmiss_crimson_red.png"));
+      const crimsonRes = await evaluatePaletteInCode(crimsonBuf);
+      expect(crimsonRes.matches).toBe(true);
+      expect(crimsonRes.minDistance).toBeGreaterThan(11.5);
+      expect(crimsonRes.minDistance).toBeLessThanOrEqual(16.0);
+
+      // Dev near-miss terracotta brown: completely off-brand > 16.0
+      const terraBuf = fs.readFileSync(path.join(fixturesDir, "case_23_nearmiss_terracotta_brown.png"));
+      const terraRes = await evaluatePaletteInCode(terraBuf);
+      expect(terraRes.matches).toBe(false);
+      expect(terraRes.minDistance).toBeGreaterThan(16.0);
     });
   });
 

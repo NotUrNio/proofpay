@@ -141,3 +141,45 @@ export async function getPayoutItem(payoutItemId: string): Promise<PayoutItemRes
 
   return (await response.json()) as PayoutItemResponse;
 }
+
+/**
+ * Fetch details of a Payout Batch.
+ */
+export async function getPayoutBatch(payoutBatchId: string): Promise<any> {
+  if (isPayPalMock() || payoutBatchId.startsWith("MOCK_")) {
+    return {
+      batch_header: {
+        payout_batch_id: payoutBatchId,
+        batch_status: "SUCCESS",
+      },
+      items: [
+        {
+          payout_item_id: "MOCK_ITEM_" + payoutBatchId.slice(-8),
+          transaction_status: "SUCCESS",
+        },
+      ],
+    };
+  }
+
+  const token = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
+
+  const response = await fetch(`${baseUrl}/v1/payments/payouts/${payoutBatchId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new PayPalError(
+      `Failed to fetch payout batch ${payoutBatchId}: status ${response.status}`,
+      response.status,
+      errText
+    );
+  }
+
+  return await response.json();
+}

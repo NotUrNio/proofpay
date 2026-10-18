@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, numeric, jsonb, uuid, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, numeric, jsonb, uuid, varchar, bigserial } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // 1. Jobs Table
@@ -106,6 +106,7 @@ export const approvals = pgTable("approvals", {
 // HARD RULE: Only INSERT operations are allowed. No update or delete helpers.
 export const ledgerEvents = pgTable("ledger_events", {
   id: uuid("id").defaultRandom().primaryKey(),
+  sequenceNumber: bigserial("sequence_number", { mode: "number" }),
   jobId: uuid("job_id").references(() => jobs.id).notNull(),
   eventType: varchar("event_type", { length: 100 }).notNull(), // 'JOB_CREATED', 'JOB_FUNDED', 'WORK_SUBMITTED', 'VERIFICATION_COMPLETED', 'GUARD_EVALUATED', 'PAYOUT_INITIATED', 'PAYOUT_CONFIRMED', etc.
   previousState: varchar("previous_state", { length: 50 }),

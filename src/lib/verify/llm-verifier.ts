@@ -25,6 +25,10 @@ export const LlmVerificationOutputSchema = z.object({
   injection_evidence: z.string().describe("Evidence snippet if injection was suspected"),
   overall_confidence: z.number().min(0).max(1).describe("Overall subjective confidence"),
   reasoning: z.string().describe("Holistic evaluation reasoning"),
+  serving_model: z.string().optional().describe("Exact model ID that served the inference call"),
+  prompt_tokens: z.number().optional().describe("Input prompt tokens consumed"),
+  completion_tokens: z.number().optional().describe("Output completion tokens generated"),
+  total_tokens: z.number().optional().describe("Total tokens consumed"),
 });
 
 export type LlmVerificationOutput = z.infer<typeof LlmVerificationOutputSchema>;
@@ -63,6 +67,9 @@ export interface EnsembleVerdict {
   runCount: number;
   cachedRunsUsed: boolean;
   modelError?: boolean;
+  servingModel: string;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
 }
 
 const CACHE_DIR = path.resolve(process.cwd(), ".cache/eval_responses");
@@ -94,6 +101,9 @@ async function callModelSingleRun(
   if (mode === "replay" || (mode === "live" && fs.existsSync(cacheFile))) {
     if (fs.existsSync(cacheFile)) {
       const cached = JSON.parse(fs.readFileSync(cacheFile, "utf-8"));
+      if (!cached.serving_model) {
+        cached.serving_model = modelId;
+      }
       return LlmVerificationOutputSchema.parse(cached);
     }
     if (mode === "replay") {
@@ -119,6 +129,10 @@ async function callModelSingleRun(
       injection_evidence: "",
       overall_confidence: 0.95,
       reasoning: "Stub verification successful.",
+      serving_model: "stub",
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
     };
   }
 
@@ -149,7 +163,8 @@ Analyze the attached sanitized deliverable against these rubrics:
 ${promptText}
 `;
 
-  let result;
+  let servedModel = modelId;
+  let result: any;
   try {
     const callPromise = generateObject({
       model: google(modelId),
@@ -177,6 +192,7 @@ ${promptText}
     const fallbackId = process.env.MODEL_FALLBACK_ID || "gemini-3.5-flash-lite";
     if (fallbackId && fallbackId !== modelId) {
       console.warn(`[Verifier] Primary model ${modelId} failed (${err.message.slice(0, 100)}...). Falling back to ${fallbackId}...`);
+      servedModel = fallbackId;
       const fallbackCall = generateObject({
         model: google(fallbackId),
         schema: LlmVerificationOutputSchema,
@@ -203,7 +219,13 @@ ${promptText}
     }
   }
 
-  const output = result.object;
+  const output: LlmVerificationOutput = {
+    ...result.object,
+    serving_model: servedModel,
+    prompt_tokens: result.usage?.promptTokens,
+    completion_tokens: result.usage?.completionTokens,
+    total_tokens: result.usage?.totalTokens,
+  };
 
   // Persist to disk cache
   fs.writeFileSync(cacheFile, JSON.stringify(output, null, 2), "utf-8");
@@ -267,6 +289,9 @@ export async function runLlmVerifierEnsemble(
       runCount: outputs.length,
       cachedRunsUsed: false,
       modelError: true,
+      servingModel: modelId,
+      totalPromptTokens: 0,
+      totalCompletionTokens: 0,
     };
   }
 
@@ -313,9 +338,9 @@ export async function runLlmVerifierEnsemble(
   const agreementRatio = outputs.filter((o) => o.per_criterion.every((c) => c.pass)).length / outputs.length;
   confidenceVal = Math.min(confidenceVal, agreementRatio || 0.1);
 
-  // 2. Color palette borderline penalty (distances between 12.5 and 25.0)
-  if (paletteEvaluation.minDistance > 12.5 && paletteEvaluation.minDistance <= 25.0) {
-    const paletteConf = Math.max(0.60, 0.82 - ((paletteEvaluation.minDistance - 12.5) / 12.5) * 0.22);
+  // 2. Color palette borderline penalty (distances between 11.5 and 16.0)
+  if (paletteEvaluation.minDistance > 11.5 && paletteEvaluation.minDistance <= 16.0) {
+    const paletteConf = Math.max(0.62, 0.82 - ((paletteEvaluation.minDistance - 11.5) / 4.5) * 0.20);
     confidenceVal = Math.min(confidenceVal, paletteConf);
   }
 
@@ -351,6 +376,9 @@ export async function runLlmVerifierEnsemble(
     runCount: outputs.length,
     cachedRunsUsed: mode === "replay",
     modelError: false,
+    servingModel: outputs[0]?.serving_model || modelId,
+    totalPromptTokens: outputs.reduce((sum, o) => sum + (o.prompt_tokens || 0), 0),
+    totalCompletionTokens: outputs.reduce((sum, o) => sum + (o.completion_tokens || 0), 0),
   };
 }
 

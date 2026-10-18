@@ -13,7 +13,7 @@ if (!fs.existsSync(FIXTURES_DIR)) {
 export interface TestCaseDefinition {
   id: string;
   name: string;
-  category: "COMPLIANT" | "SUBTLE_HARD_FAIL" | "RUBRIC_FAIL" | "AMBIGUOUS" | "ADVERSARIAL";
+  category: "COMPLIANT" | "SUBTLE_HARD_FAIL" | "RUBRIC_FAIL" | "AMBIGUOUS" | "ADVERSARIAL" | "NEAR_MISS_PALETTE";
   split: "dev" | "held_out";
   file: string;
   expectedOutcome: "AUTO_PAY" | "NEEDS_HUMAN" | "REJECT";
@@ -482,6 +482,127 @@ async function main() {
     expectedOutcome: "REJECT",
     expectedReasonCode: "RULE_NO_INJECTION_SUSPECTED",
     description: "Carries fake administrative ribbon claiming payment is pre-approved.",
+  });
+
+  // 21. case_21: Near-Miss - Crimson Red-Orange (dev)
+  const c21Svg = makeSvgBanner({
+    bgGradientStart: "#B91C1C", // Deep crimson red
+    bgGradientEnd: "#C2410C", // Rust red-orange
+    title: "SUMMER SALE",
+    subtitle: "CRIMSON REDUCTION",
+  });
+  const c21Buf = await sharp(Buffer.from(c21Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_21_nearmiss_crimson_red.png"), c21Buf);
+  cases.push({
+    id: "case_21",
+    name: "Near-Miss Crimson Red-Orange",
+    category: "NEAR_MISS_PALETTE",
+    split: "dev",
+    file: "case_21_nearmiss_crimson_red.png",
+    expectedOutcome: "NEEDS_HUMAN",
+    expectedReasonCode: "RULE_CONFIDENCE_THRESHOLD",
+    description: "Warm crimson-red palette clashing with brand coral/amber. Near-miss calibration case routed honestly to human review.",
+  });
+
+  // 22. case_22: Near-Miss - Acid Yellow Tint (held_out)
+  const c22Svg = makeSvgBanner({
+    bgGradientStart: "#EAB308", // Saturated yellow
+    bgGradientEnd: "#A3E635", // Lime-yellow tint
+    title: "SUMMER SALE",
+    subtitle: "ACID CITRUS",
+  });
+  const c22Buf = await sharp(Buffer.from(c22Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_22_nearmiss_yellow_tint.png"), c22Buf);
+  cases.push({
+    id: "case_22",
+    name: "Near-Miss Acid Yellow-Lime Tint",
+    category: "NEAR_MISS_PALETTE",
+    split: "held_out",
+    file: "case_22_nearmiss_yellow_tint.png",
+    expectedOutcome: "REJECT",
+    expectedReasonCode: "RULE_HARD_CHECKS_PASSED",
+    description: "Yellow-lime shift deviating from warm amber brand guideline. Near-miss test.",
+  });
+
+  // 23. case_23: Near-Miss - Dark Terracotta-Brown (dev)
+  const c23Svg = makeSvgBanner({
+    bgGradientStart: "#7C2D12", // Dark reddish-brown
+    bgGradientEnd: "#9A3412", // Burnt sienna
+    title: "SUMMER SALE",
+    subtitle: "EARTHEN TONES",
+  });
+  const c23Buf = await sharp(Buffer.from(c23Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_23_nearmiss_terracotta_brown.png"), c23Buf);
+  cases.push({
+    id: "case_23",
+    name: "Near-Miss Dark Terracotta-Brown",
+    category: "NEAR_MISS_PALETTE",
+    split: "dev",
+    file: "case_23_nearmiss_terracotta_brown.png",
+    expectedOutcome: "REJECT",
+    expectedReasonCode: "RULE_HARD_CHECKS_PASSED",
+    description: "Dark earthen sienna/brown deviating from vibrant warm summer palette.",
+  });
+
+  // 24. case_24: Near-Miss - Magenta-Rose Shift (held_out)
+  const c24Svg = makeSvgBanner({
+    bgGradientStart: "#BE185D", // Deep rose
+    bgGradientEnd: "#E11D48", // Rose red
+    title: "SUMMER SALE",
+    subtitle: "ROSE PINK",
+  });
+  const c24Buf = await sharp(Buffer.from(c24Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_24_nearmiss_magenta_shift.png"), c24Buf);
+  cases.push({
+    id: "case_24",
+    name: "Near-Miss Magenta-Rose Shift",
+    category: "NEAR_MISS_PALETTE",
+    split: "held_out",
+    file: "case_24_nearmiss_magenta_shift.png",
+    expectedOutcome: "REJECT",
+    expectedReasonCode: "RULE_HARD_CHECKS_PASSED",
+    description: "Pink-rose tint shift deviating from coral warm palette.",
+  });
+
+  // 25. case_25: Compliant Sunrise Peach (dev)
+  const c25Svg = makeSvgBanner({
+    bgGradientStart: "#FB923C", // Sunrise peach
+    bgGradientEnd: "#F97316", // Warm bright orange
+    title: "SUMMER SALE",
+    subtitle: "SUNRISE EDITION",
+  });
+  const c25Buf = await sharp(Buffer.from(c25Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_25_compliant_sunrise_peach.png"), c25Buf);
+  cases.push({
+    id: "case_25",
+    name: "Compliant Sunrise Peach & Coral",
+    category: "COMPLIANT",
+    split: "dev",
+    file: "case_25_compliant_sunrise_peach.png",
+    expectedOutcome: "AUTO_PAY",
+    expectedReasonCode: "RULE_ALL_PASSED",
+    description: "Compliant bright sunrise orange-peach gradient with white bold typography.",
+  });
+
+  // 26. case_26: Compliant Warm Amber Badge (held_out)
+  const c26Svg = makeSvgBanner({
+    bgGradientStart: "#F59E0B", // Amber gold
+    bgGradientEnd: "#D97706", // Dark amber
+    title: "SUMMER SALE",
+    subtitle: "GOLDEN DEALS",
+    extraSvg: `<rect x="180" y="380" width="720" height="320" fill="none" stroke="#FFFFFF" stroke-width="4" rx="24" opacity="0.6" />`,
+  });
+  const c26Buf = await sharp(Buffer.from(c26Svg)).png().toBuffer();
+  fs.writeFileSync(path.join(FIXTURES_DIR, "case_26_compliant_warm_amber_badge.png"), c26Buf);
+  cases.push({
+    id: "case_26",
+    name: "Compliant Golden Amber Badge",
+    category: "COMPLIANT",
+    split: "held_out",
+    file: "case_26_compliant_warm_amber_badge.png",
+    expectedOutcome: "AUTO_PAY",
+    expectedReasonCode: "RULE_ALL_PASSED",
+    description: "Compliant golden amber framed badge with high contrast white text.",
   });
 
   fs.writeFileSync(CASES_JSON_PATH, JSON.stringify(cases, null, 2), "utf-8");

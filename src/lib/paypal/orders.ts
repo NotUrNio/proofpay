@@ -57,6 +57,8 @@ export async function createOrder(params: CreateOrderParams): Promise<PayPalOrde
       {
         reference_id: jobId,
         description,
+        custom_id: jobId,
+        invoice_id: `INV-${jobId.slice(0, 12)}-${Date.now().toString().slice(-4)}`,
         amount: {
           currency_code: currency,
           value: amount,
@@ -145,4 +147,41 @@ export async function captureOrder(orderId: string, requestId?: string): Promise
   }
 
   return (await response.json()) as CaptureOrderResponse;
+}
+
+/**
+ * Get details of an existing PayPal Order.
+ */
+export async function getOrder(orderId: string): Promise<PayPalOrderResponse> {
+  if (isPayPalMock()) {
+    return {
+      id: orderId,
+      status: "APPROVED",
+      intent: "CAPTURE",
+      purchase_units: [],
+      links: [],
+    };
+  }
+
+  const token = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
+
+  const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new PayPalError(
+      `Failed to get PayPal order ${orderId}: ${response.status} ${response.statusText}`,
+      response.status,
+      errText
+    );
+  }
+
+  return (await response.json()) as PayPalOrderResponse;
 }

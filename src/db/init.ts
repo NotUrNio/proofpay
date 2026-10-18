@@ -91,6 +91,7 @@ export async function ensureDatabaseSchema() {
     );`,
     `CREATE TABLE IF NOT EXISTS ledger_events (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      sequence_number BIGSERIAL,
       job_id UUID REFERENCES jobs(id) NOT NULL,
       event_type VARCHAR(100) NOT NULL,
       previous_state VARCHAR(50),
@@ -101,6 +102,7 @@ export async function ensureDatabaseSchema() {
       signature_or_hash TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
     );`,
+    `ALTER TABLE ledger_events ADD COLUMN IF NOT EXISTS sequence_number BIGSERIAL;`,
     `CREATE TABLE IF NOT EXISTS idempotency_keys (
       key VARCHAR(255) PRIMARY KEY,
       scope VARCHAR(100) NOT NULL,

@@ -32,6 +32,8 @@ pnpm-debug.log*
 *.swp
 *.swo
 
-# Local database storage
+# Local database storage & cache
 .data/
+data/
 postgres-data/
+.cache/

@@ -1,6 +1,6 @@
 import { db } from "./index";
 import { ledgerEvents } from "./schema";
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import crypto from "crypto";
 
 export interface AppendLedgerParams {
@@ -11,6 +11,27 @@ export interface AppendLedgerParams {
   payload: Record<string, unknown>;
   isMock?: boolean;
   actor: "CLIENT" | "FREELANCER" | "VERIFIER" | "GUARD" | "PAYPAL_API" | "PAYPAL_WEBHOOK" | "ADMIN" | "SYSTEM";
+}
+
+/**
+ * Deterministic canonical JSON serialization to guarantee identical SHA-256 hashes
+ * regardless of key insertion order or PostgreSQL JSONB column reordering.
+ */
+export function canonicalJsonStringify(obj: unknown): string {
+  if (obj === null || typeof obj !== "object") {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return "[" + obj.map(canonicalJsonStringify).join(",") + "]";
+  }
+  const sortedKeys = Object.keys(obj as Record<string, unknown>).sort();
+  return (
+    "{" +
+    sortedKeys
+      .map((key) => JSON.stringify(key) + ":" + canonicalJsonStringify((obj as Record<string, unknown>)[key]))
+      .join(",") +
+    "}"
+  );
 }
 
 /**
@@ -28,7 +49,7 @@ export async function appendLedgerEvent(params: AppendLedgerParams) {
       .select({ signatureOrHash: ledgerEvents.signatureOrHash })
       .from(ledgerEvents)
       .where(eq(ledgerEvents.jobId, params.jobId))
-      .orderBy(desc(ledgerEvents.createdAt))
+      .orderBy(desc(ledgerEvents.sequenceNumber))
       .limit(1);
 
     if (lastEvent.length > 0 && lastEvent[0].signatureOrHash) {
@@ -40,7 +61,7 @@ export async function appendLedgerEvent(params: AppendLedgerParams) {
   }
 
   // Cryptographic integrity hash over current event + prior hash
-  const payloadString = JSON.stringify(params.payload);
+  const payloadString = canonicalJsonStringify(params.payload);
   const hashContent = `${previousHash}|${params.jobId}|${params.eventType}|${params.newState}|${params.actor}|${isMock}|${payloadString}`;
   const signatureOrHash = crypto.createHash("sha256").update(hashContent).digest("hex");
 
@@ -69,7 +90,7 @@ export async function getJobLedger(jobId: string) {
     .select()
     .from(ledgerEvents)
     .where(eq(ledgerEvents.jobId, jobId))
-    .orderBy(ledgerEvents.createdAt);
+    .orderBy(asc(ledgerEvents.sequenceNumber));
 }
 
 export interface LedgerVerificationResult {
@@ -92,13 +113,13 @@ export async function verifyLedgerChain(jobId?: string): Promise<LedgerVerificat
       .select()
       .from(ledgerEvents)
       .where(eq(ledgerEvents.jobId, jobId))
-      .orderBy(ledgerEvents.createdAt);
+      .orderBy(asc(ledgerEvents.sequenceNumber));
 
     let currentHash = "0000000000000000000000000000000000000000000000000000000000000000";
 
     for (let i = 0; i < events.length; i++) {
       const evt = events[i];
-      const payloadString = JSON.stringify(evt.payload);
+      const payloadString = canonicalJsonStringify(evt.payload);
       const hashContent = `${currentHash}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|${evt.isMock}|${payloadString}`;
       const expectedHash = crypto.createHash("sha256").update(hashContent).digest("hex");
 

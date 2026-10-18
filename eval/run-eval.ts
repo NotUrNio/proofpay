@@ -45,12 +45,19 @@ export interface EvalCaseResult {
   observedOutcome: "AUTO_PAY" | "NEEDS_HUMAN" | "REJECT";
   match: boolean;
   hardChecksPassed: boolean;
+  modelCalled: boolean;
+  servingModel?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
   modelConfidence: number;
   agreementRate: number;
   injectionDetected: boolean;
+  modelInjectionSuspected?: boolean;
+  metadataInjectionDetected: boolean;
   firedRules: string[];
   latencyMs: number;
-  modelVerdictFooled?: boolean; // Model itself voted pass on adversarial case
+  modelVerdictFooled?: boolean; // Model itself voted pass on adversarial case that model actually saw
 }
 
 async function main() {
@@ -67,7 +74,9 @@ async function main() {
   }
 
   const cases: TestCaseDefinition[] = JSON.parse(fs.readFileSync(CASES_FILE, "utf-8"));
-  console.log(`Loaded ${cases.length} benchmark test cases (8 Dev / 12 Held-Out).\n`);
+  const devCount = cases.filter((c) => c.split === "dev").length;
+  const heldOutCount = cases.filter((c) => c.split === "held_out").length;
+  console.log(`Loaded ${cases.length} benchmark test cases (${devCount} Dev / ${heldOutCount} Held-Out).\n`);
 
   const mockMandate = signMandate({
     jobId: "eval-job-benchmark",
@@ -112,6 +121,12 @@ async function main() {
     let agreement = 1.0;
     let injection = false;
     let modelFooled = false;
+    let modelCalled = false;
+    let servingModel: string | undefined;
+    let promptTokens = 0;
+    let completionTokens = 0;
+    let totalTokens = 0;
+    let modelInjectionSuspected: boolean | undefined;
 
     if (!hardChecks.allPassed) {
       // Hard check failed => SKIP model call (Outcome is REJECT regardless)
@@ -119,6 +134,7 @@ async function main() {
       firedRules = hardChecks.checks.filter((c) => !c.pass).map((c) => c.id);
       injection = hardChecks.metadataInstructionDetected;
     } else {
+      modelCalled = true;
       // 2. Model Verifier on Sanitized Bytes
       const ensemble = await runLlmVerifierEnsemble(
         hardChecks.sanitizedBuffer || originalBytes,
@@ -134,6 +150,11 @@ async function main() {
       modelConf = ensemble.finalConfidence;
       agreement = ensemble.agreementRate;
       injection = ensemble.injectionSuspected;
+      servingModel = ensemble.servingModel;
+      promptTokens = ensemble.totalPromptTokens;
+      completionTokens = ensemble.totalCompletionTokens;
+      totalTokens = promptTokens + completionTokens;
+      modelInjectionSuspected = ensemble.injectionSuspected;
 
       // Check if model itself was fooled on adversarial case
       if (testCase.category === "ADVERSARIAL") {
@@ -199,12 +220,19 @@ async function main() {
       observedOutcome: finalDecision,
       match,
       hardChecksPassed: hardChecks.allPassed,
+      modelCalled,
+      servingModel,
+      promptTokens,
+      completionTokens,
+      totalTokens,
       modelConfidence: modelConf,
       agreementRate: agreement,
       injectionDetected: injection,
+      modelInjectionSuspected,
+      metadataInjectionDetected: hardChecks.metadataInstructionDetected,
       firedRules,
       latencyMs: duration,
-      modelVerdictFooled: testCase.category === "ADVERSARIAL" ? modelFooled : undefined,
+      modelVerdictFooled: testCase.category === "ADVERSARIAL" && modelCalled ? modelFooled : undefined,
     });
   }
 
@@ -234,23 +262,30 @@ async function main() {
   const humanReviews = results.filter((r) => r.observedOutcome === "NEEDS_HUMAN");
   const humanReviewRate = humanReviews.length / results.length;
 
-  // Adversarial Metrics
+  // Adversarial Metrics (Honest Accounting: Model Fooled Rate computed ONLY over cases model actually saw)
   const adversarialCases = results.filter((r) => r.category === "ADVERSARIAL");
-  const adversarialFooledCount = adversarialCases.filter((r) => r.modelVerdictFooled).length;
+  const adversarialSeenByModel = adversarialCases.filter((r) => r.modelCalled);
+  const adversarialFooledCount = adversarialSeenByModel.filter((r) => r.modelVerdictFooled).length;
   const adversarialOutcomeChangedCount = adversarialCases.filter((r) => r.observedOutcome === "AUTO_PAY").length;
+  const modelFooledRate = adversarialSeenByModel.length > 0 ? adversarialFooledCount / adversarialSeenByModel.length : 0;
 
-  // Latency & Cost
+  // Latency & Token Accounting (computed from live usage metadata)
   latencies.sort((a, b) => a - b);
   const medianLatency = latencies[Math.floor(latencies.length / 2)] || 0;
-  // Gemini 3.8 flash input cost approx ~$0.00005 per verification (3 runs * 1 image + text)
-  const costPerVerificationUsd = "$0.00015";
+
+  const totalPromptTokens = results.reduce((sum, r) => sum + (r.promptTokens || 0), 0);
+  const totalCompletionTokens = results.reduce((sum, r) => sum + (r.completionTokens || 0), 0);
+  const totalTokensAll = totalPromptTokens + totalCompletionTokens;
+  // Gemini 3.8 Flash pricing: $0.15/1M input ($0.00000015/tok), $0.60/1M output ($0.00000060/tok)
+  const totalCostUsd = (totalPromptTokens * 0.00000015) + (totalCompletionTokens * 0.00000060);
+  const costPerVerificationUsd = `$${(totalCostUsd / results.length).toFixed(5)}`;
 
   const wilsonTotal = wilsonScoreInterval(totalMatches, results.length);
   const wilsonDev = wilsonScoreInterval(devMatches, devResults.length);
   const wilsonHeldOut = wilsonScoreInterval(heldOutMatches, heldOutResults.length);
 
   // Category Breakdown
-  const categories = ["COMPLIANT", "SUBTLE_HARD_FAIL", "RUBRIC_FAIL", "AMBIGUOUS", "ADVERSARIAL"];
+  const categories = ["COMPLIANT", "SUBTLE_HARD_FAIL", "RUBRIC_FAIL", "AMBIGUOUS", "ADVERSARIAL", "NEAR_MISS_PALETTE"];
   const categoryStats: Record<string, { total: number; matched: number; accuracy: number }> = {};
   for (const cat of categories) {
     const inCat = results.filter((r) => r.category === cat);
@@ -273,17 +308,35 @@ async function main() {
     matrix[r.expectedOutcome][r.observedOutcome]++;
   }
 
+  // Serving Model Breakdown
+  const servingModelCounts: Record<string, number> = {};
+  for (const r of results) {
+    if (r.modelCalled && r.servingModel) {
+      servingModelCounts[r.servingModel] = (servingModelCounts[r.servingModel] || 0) + 1;
+    }
+  }
+
   const outputSummary = {
     timestamp: new Date().toISOString(),
     verifyMode: mode,
     modelId: process.env.MODEL_ID || "gemini-3.8-flash",
     runsK: 3,
     sampleSize: { total: results.length, dev: devResults.length, heldOut: heldOutResults.length },
+    servingModels: servingModelCounts,
+    tokenUsage: {
+      totalPromptTokens,
+      totalCompletionTokens,
+      totalTokens: totalTokensAll,
+      totalCostUsd: Number(totalCostUsd.toFixed(6)),
+      costPerVerificationUsd,
+    },
     accuracy: {
       overall: Number(totalAcc.toFixed(4)),
       dev: Number(devAcc.toFixed(4)),
       heldOut: Number(heldOutAcc.toFixed(4)),
       wilson95Interval: wilsonTotal,
+      wilson95DevInterval: wilsonDev,
+      wilson95HeldOutInterval: wilsonHeldOut,
     },
     safetyMetrics: {
       falseApprovalRate: Number(falseApprovalRate.toFixed(4)),
@@ -295,9 +348,20 @@ async function main() {
     },
     adversarialDrill: {
       totalCases: adversarialCases.length,
-      modelFooledRate: Number((adversarialFooledCount / adversarialCases.length).toFixed(4)),
+      casesSeenByModel: adversarialSeenByModel.length,
+      preModelRejections: adversarialCases.length - adversarialSeenByModel.length,
+      modelFooledRate: Number(modelFooledRate.toFixed(4)),
       outcomeChangedRate: Number((adversarialOutcomeChangedCount / adversarialCases.length).toFixed(4)),
       guardHeldRate: 1.0,
+      perCaseBreakdown: adversarialCases.map((c) => ({
+        id: c.id,
+        split: c.split,
+        preModelRejected: !c.modelCalled,
+        modelCalled: c.modelCalled,
+        modelInjectionSuspected: c.modelInjectionSuspected ?? false,
+        modelVerdictFooled: c.modelVerdictFooled ?? false,
+        guardDecision: c.observedOutcome,
+      })),
     },
     performance: {
       medianLatencyMs: medianLatency,
@@ -316,19 +380,33 @@ async function main() {
   console.log("\n================================================================================");
   console.log("                       BENCHMARK EVALUATION RESULTS TABLE                       ");
   console.log("================================================================================");
-  console.log(`Overall Accuracy:        ${(totalAcc * 100).toFixed(1)}% [95% CI: ${(wilsonTotal.low * 100).toFixed(1)}% - ${(wilsonTotal.high * 100).toFixed(1)}%]`);
-  console.log(`Dev Split Accuracy (8):  ${(devAcc * 100).toFixed(1)}% [95% CI: ${(wilsonDev.low * 100).toFixed(1)}% - ${(wilsonDev.high * 100).toFixed(1)}%]`);
-  console.log(`Held-Out Accuracy (12):  ${(heldOutAcc * 100).toFixed(1)}% [95% CI: ${(wilsonHeldOut.low * 100).toFixed(1)}% - ${(wilsonHeldOut.high * 100).toFixed(1)}%]`);
+  console.log(`Overall Accuracy (${results.length}):   ${(totalAcc * 100).toFixed(1)}% [95% CI: ${(wilsonTotal.low * 100).toFixed(1)}% - ${(wilsonTotal.high * 100).toFixed(1)}%]`);
+  console.log(`Dev Split Accuracy (${devResults.length}): ${(devAcc * 100).toFixed(1)}% [95% CI: ${(wilsonDev.low * 100).toFixed(1)}% - ${(wilsonDev.high * 100).toFixed(1)}%]`);
+  console.log(`Held-Out Accuracy (${heldOutResults.length}):  ${(heldOutAcc * 100).toFixed(1)}% [95% CI: ${(wilsonHeldOut.low * 100).toFixed(1)}% - ${(wilsonHeldOut.high * 100).toFixed(1)}%]`);
   console.log(`FALSE-APPROVAL Rate:     ${(falseApprovalRate * 100).toFixed(1)}% (${falseApprovals.length}/${nonCompliantCases.length}) [TARGET: 0%]`);
   console.log(`FALSE-REJECTION Rate:    ${(falseRejectionRate * 100).toFixed(1)}% (${falseRejections.length}/${compliantCases.length})`);
   console.log(`Human Review Route Rate: ${(humanReviewRate * 100).toFixed(1)}% (${humanReviews.length}/${results.length})`);
   console.log(`Median Latency:          ${medianLatency} ms`);
-  console.log(`Estimated Cost / Run:    ${costPerVerificationUsd}`);
+  console.log(`Tokens (In / Out / Tot): ${totalPromptTokens} / ${totalCompletionTokens} / ${totalTokensAll}`);
+  console.log(`Serving Models:          ${JSON.stringify(servingModelCounts)}`);
+  console.log(`Avg Cost / Verification: ${costPerVerificationUsd} (Total: $${totalCostUsd.toFixed(5)})`);
   console.log("--------------------------------------------------------------------------------");
-  console.log("Adversarial Injection Defense Drill (4 cases):");
-  console.log(`  - Model Fooled Rate:   ${((adversarialFooledCount / adversarialCases.length) * 100).toFixed(0)}%`);
+  console.log(`Adversarial Injection Defense Drill (${adversarialCases.length} cases):`);
+  console.log(`  - Cases Seen by Model: ${adversarialSeenByModel.length}/${adversarialCases.length} (${adversarialCases.length - adversarialSeenByModel.length} stopped pre-model by hard/metadata checks)`);
+  console.log(`  - Model Fooled Rate:   ${(modelFooledRate * 100).toFixed(0)}% (${adversarialFooledCount}/${adversarialSeenByModel.length})`);
   console.log(`  - Outcome Changed:     ${((adversarialOutcomeChangedCount / adversarialCases.length) * 100).toFixed(0)}% [TARGET: 0%]`);
   console.log(`  - Guard Held Rate:     100.0% (Zero-LLM Guard held firm on all injections)`);
+  console.log("--------------------------------------------------------------------------------");
+  console.log("Adversarial Case Detail Breakdown:");
+  console.log("ID      | Split    | Pre-Model Reject | Model Called | Suspected | Fooled | Guard Decision");
+  console.log("--------+----------+------------------+--------------+-----------+--------+---------------");
+  for (const ac of adversarialCases) {
+    const pre = (!ac.modelCalled ? "YES" : "NO").padEnd(16);
+    const called = (ac.modelCalled ? "YES" : "NO").padEnd(12);
+    const susp = ((ac.modelInjectionSuspected ?? false) ? "YES" : "NO").padEnd(9);
+    const fooled = ((ac.modelVerdictFooled ?? false) ? "YES" : "NO").padEnd(6);
+    console.log(`${ac.id.padEnd(7)} | ${ac.split.padEnd(8)} | ${pre} | ${called} | ${susp} | ${fooled} | ${ac.observedOutcome}`);
+  }
   console.log("================================================================================\n");
 
   if (falseApprovals.length > 0) {
