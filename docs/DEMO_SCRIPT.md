@@ -15,7 +15,7 @@
 | **1:05 – 1:35** | `/jobs/[id]/submit` $\to$ `/inbox` | `priya@proofpay.io` | Upload `case_17` (Adversarial Prompt Injection) | Hard checks + Model flag injection; Policy Guard halts payout ($0.00 moved). |
 | **1:35 – 1:55** | `/inbox` $\to$ Reviewer modal | `reviewer@proofpay.io` | Open gray-zone submission $\to$ Click "Reject & Refund Escrow" | Gray-zone ($\Delta E \in [11.5, 16.0]$) human routing; PayPal Payments v2 refund. |
 | **1:55 – 2:25** | `/chaos` $\to$ `/policy` | `reviewer@proofpay.io` | Run Drill 3 (Idempotency) & Drill 1 (Duplicate Order) | PayPal negative testing protocol; real idempotency proof; policy replay. |
-| **2:25 – 2:40** | Terminal (`pnpm ledger:verify`) $\to$ `/studio` | Any | Run ledger verification command $\to$ View AG Studio | Postgres trigger append-only audit chain; AG Studio visual introspection. |
+| **2:25 – 2:40** | Terminal (`pnpm ledger:verify`) $\to$ `/studio` | Any | Run ledger verification command $\to$ View Analytics Workspace | Postgres trigger append-only audit chain; Recharts analytics dashboard. |
 | **2:40 – 2:45** | Summary slide / GitHub repo | Any | Display repo link & hackathon stack | Autonomous trust layer powered by PayPal & Google Gemini. |
 
 ---
@@ -91,15 +91,15 @@
 
 ---
 
-### [2:25 – 2:40] Cryptographic Hash Chain & AG Studio Introspection
+### [2:25 – 2:40] Cryptographic Hash Chain & Analytics Workspace
 - **Visual**:
   1. Show terminal executing: `pnpm ledger:verify`.
   2. Show output: **"Verified 24 ledger events across SHA-256 chain. Tamper check PASSED."**
-  3. Switch to browser tab at `/studio` (AG Studio embed).
-  4. Show the visual workflow canvas displaying the active job state, ledger event feed, and Policy Guard decision tree.
+  3. Switch to browser tab at `/studio` (Analytics Workspace).
+  4. Show the Recharts analytics dashboard displaying milestone outcomes, spend vs policy caps, and ground-truth model benchmarks.
 - **Voiceover**:
   > *"Every single state transition is locked into an immutable PostgreSQL ledger protected by database-level triggers that abort any UPDATE or DELETE. Running our ledger verification walks the SHA-256 hash chain, guaranteeing zero tampering.*
-  > *And with AG Studio integrated directly into our app, teams get visual, runtime workflow introspection over every escrow milestone."*
+  > *And with our Recharts analytics workspace, teams get real-time visual velocity, outcome breakdowns, and model agreement benchmarks across every escrow milestone."*
 
 ---
 

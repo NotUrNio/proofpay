@@ -69,13 +69,13 @@ flowchart TD
     subgraph AuditLedger ["6. Immutable Append-Only Audit Ledger"]
         PostgresTriggers["PostgreSQL Database Triggers<br/>(RAISE EXCEPTION on UPDATE/DELETE/TRUNCATE)"]
         HashChain["SHA-256 Cryptographic Hash Chain<br/>(prev_hash linkage verified via pnpm ledger:verify)"]
-        AgStudio["AG Studio Embedded Workspace (/studio)<br/>(Visual workflow introspection & grid canvas)"]
+        AnalyticsWorkspace["Analytics Workspace (/studio)<br/>(Real-time metrics & Recharts visualization)"]
         
         EscrowCapture -.-> PostgresTriggers
         Guard -.-> PostgresTriggers
         PayPalPayout -.-> PostgresTriggers
         RefundEscrow -.-> PostgresTriggers
-        PostgresTriggers --> HashChain --> AgStudio
+        PostgresTriggers --> HashChain --> AnalyticsWorkspace
     end
 ```
 
@@ -139,10 +139,19 @@ ProofPay enforces server-side role-based access control. Use the **Role Switcher
 | :--- | :--- | :--- | :--- |
 | **Client** | `alice@proofpay.io` | `demo-pass-123` | Create milestone jobs (`/jobs/new`), sign mandates, fund escrow with PayPal Orders v2 (`/jobs/[id]`) |
 | **Freelancer** | `priya@proofpay.io` | `demo-pass-123` | View assigned milestones, upload deliverables, trigger verification (`/jobs/[id]/submit`) |
-| **Reviewer** | `reviewer@proofpay.io` | `demo-pass-123` | Human Review Inbox (`/inbox`), Policy Editor (`/policy`), Chaos Negative Testing (`/chaos`), AG Studio (`/studio`) |
+| **Reviewer** | `reviewer@proofpay.io` | `demo-pass-123` | Human Review Inbox (`/inbox`), Policy Editor (`/policy`), Chaos Negative Testing (`/chaos`), Analytics Workspace (`/studio`) |
 
 > [!IMPORTANT]
 > **Credential Separation**: Demo app accounts (`alice@proofpay.io`, `priya@proofpay.io`, `reviewer@proofpay.io`) are decoupled from PayPal sandbox credentials. PayPal Sandbox business and personal credentials live exclusively in the backend `.env` file and are never exposed to clients or checked into source control.
+
+---
+
+### ⏱️ Cloud Hosting & Cold-Start Realities (Render Free Tier)
+When accessing the hosted deployment on Render's free tier (`https://proofpay-68qi.onrender.com`):
+- **Spin-down policy**: Render automatically spins down free-tier web services after 15 minutes of zero traffic.
+- **First-visit delay**: A cold first request triggers container provisioning and Node.js process boot, taking **50–60 seconds** before the server responds with HTTP 200. During this window, the browser waits at the TCP/TLS connection layer (showing the browser's native spinner).
+- **Client skeletons (`loading.tsx`)**: Next.js App Router streaming skeletons and transitions run **client-side only after** the remote server has booted and begun streaming HTML. They cannot mask or speed up the underlying infrastructure spin-up.
+- **Warm state**: Once warmed up, all subsequent page loads, role switches, and API requests execute with normal sub-second dynamic latencies.
 
 ---
 
@@ -284,7 +293,7 @@ ProofPay implements defense-in-depth across 5 distinct security boundaries:
 - **PayPal Payments v2 REST API**: Captured payment refunds (`POST /v2/payments/captures/{id}/refund`).
 - **PayPal Payouts v1 REST API**: Single payout settlements with idempotent `sender_batch_id`.
 - **AG Grid Community**: Interactive audit ledger grid with column sorting, filtering, and event payload viewer.
-- **AG Studio**: Embedded visual workflow designer canvas (`/studio`) for runtime state introspection.
+- **Recharts (MIT)**: Responsive, accessible analytics workspace (`/studio`) visualizing escrow spend velocity, decision outcomes, and model agreement benchmarks.
 - **Render Cloud**: Managed web service and PostgreSQL database deployment (`render.yaml`).
 
 ---

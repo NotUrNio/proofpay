@@ -91,7 +91,7 @@ export function CommandPalette() {
     },
     {
       id: "lab_studio",
-      title: "AG Studio Analytics Workspace",
+      title: "Analytics Workspace (Recharts)",
       category: "Lab",
       icon: BarChart3,
       action: () => router.push("/studio"),

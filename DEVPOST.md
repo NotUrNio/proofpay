@@ -54,7 +54,7 @@ ProofPay was built as a full-stack, enterprise-grade Next.js application designe
 - **Frontend & Workflow Introspection**:
   - **Next.js 15 App Router & Tailwind CSS**: Responsive role-based dashboard for Clients, Freelancers, and Reviewers.
   - **AG Grid Community**: Interactive audit ledger grid with column sorting, status filtering, and expandable event JSON viewer.
-  - **AG Studio**: Embedded visual workflow designer canvas (`/studio`) providing runtime introspection over milestone state machines and ledger events.
+  - **Analytics Workspace**: Real-time analytical dashboard (`/studio`) built with Recharts (MIT), visualizing milestone velocity, settlement outcomes, policy cap margins, and model agreement benchmarks.
 
 ---
 
@@ -121,7 +121,7 @@ Every metric reported below is backed by committed code, reproducible test suite
 - **Financial APIs**: PayPal Orders v2, PayPal Payments v2, PayPal Payouts REST API, PayPal Webhooks v1
 - **AI & Vision**: Google Gemini (`gemini-3.8-flash`, `gemini-3.5-flash-lite`), Vercel AI SDK (`@ai-sdk/google`), Sharp (Image processing & CIELAB color quantization)
 - **Database & Architecture**: PostgreSQL, Drizzle ORM, PGlite (Embedded testing engine)
-- **UI & Analytics**: Next.js 15, React 19, Tailwind CSS, Lucide Icons, AG Grid Community, AG Studio
+- **UI & Analytics**: Next.js 15, React 19, Tailwind CSS, Lucide Icons, AG Grid Community, Recharts (MIT)
 - **DevOps & Testing**: Docker Compose, Render Cloud, Vitest, TypeScript
 
 ---

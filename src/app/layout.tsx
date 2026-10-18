@@ -54,6 +54,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
+      <head />
       <body className="bg-[#0D1117] text-[#F0F6FC] antialiased min-h-screen flex flex-col selection:bg-blue-600/30">
         {/* Offline Banner */}
         <OfflineBanner />
@@ -146,7 +147,7 @@ export default async function RootLayout({
                       href="/studio"
                       className="block px-2.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-[#21262D] rounded-md transition-colors"
                     >
-                      AG Studio Analytics
+                      Analytics Workspace
                     </Link>
                     <Link
                       href="/eval"

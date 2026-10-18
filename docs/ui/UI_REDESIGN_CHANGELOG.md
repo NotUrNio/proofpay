@@ -152,9 +152,9 @@ Captured at both **390px** (mobile) and **1440px** (desktop):
 ### Reliability Chaos Lab (`/chaos`)
 - **Interactive Reliability Console**: Card per drill with individual "Run Drill" buttons, live payload inspect console, and a 1-click "Run All 5 Drills" test runner.
 
-### AG Studio (`/studio`)
-- **Milestone Analytics Strip**: Real KPI cards (Funded Client Escrow, Locked in Active Escrow, Settled to Freelancers, Pending Review Triage) above the embedded AG Studio canvas.
-- **Graceful Community Fallback**: Clear explanation that Community features are active.
+### Analytics Workspace (`/studio`)
+- **Milestone Analytics Strip**: Real KPI cards (Funded Client Escrow, Locked in Active Escrow, Settled to Freelancers, Pending Review Triage) with real vs [SIMULATED] splits.
+- **Recharts (MIT) Migration**: Completely replaced AG Studio with an open, accessible Recharts analytics dashboard at `/studio` with real-only data, spend-vs-cap gauges, latency percentiles, model consensus breakdowns, and table toggle views.
 
 ### System States & Polish
 - Custom `src/app/not-found.tsx` (404 Not Found with overview recovery link)
