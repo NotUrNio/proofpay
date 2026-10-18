@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE LOW CONTRAST",
+  "dominant_color_description": "Warm coral, orange, and amber gradient background with lighter geometric circles.",
+  "legibility": 0.2,
+  "legibility_reason": "The text color is extremely close in hue and luminance to the background gradient, resulting in very poor contrast and difficult readability.",
+  "layout_notes": "Simple centered composition featuring two abstract circles and low-contrast typography over a summer-themed color gradient.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The banner uses a warm coral and amber palette fitting summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": false,
+      "confidence": 0.98,
+      "evidence": "Text contrast is severely lacking, making the text hard to read."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.96,
+  "reasoning": "The banner successfully delivers a warm summer palette, but fails on typographic legibility due to extremely low contrast between the text and background."
+}

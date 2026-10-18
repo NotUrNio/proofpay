@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE UP TO 50% OFF • LIMITED TIME ONLY",
+  "dominant_color_description": "Vibrant gradient of warm orange, amber, and coral tones with subtle translucent circular overlay shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast bold white sans-serif lettering stands out clearly against the saturated orange background.",
+  "layout_notes": "Clean, centered minimalist composition with strong typographic hierarchy and subtle geometric accents.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Vibrant warm amber, coral, and orange gradient clearly conveys a warm summer theme."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.96,
+      "evidence": "Text hierarchy is distinct with a large headline and crisp subhead, both rendered cleanly in high-contrast white."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The graphic adheres well to both criteria, presenting a warm summer color palette and legible, professional typography without any hidden or suspicious instructions."
+}

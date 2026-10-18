@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE COLLECTION 2026",
+  "dominant_color_description": "Warm gradient transitioning from rich coral and red-orange to bright amber and warm golden tones with subtle translucent circular overlays",
+  "legibility": 0.95,
+  "legibility_reason": "Crisp white sans-serif typography set against a deep warm orange gradient provides excellent contrast and immediate readability.",
+  "layout_notes": "Balanced minimalist layout with centered text enclosed in a delicate rounded border, accented with subtle geometric circular motifs in opposite corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Features a radiant and warm summer color scheme blending coral, fiery orange, and amber tones."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.96,
+      "evidence": "The text 'SUMMER SALE' and 'COLLECTION 2026' displays clear visual hierarchy, sharp font rendering, and strong contrast."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The banner successfully presents a vibrant summer theme with professional, highly readable typography and zero adversarial instructions."
+}

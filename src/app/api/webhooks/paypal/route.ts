@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, payments, jobs } from "@/db";
+import { db, payments, jobs, idempotencyKeys } from "@/db";
 import { appendLedgerEvent } from "@/db/ledger";
 import { verifyWebhookSignature, isPayPalMock } from "@/lib/paypal";
 import { eq } from "drizzle-orm";
@@ -40,9 +40,30 @@ export async function POST(req: NextRequest) {
     // 3. Parse JSON event after signature check
     const event = JSON.parse(rawBody);
     const eventType = event.event_type;
+    const eventId = event.id;
     const resource = event.resource || {};
 
-    console.log(`[Webhook] Received PayPal Event: ${eventType} (ID: ${event.id})`);
+    console.log(`[Webhook] Received PayPal Event: ${eventType} (ID: ${eventId})`);
+
+    // Deduplicate by PayPal event ID
+    if (eventId) {
+      const [existing] = await db
+        .select()
+        .from(idempotencyKeys)
+        .where(eq(idempotencyKeys.key, `webhook_${eventId}`))
+        .limit(1);
+
+      if (existing) {
+        console.log(`[Webhook] Deduplicated already processed event: ${eventId}`);
+        return NextResponse.json({ received: true, deduplicated: true });
+      }
+
+      await db.insert(idempotencyKeys).values({
+        key: `webhook_${eventId}`,
+        scope: "paypal_webhook_event",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7-day deduplication window
+      });
+    }
 
     // 4. Handle Payout Item Events
     if (eventType.startsWith("PAYMENT.PAYOUTS-ITEM.")) {

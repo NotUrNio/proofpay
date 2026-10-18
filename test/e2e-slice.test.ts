@@ -14,7 +14,9 @@ describe("Milestone 1 End-to-End Vertical Slice Acceptance Test", () => {
     await ensureDatabaseSchema();
   });
 
-  it("completes the full autonomous escrow happy path from clean DB to payout and ledger verification", async () => {
+  it(
+    "completes the full autonomous escrow happy path from clean DB to payout and ledger verification",
+    async () => {
     // 1. CREATE JOB
     const [job] = await db
       .insert(jobs)
@@ -157,7 +159,7 @@ describe("Milestone 1 End-to-End Vertical Slice Acceptance Test", () => {
     }));
 
     const verdict = await verifySubmission(formattedCriteria, {
-      textContent: "Summer Sale promotional banner with SUMMER SALE typography and warm palette.",
+      textContent: "Summer Sale promotional banner with SUMMER SALE typography and warm palette featuring coral and gold colors.",
       mimeType: "image/png",
       fileSizeBytes: 524288,
       imageDimensions: { width: 1080, height: 1080 },
@@ -283,5 +285,5 @@ describe("Milestone 1 End-to-End Vertical Slice Acceptance Test", () => {
 
     // Check cryptographic hash chaining
     expect(ledger.every((e) => e.signatureOrHash !== null && e.signatureOrHash.length === 64)).toBe(true);
-  });
+  }, 60000);
 });

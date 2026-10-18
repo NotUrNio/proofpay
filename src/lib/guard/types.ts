@@ -17,6 +17,12 @@ export interface GuardVerdictInput {
   confidence: number; // 0.00 to 1.00
   reasoning: string;
   perCriteriaResults: CriterionCheckResult[];
+  allHardChecksPassed?: boolean;
+  injectionSuspected?: boolean;
+  injectionEvidence?: string;
+  metadataInstructionDetected?: boolean;
+  agreementRate?: number;
+  modelError?: boolean;
 }
 
 export interface GuardJobInput {

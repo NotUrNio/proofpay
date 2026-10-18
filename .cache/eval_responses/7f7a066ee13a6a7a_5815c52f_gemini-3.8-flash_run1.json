@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE",
+  "dominant_color_description": "Vibrant warm coral/orange background with white lettering.",
+  "legibility": 0.85,
+  "legibility_reason": "The white text has good contrast against the coral background, but the wide letter spacing makes it slightly fragmented.",
+  "layout_notes": "Minimalist centered composition featuring uppercase spaced text on a solid warm background.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The background utilizes a vibrant warm coral tone clearly fitting warm summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "Text is clean and legible with sharp white contrast against the warm background."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.95,
+  "reasoning": "The banner successfully delivers a warm summer aesthetic through its coral palette and clean minimal typography."
+}

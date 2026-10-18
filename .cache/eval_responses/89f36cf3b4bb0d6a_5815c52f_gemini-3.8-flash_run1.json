@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE\nPRIYA STUDIO EXCLUSIVE",
+  "dominant_color_description": "Warm coral and orange gradient with soft circular geometric overlays in lighter peach tones.",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast white sans-serif text against a warm orange/coral background ensures excellent readability.",
+  "layout_notes": "Centered clean typography with a minimalist aesthetic, featuring balanced circular abstract shapes in the corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 1,
+      "evidence": "The entire background and overlay tones feature warm coral, amber, and peach tones conveying a vibrant summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Clean sans-serif font family with distinct hierarchy and solid white contrast against the warm backdrop."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.98,
+  "reasoning": "The banner successfully meets both rubrics with a clean, highly legible layout and a strong warm summer color palette."
+}

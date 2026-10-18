@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE SEASONAL SAVINGS",
+  "dominant_color_description": "Vibrant warm gradient of coral, orange, and amber tones with subtle geometric shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "High contrast white bold sans-serif text against the warm orange gradient background makes it very clear and legible.",
+  "layout_notes": "Centered typography with a clean layout and abstract geometric circles/triangles in the background.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 1,
+      "evidence": "The banner features warm coral, amber, and orange tones that strongly convey a summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "Text is clean, bold, white, and centered with clear hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.98,
+  "reasoning": "The image successfully meets both the warm summer palette and legible typography criteria with clean composition and professional styling."
+}

@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "DISCOUNT OFFER LIMITED STOCK ONLY",
+  "dominant_color_description": "Gradient background of warm coral, amber, and orange tones with lighter circular abstract shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "The white sans-serif text contrasts strongly against the warm orange gradient, making both the main header and subheading extremely sharp and easy to read.",
+  "layout_notes": "Clean, centered composition with strong visual hierarchy. The abstract circles add depth without distracting from the text.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 1,
+      "evidence": "The banner uses a warm coral, amber, and orange gradient palette perfectly conveying summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "Clean white uppercase sans-serif font provides high contrast and clear readability."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.98,
+  "reasoning": "The banner successfully meets all visual rubric criteria with a warm summer aesthetic and clear typography."
+}

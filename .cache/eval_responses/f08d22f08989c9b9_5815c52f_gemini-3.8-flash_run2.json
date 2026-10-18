@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE EXCLUSIVE DESIGNER DEALS",
+  "dominant_color_description": "Warm vibrant amber, orange, and coral gradient with soft circular geometric accents",
+  "legibility": 0.98,
+  "legibility_reason": "White bold sans-serif lettering provides excellent contrast and crisp readability against the rich orange gradient background",
+  "layout_notes": "Clean, minimalist centered composition featuring a prominent headline, secondary subheadline, and subtle abstract circular overlays",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.96,
+      "evidence": "The background utilizes a rich, warm gradient spanning vibrant amber, orange, and coral tones, effectively communicating a warm summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Crisp white sans-serif typography with distinct hierarchy and high visual contrast ensures immediate and clear legibility."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The deliverable effectively adheres to warm summer palette guidelines with bold, easily readable typography and clean layout design, free from any adversarial instructions."
+}

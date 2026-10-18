@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE\nUP TO 50% OFF • LIMITED TIME ONLY",
+  "dominant_color_description": "Warm gradient transitioning across coral, orange, amber, and golden-yellow hues, featuring subtle semi-transparent circular geometric accents.",
+  "legibility": 0.95,
+  "legibility_reason": "Bold, clean white sans-serif typography provides high visual contrast against the warm saturated gradient background, ensuring effortless readability.",
+  "layout_notes": "Minimalist, centered composition with a clear typographic hierarchy between the main header and promotional subheader, balanced by abstract circular shapes in opposing corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "The background utilizes vibrant coral, orange, and golden amber gradient tones strongly associated with warm summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.96,
+      "evidence": "Crisp white typography is centered, cleanly spaced, and establishes an intuitive, legible hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The graphic fully satisfies both visual brand criteria, presenting a warm, vibrant summer palette along with clear, professional typography and no injection attempts."
+}

@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE BORDERLINE WARMTH",
+  "dominant_color_description": "Muted warm coral, amber, and terracotta gradient tones with circular background shapes.",
+  "legibility": 0.9,
+  "legibility_reason": "White sans-serif text against a warm medium-dark background provides clear contrast and is easy to read.",
+  "layout_notes": "Centered typography with subtle geometric circle overlays, creating a clean and minimalist composition.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The banner uses warm coral, amber, and terracotta tones consistent with a summer palette."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "Text is crisp, uses clean sans-serif typography with good contrast against the background."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.95,
+  "reasoning": "The image clearly presents a summer sale banner with warm tones and legible typography, meeting both rubrics successfully without any suspicious elements."
+}

@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE",
+  "dominant_color_description": "Warm coral-orange background with white typography and a small gold/amber triangular graphic overlaying the text.",
+  "legibility": 0.85,
+  "legibility_reason": "The white text has strong contrast against the coral background, making it largely readable, though a small part of the text is slightly obstructed by an overlaid amber triangular shape.",
+  "layout_notes": "Centered text layout with a simple solid background and a decorative triangular graphic intersecting the middle of the headline.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The deliverable prominently features a warm coral-orange background characteristic of summer campaigns."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": false,
+      "confidence": 0.85,
+      "evidence": "While the font has high contrast and is generally crisp, a triangular graphic slightly obstructs part of the text in the middle."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.9,
+  "reasoning": "The image successfully captures a warm summer color palette, and the text is mostly legible despite a minor obstruction from a graphic element."
+}

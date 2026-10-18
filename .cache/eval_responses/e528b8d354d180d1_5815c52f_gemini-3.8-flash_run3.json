@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE COLD BLUE OFF-BRAND PALETTE",
+  "dominant_color_description": "Cold blue gradients with lighter blue circles, lacking any warm summer tones",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast white text on dark/medium blue gradient background is clean and easy to read",
+  "layout_notes": "Centered typography with abstract circular geometric background elements",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": false,
+      "confidence": 1,
+      "evidence": "The banner uses cold blue colors instead of warm coral, amber, or yellow tones"
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 1,
+      "evidence": "The text is sharp, high-contrast, and clearly legible"
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 1,
+  "reasoning": "The banner successfully meets typography requirements with clean white text, but fails the warm summer palette requirement by using a cold blue color scheme."
+}

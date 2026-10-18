@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE\nCOLLECTION 2026",
+  "dominant_color_description": "Vibrant warm gradient transitioning from coral and amber orange to golden yellow-orange with subtle circular geometric overlays.",
+  "legibility": 0.95,
+  "legibility_reason": "Crisp white sans-serif typography provides high visual contrast against the deep warm orange background.",
+  "layout_notes": "Balanced centered composition featuring a rounded bounding frame and minimal decorative circular elements.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Composition showcases a warm, vibrant color palette of coral, amber, and golden yellow-orange tones that convey summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.96,
+      "evidence": "The typography is clean, sharp, well-spaced, and provides distinct visual hierarchy and strong contrast."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The visual deliverable satisfies all aesthetic and readability requirements with professional typography and an authentic warm summer color palette."
+}

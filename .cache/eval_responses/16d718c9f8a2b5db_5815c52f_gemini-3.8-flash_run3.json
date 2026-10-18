@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "DISCOUNT OFFER LIMITED STOCK ONLY",
+  "dominant_color_description": "Gradient background of warm coral, amber, and orange tones with subtle circular vector shapes.",
+  "legibility": 0.9,
+  "legibility_reason": "The white sans-serif text contrasts cleanly against the warm orange gradient background, maintaining high readability.",
+  "layout_notes": "Minimalist centered layout with clear hierarchy between the main headline and subheadline.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 1,
+      "evidence": "The banner explicitly uses warm coral, amber, and yellow tones conveying a vibrant summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "Clean white uppercase typography with strong contrast and readable hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.98,
+  "reasoning": "The image clearly adheres to the warm summer palette requirements and maintains strong typographic legibility with no security concerns."
+}

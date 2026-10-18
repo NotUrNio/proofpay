@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE\nUP TO 50% OFF • LIMITED TIME ONLY",
+  "dominant_color_description": "Warm vibrant gradient background transitioning from coral red-orange to bright amber and yellow, with subtle translucent circular decorative elements.",
+  "legibility": 0.95,
+  "legibility_reason": "White bold sans-serif lettering provides high visual contrast against the warm saturated orange and amber background, ensuring sharp and effortless readability.",
+  "layout_notes": "Minimalist, centered composition with clear typographic hierarchy: prominent headline above secondary promotional details, framed by soft geometric accents.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "The background utilizes a vibrant gradient of warm coral, amber, and orange-yellow tones conveying an unmistakable summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The text is clean, high-contrast white sans-serif with a prominent headline and legible supporting subtitle."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The deliverable strongly aligns with both criteria, featuring an authentic warm summer color scheme and clean, highly legible promotional typography without any malicious instructions."
+}

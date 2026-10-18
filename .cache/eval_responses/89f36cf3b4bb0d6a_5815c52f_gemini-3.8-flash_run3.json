@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE PRIYA STUDIO EXCLUSIVE",
+  "dominant_color_description": "Warm coral, peach, and soft amber gradient with translucent circular shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast white lettering against a warm coral background provides clear and legible typography.",
+  "layout_notes": "Centered minimalist layout with clear text hierarchy, featuring subtle overlay circles on the top-left and bottom-right corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 1,
+      "evidence": "The banner uses warm coral, amber, and peach gradient tones that strongly evoke summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "Clean sans-serif typography with excellent white-on-coral contrast and clear hierarchy."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.98,
+  "reasoning": "The banner successfully meets both the warm summer color palette rubric and the legible professional typography rubric with clean execution."
+}

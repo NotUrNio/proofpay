@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE",
+  "dominant_color_description": "Vibrant warm coral background with white text and an amber/orange triangle element intersecting the text",
+  "legibility": 0.9,
+  "legibility_reason": "The white bold sans-serif text contrasts strongly against the vibrant warm coral background, making it highly readable, though a small overlaid triangle slightly interferes with the letters E and R.",
+  "layout_notes": "Centered minimalist composition featuring bold white typography on a solid warm coral background with a geometric triangle accent.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The background consists entirely of a vibrant warm coral tone, strongly fitting the warm summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "Text is clean, bold, and uses high-contrast white against the coral background, ensuring good professional legibility."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.92,
+  "reasoning": "The image successfully fulfills both the warm summer color palette rubric and the legible typography rubric, featuring a bold coral background and clear white text with minor stylistic overlap."
+}

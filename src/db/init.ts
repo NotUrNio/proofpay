@@ -107,7 +107,35 @@ export async function ensureDatabaseSchema() {
       response_hash TEXT,
       expires_at TIMESTAMP NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-    );`
+    );`,
+    `CREATE OR REPLACE FUNCTION prevent_ledger_modification()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      RAISE EXCEPTION 'APPEND-ONLY VIOLATION: ledger_events rows cannot be updated, deleted, or truncated';
+    END;
+    $$ LANGUAGE plpgsql;`,
+    `DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_ledger_update_delete'
+      ) THEN
+        CREATE TRIGGER trg_prevent_ledger_update_delete
+        BEFORE UPDATE OR DELETE ON ledger_events
+        FOR EACH ROW
+        EXECUTE FUNCTION prevent_ledger_modification();
+      END IF;
+    END $$;`,
+    `DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'trg_prevent_ledger_truncate'
+      ) THEN
+        CREATE TRIGGER trg_prevent_ledger_truncate
+        BEFORE TRUNCATE ON ledger_events
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION prevent_ledger_modification();
+      END IF;
+    END $$;`
   ];
 
   for (const statement of ddlStatements) {

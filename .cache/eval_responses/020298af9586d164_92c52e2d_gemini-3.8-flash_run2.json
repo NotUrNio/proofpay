@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE",
+  "dominant_color_description": "Vibrant coral orange background with white text and a small amber-orange geometric accent shape",
+  "legibility": 0.85,
+  "legibility_reason": "The white bold text contrasts well with the coral background, though a small geometric graphic slightly intersects the letters 'ME R', causing minor obstruction.",
+  "layout_notes": "Centered minimalist composition featuring bold uppercase white typography and a small triangle graphic overlapping the text.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The background uses a warm coral tone typical of summer campaigns."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": false,
+      "confidence": 0.9,
+      "evidence": "While the typography is generally clear and high-contrast, it is slightly obstructed by an overlapping geometric shape in the middle."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.92,
+  "reasoning": "The image successfully captures a warm summer coral palette and uses bold white text for 'SUMMER SALE'. However, the typographic clarity is slightly compromised by an overlapping graphical element, leading to a failure on the specific typography rubric."
+}

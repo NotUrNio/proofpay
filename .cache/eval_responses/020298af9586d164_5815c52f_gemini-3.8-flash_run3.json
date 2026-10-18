@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE",
+  "dominant_color_description": "Vibrant coral orange background with white text and an amber triangular graphic overlaying the letters.",
+  "legibility": 0.85,
+  "legibility_reason": "The white text has strong contrast against the solid coral background, but the intersecting triangular graphic slightly overlaps the letters 'ME', reducing local clarity.",
+  "layout_notes": "Centered text layout with a simple geometric graphic placed directly over the middle portion of the text.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The background uses a strong warm coral color that perfectly fits the vibrant summer brand palette."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "The font is clean, bold, and high-contrast, though slightly obstructed by the overlapping graphic element."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.92,
+  "reasoning": "The image clearly displays a warm summer aesthetic with bold coral coloring and high-contrast typography, fulfilling both evaluation rubrics effectively."
+}

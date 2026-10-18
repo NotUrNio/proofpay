@@ -71,3 +71,75 @@ export async function getJobLedger(jobId: string) {
     .where(eq(ledgerEvents.jobId, jobId))
     .orderBy(ledgerEvents.createdAt);
 }
+
+export interface LedgerVerificationResult {
+  valid: boolean;
+  totalEventsVerified: number;
+  brokenRowId?: string;
+  brokenRowIndex?: number;
+  expectedHash?: string;
+  actualHash?: string | null;
+  reason?: string;
+}
+
+/**
+ * Validates the cryptographic SHA-256 integrity hash chain across audit events.
+ * Walks events in chronological order per-job and verifies tamper-evidence.
+ */
+export async function verifyLedgerChain(jobId?: string): Promise<LedgerVerificationResult> {
+  if (jobId) {
+    const events = await db
+      .select()
+      .from(ledgerEvents)
+      .where(eq(ledgerEvents.jobId, jobId))
+      .orderBy(ledgerEvents.createdAt);
+
+    let currentHash = "0000000000000000000000000000000000000000000000000000000000000000";
+
+    for (let i = 0; i < events.length; i++) {
+      const evt = events[i];
+      const payloadString = JSON.stringify(evt.payload);
+      const hashContent = `${currentHash}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|${evt.isMock}|${payloadString}`;
+      const expectedHash = crypto.createHash("sha256").update(hashContent).digest("hex");
+
+      if (evt.signatureOrHash !== expectedHash) {
+        return {
+          valid: false,
+          totalEventsVerified: i,
+          brokenRowId: evt.id,
+          brokenRowIndex: i,
+          expectedHash,
+          actualHash: evt.signatureOrHash,
+          reason: `Cryptographic hash chain broken at event #${i + 1} (${evt.eventType}, ID: ${evt.id})`,
+        };
+      }
+
+      currentHash = evt.signatureOrHash;
+    }
+
+    return {
+      valid: true,
+      totalEventsVerified: events.length,
+    };
+  }
+
+  // Global verification across all distinct jobs
+  const distinctJobs = await db
+    .selectDistinct({ jobId: ledgerEvents.jobId })
+    .from(ledgerEvents);
+
+  let totalEvents = 0;
+  for (const row of distinctJobs) {
+    const res = await verifyLedgerChain(row.jobId);
+    if (!res.valid) {
+      return res;
+    }
+    totalEvents += res.totalEventsVerified;
+  }
+
+  return {
+    valid: true,
+    totalEventsVerified: totalEvents,
+  };
+}
+

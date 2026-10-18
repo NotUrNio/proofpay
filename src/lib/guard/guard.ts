@@ -100,18 +100,67 @@ export function evaluatePolicyGuard(input: GuardInput): GuardResult {
   const failedHardChecks = (verdict.perCriteriaResults || []).filter(
     (c) => c.isHardCheck && !c.passed
   );
-  const allHardPassed = failedHardChecks.length === 0 && verdict.overallPassed !== false;
+  const explicitHardCheckPass = verdict.allHardChecksPassed !== undefined ? verdict.allHardChecksPassed : true;
+  const allHardPassed = explicitHardCheckPass && failedHardChecks.length === 0 && verdict.overallPassed !== false;
   ruleResults.push({
     ruleId: "RULE_HARD_CHECKS_PASSED",
     ruleName: "Deterministic Hard Acceptance Criteria",
     passed: allHardPassed,
     details: allHardPassed
       ? "All mandatory deterministic criteria satisfied"
-      : `Failed ${failedHardChecks.length} hard criteria: ${failedHardChecks.map((c) => c.name).join(", ")}`,
+      : `Failed deterministic hard criteria: ${failedHardChecks.map((c) => c.name).join(", ") || "Container / Dimension / Format failure"}`,
     severity: "FATAL",
   });
 
-  // 9. Idempotency Key Unused Check
+  // 9. Prompt Injection Sensor Check
+  const noInjection = verdict.injectionSuspected !== true;
+  ruleResults.push({
+    ruleId: "RULE_NO_INJECTION_SUSPECTED",
+    ruleName: "Visual & Content Prompt Injection Defense",
+    passed: noInjection,
+    details: noInjection
+      ? "No prompt injection or instruction override detected"
+      : `Adversarial prompt injection detected: "${verdict.injectionEvidence?.slice(0, 100) || "Flagged by visual sensor"}"`,
+    severity: "FATAL",
+  });
+
+  // 10. Metadata Instruction Check
+  const noMetadataInstruction = verdict.metadataInstructionDetected !== true;
+  ruleResults.push({
+    ruleId: "RULE_NO_METADATA_INSTRUCTIONS",
+    ruleName: "Sanitized Image Metadata Hygiene",
+    passed: noMetadataInstruction,
+    details: noMetadataInstruction
+      ? "Image metadata clean of adversarial commands"
+      : "Suspicious instruction text detected inside image metadata chunk",
+    severity: "FATAL",
+  });
+
+  // 11. Multi-run Agreement Consensus Threshold (K=3)
+  const agreementClean = verdict.agreementRate === undefined || verdict.agreementRate >= 0.67;
+  ruleResults.push({
+    ruleId: "RULE_MODEL_AGREEMENT_THRESHOLD",
+    ruleName: "Ensemble Consensus Agreement Threshold",
+    passed: agreementClean,
+    details: agreementClean
+      ? `Ensemble agreement verified (${((verdict.agreementRate ?? 1) * 100).toFixed(0)}%)`
+      : `Model runs disagreed: agreement (${((verdict.agreementRate ?? 0) * 100).toFixed(0)}%) is below 67% consensus`,
+    severity: "HUMAN_REVIEW",
+  });
+
+  // 12. Model Execution Health & Fail-Closed Behavior
+  const modelClean = verdict.modelError !== true;
+  ruleResults.push({
+    ruleId: "RULE_MODEL_EXECUTION_CLEAN",
+    ruleName: "Model Layer Execution Reliability",
+    passed: modelClean,
+    details: modelClean
+      ? "Model visual sensor executed cleanly"
+      : "Model sensor API/timeout failure. Fails closed to human review queue.",
+    severity: "HUMAN_REVIEW",
+  });
+
+  // 13. Idempotency Key Unused Check
   const idempotencySafe = !context.isIdempotencyKeyUsed;
   ruleResults.push({
     ruleId: "RULE_IDEMPOTENCY_UNUSED",
@@ -121,7 +170,7 @@ export function evaluatePolicyGuard(input: GuardInput): GuardResult {
     severity: "FATAL",
   });
 
-  // 10. Job State Valid Check
+  // 14. Job State Valid Check
   const validStates = ["SUBMITTED", "VERIFYING", "VERIFIED", "CREATED", "FUNDED"];
   const isStateValid = validStates.includes(job.status);
   ruleResults.push({

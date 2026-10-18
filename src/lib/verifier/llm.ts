@@ -1,6 +1,6 @@
 import { CriterionDefinition, CriterionEvaluation, SubmissionData, VerifierVerdictSchema } from "./types";
 import { generateObject } from "ai";
-import { google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 
 export function isGeminiConfigured(): boolean {
@@ -23,7 +23,7 @@ export async function evaluateRubricCriterion(
   criterion: CriterionDefinition,
   submission: SubmissionData
 ): Promise<CriterionEvaluation> {
-  const modelId = process.env.MODEL_ID || "gemini-2.5-flash";
+  const modelId = process.env.MODEL_ID || "gemini-3.8-flash";
 
   // If Gemini is not configured, use reliable deterministic evaluation stub
   if (!isGeminiConfigured()) {
@@ -84,13 +84,34 @@ MIME Type: ${submission.mimeType || "N/A"}
 File Size: ${submission.fileSizeBytes || (submission.fileBuffer ? submission.fileBuffer.length : 0)} bytes
 `;
 
+  const googleProvider = createGoogleGenerativeAI({
+    apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  });
+
+  let result;
   try {
-    const result = await generateObject({
-      model: google(modelId),
+    result = await generateObject({
+      model: googleProvider(modelId),
       schema: RubricEvaluationSchema,
       system: systemPrompt,
       prompt: userPrompt,
     });
+  } catch (err: any) {
+    const fallbackId = process.env.MODEL_FALLBACK_ID || "gemini-3.5-flash-lite";
+    if (fallbackId && fallbackId !== modelId) {
+      console.warn(`[Verifier] Primary model ${modelId} failed. Falling back to ${fallbackId}...`);
+      result = await generateObject({
+        model: googleProvider(fallbackId),
+        schema: RubricEvaluationSchema,
+        system: systemPrompt,
+        prompt: userPrompt,
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  try {
 
     return {
       criterionId: criterion.id,

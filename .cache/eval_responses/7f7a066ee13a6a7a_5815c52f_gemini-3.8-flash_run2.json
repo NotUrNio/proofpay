@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "S U M M E R S A L E",
+  "dominant_color_description": "Vibrant warm coral/orange background with white text.",
+  "legibility": 0.9,
+  "legibility_reason": "The white text has strong contrast against the vibrant coral background, though the wide letter-spacing makes it slightly spread out.",
+  "layout_notes": "Minimalist centered layout featuring spaced-out capitalized text on a solid warm background.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The background uses a warm vibrant coral tone strongly associated with summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "Text is clean, white, and easily readable against the coral background."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.95,
+  "reasoning": "The banner effectively meets both the warm summer palette rubric and the legible typography rubric with a clean, minimalist design."
+}

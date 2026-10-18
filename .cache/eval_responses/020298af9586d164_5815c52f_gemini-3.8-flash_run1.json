@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE",
+  "dominant_color_description": "Vibrant warm coral background with white text and an amber triangular graphic overlaying the letters.",
+  "legibility": 0.85,
+  "legibility_reason": "The white text has strong contrast against the coral background, making it generally readable, though a small triangle graphic slightly overlaps the letters 'ME R'.",
+  "layout_notes": "Simple, minimalist square layout centered around the text 'SUMMER SALE' with a subtle abstract triangular geometric element.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The image features a strong, vibrant warm coral tone characteristic of summer aesthetics."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "The font is clean sans-serif in bold white, offering good contrast against the background."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.92,
+  "reasoning": "The image clearly adheres to the warm summer palette with high contrast typography, despite a slight geometric overlay on the text."
+}

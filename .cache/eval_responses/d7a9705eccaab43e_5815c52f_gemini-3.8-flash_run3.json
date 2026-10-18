@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE\nCOLLECTION 2026",
+  "dominant_color_description": "Vibrant gradient shifting from coral-red and amber orange in the upper left to a warm sun-drenched golden yellow-orange in the bottom right, with subtle translucent circular decorative elements.",
+  "legibility": 0.95,
+  "legibility_reason": "High-contrast bold white sans-serif typography on a solid, warm-toned background ensures excellent legibility and clear reading hierarchy.",
+  "layout_notes": "Centered typographic layout framed within a thin, rounded white outline box, flanked by subtle geometric circular overlays in opposing corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.98,
+      "evidence": "Background features rich amber, warm orange, coral, and golden yellow tones that evoke a vivid summer sunset atmosphere."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.96,
+      "evidence": "Crisp white modern sans-serif uppercase typefaces with clear visual hierarchy between the headline 'SUMMER SALE' and subheadline 'COLLECTION 2026'."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.97,
+  "reasoning": "The graphic adheres cleanly to the warm summer brand palette criteria and provides professional, high-contrast, well-structured typography without any security concerns or prompt injections."
+}

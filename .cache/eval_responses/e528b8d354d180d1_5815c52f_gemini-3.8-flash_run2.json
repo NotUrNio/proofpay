@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE COLD BLUE OFF-BRAND PALETTE",
+  "dominant_color_description": "Shades of blue ranging from dark navy/blue to bright cyan with subtle circular geometric shapes.",
+  "legibility": 0.95,
+  "legibility_reason": "White sans-serif text against a dark blue background provides strong contrast and clear readability.",
+  "layout_notes": "Centered typography with simple geometric circles in the top-left and bottom-right corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": false,
+      "confidence": 1,
+      "evidence": "The background uses cold blue and cyan tones, failing to convey the required warm summer coral, amber, or yellow palette."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "White text is clean, bold, and easily legible against the blue gradient background."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.98,
+  "reasoning": "The banner has clear typography with high contrast, but completely fails the warm summer palette requirement by using a cold blue color scheme."
+}

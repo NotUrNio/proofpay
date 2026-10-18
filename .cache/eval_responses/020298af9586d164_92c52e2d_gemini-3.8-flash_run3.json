@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMMER SALE",
+  "dominant_color_description": "Warm coral-orange background with a muted gold/amber triangular graphic element and crisp white typography.",
+  "legibility": 0.85,
+  "legibility_reason": "The white text has strong contrast against the coral background, but a small triangular shape overlaps the letters E and R, slightly obstructing readability.",
+  "layout_notes": "Centered text layout featuring the words SUMMER SALE in bold white sans-serif uppercase letters, partially overlaid by a downward-pointing translucent orange-gold triangle.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The background uses a strong warm coral tone characteristic of summer campaigns."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": false,
+      "confidence": 0.9,
+      "evidence": "While the contrast is high, the headline text is obstructed by an overlapping graphic element."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.92,
+  "reasoning": "The deliverable successfully meets the warm palette requirement with its coral tones, but fails the typography rubric due to an overlapping graphic element crossing through the middle of the headline text."
+}

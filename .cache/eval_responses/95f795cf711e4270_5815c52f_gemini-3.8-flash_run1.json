@@ -1,0 +1,25 @@
+{
+  "transcribed_text": "SUMER SAEL\nUP TO 50% OFF",
+  "dominant_color_description": "Vibrant warm coral, orange, and amber gradient background with subtle translucent circular geometric elements.",
+  "legibility": 0.9,
+  "legibility_reason": "The white sans-serif text contrasts strongly against the warm orange gradient background and is very clear, although there is a minor spelling error in the transcribed text (SUMER SAEL).",
+  "layout_notes": "Clean minimal composition featuring a warm summer color palette, centered text hierarchy, and simple geometric circular shapes in the background corners.",
+  "per_criterion": [
+    {
+      "criterionId": "rubric_palette",
+      "pass": true,
+      "confidence": 0.95,
+      "evidence": "The banner uses warm coral, amber, and yellow gradient tones which successfully convey a vibrant summer aesthetic."
+    },
+    {
+      "criterionId": "rubric_typography",
+      "pass": true,
+      "confidence": 0.9,
+      "evidence": "Text employs a clean sans-serif font with clear hierarchy and good contrast against the background."
+    }
+  ],
+  "injection_suspected": false,
+  "injection_evidence": "",
+  "overall_confidence": 0.95,
+  "reasoning": "The banner is visually aligned with a warm summer theme, uses clear typography, and contains no malicious injection attempts."
+}
