@@ -7,7 +7,10 @@ import crypto from "crypto";
  * Create a PayPal Order with intent=CAPTURE.
  * Follows PayPal Orders v2 REST standard with PayPal-Request-Id for idempotency.
  */
-export async function createOrder(params: CreateOrderParams): Promise<PayPalOrderResponse> {
+export async function createOrder(
+  params: CreateOrderParams,
+  options?: { mockApplicationCode?: string }
+): Promise<PayPalOrderResponse> {
   const {
     amount,
     currency = "USD",
@@ -74,14 +77,21 @@ export async function createOrder(params: CreateOrderParams): Promise<PayPalOrde
     },
   };
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "PayPal-Request-Id": requestId,
+    Prefer: "return=representation",
+  };
+  if (options?.mockApplicationCode) {
+    headers["PayPal-Mock-Response"] = JSON.stringify({
+      mock_application_codes: options.mockApplicationCode,
+    });
+  }
+
   const response = await fetch(`${baseUrl}/v2/checkout/orders`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "PayPal-Request-Id": requestId,
-      Prefer: "return=representation",
-    },
+    headers,
     body: JSON.stringify(body),
   });
 
@@ -97,7 +107,11 @@ export async function createOrder(params: CreateOrderParams): Promise<PayPalOrde
  * Capture an approved PayPal Order.
  * Releases funds into the platform's Sandbox Business account.
  */
-export async function captureOrder(orderId: string, requestId?: string): Promise<CaptureOrderResponse> {
+export async function captureOrder(
+  orderId: string,
+  requestId?: string,
+  options?: { mockApplicationCode?: string }
+): Promise<CaptureOrderResponse> {
   const reqId = requestId || `capture_${orderId}_${crypto.randomUUID().slice(0, 8)}`;
 
   if (isPayPalMock()) {
@@ -131,14 +145,21 @@ export async function captureOrder(orderId: string, requestId?: string): Promise
   const token = await getPayPalAccessToken();
   const baseUrl = getPayPalBaseUrl();
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "PayPal-Request-Id": reqId,
+    Prefer: "return=representation",
+  };
+  if (options?.mockApplicationCode) {
+    headers["PayPal-Mock-Response"] = JSON.stringify({
+      mock_application_codes: options.mockApplicationCode,
+    });
+  }
+
   const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "PayPal-Request-Id": reqId,
-      Prefer: "return=representation",
-    },
+    headers,
   });
 
   if (!response.ok) {

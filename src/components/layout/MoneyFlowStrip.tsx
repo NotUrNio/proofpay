@@ -107,6 +107,13 @@ export function MoneyFlowStrip() {
             </Link>
 
             <Link
+              href="/chaos"
+              className="text-rose-300 hover:text-rose-200 text-[11px] font-medium transition-colors flex items-center gap-1"
+            >
+              <span>Chaos Drills</span>
+            </Link>
+
+            <Link
               href="/studio"
               className="text-indigo-300 hover:text-indigo-200 text-[11px] font-medium transition-colors flex items-center gap-1"
             >
@@ -119,3 +126,4 @@ export function MoneyFlowStrip() {
     </div>
   );
 }
+

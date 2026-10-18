@@ -53,6 +53,9 @@ export default function RootLayout({
                 <Link href="/policy" className="hover:text-blue-600 transition-colors">
                   Policy Guard
                 </Link>
+                <Link href="/chaos" className="hover:text-rose-600 text-rose-700 font-semibold transition-colors">
+                  Chaos Drills
+                </Link>
                 <Link href="/studio" className="hover:text-blue-600 transition-colors text-indigo-600 font-semibold">
                   AG Studio
                 </Link>
