@@ -1,5 +1,5 @@
 import { getPayPalAccessToken, getPayPalBaseUrl, isPayPalMock } from "./auth";
-import { CreateOrderParams, PayPalOrderResponse, CaptureOrderResponse } from "./types";
+import { CreateOrderParams, PayPalOrderResponse, CaptureOrderResponse, RefundCaptureParams, RefundResponse } from "./types";
 import { PayPalError } from "./errors";
 import crypto from "crypto";
 
@@ -205,4 +205,66 @@ export async function getOrder(orderId: string): Promise<PayPalOrderResponse> {
   }
 
   return (await response.json()) as PayPalOrderResponse;
+}
+
+/**
+ * Refund a captured PayPal payment (POST /v2/payments/captures/{capture_id}/refund).
+ * Releases platform escrow funds back to the original client/buyer.
+ * Idempotent with PayPal-Request-Id.
+ */
+export async function refundCapturedPayment(params: RefundCaptureParams): Promise<RefundResponse> {
+  const { captureId, amount, currency = "USD", noteToPayer = "ProofPay Escrow Refund", requestId } = params;
+  const reqId = requestId || `refund_${captureId}_${crypto.randomUUID().slice(0, 8)}`;
+
+  if (isPayPalMock()) {
+    const mockRefundId = `MOCK_REFUND_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+    return {
+      id: mockRefundId,
+      status: "COMPLETED",
+      amount: amount
+        ? {
+            value: amount,
+            currency_code: currency,
+          }
+        : undefined,
+      note_to_payer: noteToPayer,
+      create_time: new Date().toISOString(),
+    };
+  }
+
+  const token = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
+
+  const body: Record<string, unknown> = {};
+  if (amount) {
+    body.amount = {
+      value: amount,
+      currency_code: currency,
+    };
+  }
+  if (noteToPayer) {
+    body.note_to_payer = noteToPayer;
+  }
+
+  const response = await fetch(`${baseUrl}/v2/payments/captures/${captureId}/refund`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "PayPal-Request-Id": reqId,
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new PayPalError(
+      `Failed to refund captured payment ${captureId}: ${response.status} ${response.statusText}`,
+      response.status,
+      errText
+    );
+  }
+
+  return (await response.json()) as RefundResponse;
 }

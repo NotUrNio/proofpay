@@ -4,9 +4,9 @@ import { evaluatePolicyGuard } from "../src/lib/guard";
 import { appendLedgerEvent, verifyLedgerChain } from "../src/db/ledger";
 import { ensureDatabaseSchema } from "../src/db/init";
 import crypto from "crypto";
-
 describe("Milestone 4: Failure Drills, Chaos Negative Testing & Policy Replay", () => {
   beforeEach(async () => {
+    process.env.PAYPAL_MOCK = "true";
     await ensureDatabaseSchema();
   });
 
@@ -193,6 +193,24 @@ describe("Milestone 4: Failure Drills, Chaos Negative Testing & Policy Replay", 
       const audit = await verifyLedgerChain(jobId);
       expect(audit.valid).toBe(true);
       expect(audit.totalEventsVerified).toBe(2);
+    });
+
+    it("should execute RETRY_500_IDEMPOTENCY drill and prove idempotent recovery with same requestId", async () => {
+      const drillResult = await runChaosDrill("RETRY_500_IDEMPOTENCY");
+      expect(drillResult.drillType).toBe("RETRY_500_IDEMPOTENCY");
+      expect(drillResult.proofPayHandled).toBe(true);
+      expect(drillResult.moneyMoved).toBe(false);
+      expect(drillResult.triggerMechanism).toBe("Idempotency Replay Safeguard");
+      expect(drillResult.summary).toContain("double payment mathematically impossible");
+    });
+
+    it("should execute WEBHOOK_REPLAY drill and prove deduplication with zero duplicate effects", async () => {
+      const drillResult = await runChaosDrill("WEBHOOK_REPLAY");
+      expect(drillResult.drillType).toBe("WEBHOOK_REPLAY");
+      expect(drillResult.proofPayHandled).toBe(true);
+      expect(drillResult.moneyMoved).toBe(false);
+      expect(drillResult.httpStatus).toBe(200);
+      expect(drillResult.summary).toContain("webhook replay defense");
     });
   });
 });

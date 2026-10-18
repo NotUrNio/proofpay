@@ -3,6 +3,7 @@ import "./globals.css";
 import Link from "next/link";
 import { ShieldAlert, ShieldCheck, Zap } from "lucide-react";
 import { MoneyFlowStrip } from "@/components/layout/MoneyFlowStrip";
+import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
 
 export const metadata: Metadata = {
   title: "ProofPay ⚡ AI-Verified Escrow & Instant Payouts",
@@ -63,7 +64,8 @@ export default function RootLayout({
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono bg-slate-100 border border-slate-200 text-slate-600 px-2.5 py-1 rounded-md flex items-center gap-1.5">
+              <RoleSwitcher />
+              <span className="text-xs font-mono bg-slate-100 border border-slate-200 text-slate-600 px-2.5 py-1 rounded-md hidden sm:flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                 Zero-LLM Guard: Active
               </span>

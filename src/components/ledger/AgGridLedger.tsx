@@ -3,14 +3,9 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { ColDef, GridApi, GridReadyEvent, RowClickedEvent } from "ag-grid-community";
-import "ag-grid-enterprise/styles/ag-grid.css";
-import "ag-grid-enterprise/styles/ag-theme-quartz.css";
-import { LicenseManager } from "ag-grid-enterprise";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-quartz.css";
 import { ShieldCheck, Download, Search, CheckCircle2, History, X, Copy, ExternalLink, RefreshCw } from "lucide-react";
-
-if (process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE_KEY) {
-  LicenseManager.setLicenseKey(process.env.NEXT_PUBLIC_AG_STUDIO_LICENSE_KEY);
-}
 
 export interface LedgerRowData {
   id: string;

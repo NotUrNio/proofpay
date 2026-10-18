@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, policies, jobs, verdicts, submissions } from "@/db";
-import { desc, eq } from "drizzle-orm";
+import { db, policies, jobs, verdicts, mandates } from "@/db";
+import { desc, eq, gt } from "drizzle-orm";
+import { assertAuthorizedRole } from "@/lib/auth/roles";
+import { z } from "zod";
 import evalCases from "../../../../eval/cases.json";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+const policySchema = z.object({
+  name: z.string().min(1).max(100).default("Updated Security Policy"),
+  maxDailyPayoutAmount: z.coerce.number().positive().max(10000),
+  maxJobPayoutAmount: z.coerce.number().positive().max(5000),
+  minConfidenceThreshold: z.coerce.number().min(0.5).max(1.0),
+  requireHumanReviewIfAmbiguous: z.boolean().default(true),
+});
+
+export async function GET(req: NextRequest) {
+  // Role check: Reviewers can view policy configuration
+  const auth = assertAuthorizedRole(req, ["reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
+
   try {
     const [currentPolicy] = await db
       .select()
@@ -14,7 +30,6 @@ export async function GET() {
       .orderBy(desc(policies.createdAt))
       .limit(1);
 
-    // Default policy values if not seeded yet
     const policy = currentPolicy || {
       name: "Default Platform Security Policy",
       maxDailyPayoutAmount: "1000.00",
@@ -24,8 +39,6 @@ export async function GET() {
       isActive: true,
     };
 
-    // Load past verdicts from DB or benchmark eval set for counterfactual preview
-    const dbVerdicts = await db.select().from(verdicts);
     const dbJobs = await db.select().from(jobs);
 
     return NextResponse.json({
@@ -44,28 +57,72 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const {
-      name = "Updated Security Policy",
-      maxDailyPayoutAmount = "1000.00",
-      maxJobPayoutAmount = "500.00",
-      minConfidenceThreshold = "0.8500",
-      requireHumanReviewIfAmbiguous = true,
-    } = body;
+  // Server-side role check: Only reviewer can edit platform policy
+  const auth = assertAuthorizedRole(req, ["reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
 
-    // Deactivate previous policies
+  try {
+    const rawBody = await req.json().catch(() => ({}));
+    const parseResult = policySchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid policy parameters",
+          details: parseResult.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const {
+      name,
+      maxDailyPayoutAmount,
+      maxJobPayoutAmount,
+      minConfidenceThreshold,
+      requireHumanReviewIfAmbiguous,
+    } = parseResult.data;
+
+    // Hard Constraint: Policy edits can NEVER exceed any active signed mandate's maxAmount cap
+    const activeMandates = await db
+      .select()
+      .from(mandates)
+      .where(gt(mandates.expiresAt, new Date()));
+
+    if (activeMandates.length > 0) {
+      const minMandateCap = Math.min(
+        ...activeMandates.map((m) => parseFloat(m.maxAmount))
+      );
+      if (maxJobPayoutAmount > minMandateCap) {
+        return NextResponse.json(
+          {
+            error: `Policy violation: maxJobPayoutAmount ($${maxJobPayoutAmount.toFixed(
+              2
+            )}) cannot exceed the active signed mandate cap ($${minMandateCap.toFixed(
+              2
+            )}). Signed client mandates represent immutable financial limits.`,
+            mandateCap: minMandateCap,
+            requestedAmount: maxJobPayoutAmount,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Deactivate previous active policies
     await db.update(policies).set({ isActive: false }).where(eq(policies.isActive, true));
 
-    // Insert new policy
+    // Insert new policy version
     const [newPolicy] = await db
       .insert(policies)
       .values({
         name,
-        maxDailyPayoutAmount: String(maxDailyPayoutAmount),
-        maxJobPayoutAmount: String(maxJobPayoutAmount),
-        minConfidenceThreshold: String(minConfidenceThreshold),
-        requireHumanReviewIfAmbiguous: Boolean(requireHumanReviewIfAmbiguous),
+        maxDailyPayoutAmount: maxDailyPayoutAmount.toFixed(2),
+        maxJobPayoutAmount: maxJobPayoutAmount.toFixed(2),
+        minConfidenceThreshold: minConfidenceThreshold.toFixed(4),
+        requireHumanReviewIfAmbiguous,
         isActive: true,
       })
       .returning();

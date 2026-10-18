@@ -3,6 +3,7 @@ import { db, jobs, criteria, mandates, policies } from "@/db";
 import { appendLedgerEvent } from "@/db/ledger";
 import { signMandate } from "@/lib/guard";
 import { ensureDatabaseSchema } from "@/db/init";
+import { assertAuthorizedRole } from "@/lib/auth/roles";
 import { desc } from "drizzle-orm";
 
 export async function GET() {
@@ -13,6 +14,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   await ensureDatabaseSchema();
+  const auth = assertAuthorizedRole(req, ["client", "reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
   try {
     const body = await req.json();
     const {

@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, jobs, verdicts, submissions, mandates, policies, payments } from "@/db";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and } from "drizzle-orm";
 import { evaluatePolicyGuard } from "@/lib/guard";
 import { createPayout } from "@/lib/paypal/payouts";
+import { refundCapturedPayment } from "@/lib/paypal/orders";
 import { appendLedgerEvent } from "@/db/ledger";
+import { assertAuthorizedRole } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Role check: Only reviewers can inspect the human review queue
+  const auth = assertAuthorizedRole(req, ["reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
+
   try {
     const candidateJobs = await db
       .select()
@@ -74,9 +82,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // Server-side role check: Only reviewer role can approve/reject deliverables
+  const auth = assertAuthorizedRole(req, ["reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
+  const sessionUser = auth.user;
+
   try {
     const body = await req.json();
-    const { jobId, action, reviewerEmail = "admin-reviewer@proofpay.io" } = body;
+    const { jobId, action, reviewerEmail = sessionUser.email } = body;
 
     if (!jobId || !action) {
       return NextResponse.json({ error: "Missing jobId or action" }, { status: 400 });
@@ -104,7 +119,7 @@ export async function POST(req: NextRequest) {
       : [null];
 
     if (action === "approve") {
-      // Security Check: evaluate policy guard
+      // Security Check: evaluate pure TypeScript Policy Guard (ZERO LLM imports)
       const guardResult = evaluatePolicyGuard({
         job: {
           id: job.id,
@@ -211,7 +226,47 @@ export async function POST(req: NextRequest) {
         decision: "APPROVED",
         payoutBatchId,
       });
-    } else if (action === "reject") {
+    } else if (action === "reject" || action === "reject_and_refund") {
+      // Find captured payment for this job to refund escrow
+      const [fundingPayment] = await db
+        .select()
+        .from(payments)
+        .where(and(eq(payments.jobId, job.id), eq(payments.type, "FUNDING")))
+        .limit(1);
+
+      let refundId: string | null = null;
+      let refundStatus: string = "COMPLETED";
+
+      if (fundingPayment && fundingPayment.paypalId) {
+        try {
+          const refundRes = await refundCapturedPayment({
+            captureId: fundingPayment.paypalId,
+            amount: job.amount,
+            currency: job.currency,
+            noteToPayer: `ProofPay Escrow Refund: Deliverable rejected during review for ${job.title}`,
+            requestId: `ref_${job.id.slice(0, 8)}_${Date.now()}`,
+          });
+          refundId = refundRes.id;
+          refundStatus = refundRes.status;
+
+          // Record refund in payments table
+          await db.insert(payments).values({
+            jobId: job.id,
+            type: "REFUND",
+            paypalId: refundRes.id,
+            amount: job.amount,
+            currency: job.currency,
+            status: refundRes.status,
+            isMock: process.env.PAYPAL_MOCK === "true",
+            rawResponse: refundRes as unknown as Record<string, unknown>,
+          });
+        } catch (refundErr) {
+          console.error("[Inbox API] Refund execution error:", refundErr);
+          // Still proceed with job rejection if refund fails or in mock
+          refundId = "REFUND_ERROR_LOGGED";
+        }
+      }
+
       await db
         .update(jobs)
         .set({ status: "REJECTED", updatedAt: new Date() })
@@ -219,19 +274,25 @@ export async function POST(req: NextRequest) {
 
       await appendLedgerEvent({
         jobId: job.id,
-        eventType: "JOB_REJECTED",
+        eventType: refundId ? "ESCROW_REFUNDED" : "JOB_REJECTED",
         previousState: job.status,
         newState: "REJECTED",
         actor: "ADMIN",
         payload: {
           reviewerEmail,
-          reason: "Rejected in human review queue",
+          reason: "Rejected in human review queue: Escrow refunded to client",
+          refundId,
+          refundStatus,
+          captureId: fundingPayment?.paypalId || null,
+          amount: job.amount,
+          currency: job.currency,
         },
       });
 
       return NextResponse.json({
         success: true,
         decision: "REJECTED",
+        refundId,
       });
     }
 

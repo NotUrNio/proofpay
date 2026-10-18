@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, jobs, payments } from "@/db";
 import { appendLedgerEvent } from "@/db/ledger";
 import { createOrder, captureOrder, isPayPalMock } from "@/lib/paypal";
+import { assertAuthorizedRole } from "@/lib/auth/roles";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -9,6 +10,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = assertAuthorizedRole(req, ["client", "reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
   try {
     const { id } = await params;
     const body = await req.json().catch(() => ({}));

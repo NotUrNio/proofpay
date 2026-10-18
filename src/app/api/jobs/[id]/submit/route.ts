@@ -4,6 +4,7 @@ import { appendLedgerEvent } from "@/db/ledger";
 import { verifySubmission, CriterionDefinition, SubmissionData } from "@/lib/verifier";
 import { evaluatePolicyGuard, SignedMandate } from "@/lib/guard";
 import { createPayout, isPayPalMock } from "@/lib/paypal";
+import { assertAuthorizedRole, checkRateLimit } from "@/lib/auth/roles";
 import { eq, sum } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -11,6 +12,24 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Server-side role check: Only freelancers or reviewers can submit deliverables
+  const auth = assertAuthorizedRole(req, ["freelancer", "reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
+
+  // Rate limiting to protect Gemini API quota (5 submissions per minute)
+  const clientIp = req.headers.get("x-forwarded-for") || "local_client";
+  const rateLimit = checkRateLimit(`submit_${clientIp}`, 5, 60000);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: "Rate limit exceeded. Submissions are limited to 5 per minute to protect Gemini API quota.",
+      },
+      { status: 429 }
+    );
+  }
+
   try {
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
@@ -23,6 +42,17 @@ export async function POST(
       fileName = "summer_sale_banner_1080x1080.png",
       fileBase64,
     } = body;
+
+    // Hard payload size limit (10 MB upload cap)
+    const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+    if (fileSizeBytes > MAX_UPLOAD_BYTES || (fileBase64 && fileBase64.length > (MAX_UPLOAD_BYTES * 4) / 3)) {
+      return NextResponse.json(
+        {
+          error: `Payload too large. File size exceeds the platform upload cap of 10 MB (${fileSizeBytes} bytes provided).`,
+        },
+        { status: 413 }
+      );
+    }
 
     // 1. Fetch Job
     const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);

@@ -156,3 +156,25 @@ export interface VerifyWebhookParams {
 export interface WebhookVerificationResponse {
   verification_status: "SUCCESS" | "FAILURE";
 }
+
+// Refund Capture Interfaces (POST /v2/payments/captures/{capture_id}/refund)
+export interface RefundCaptureParams {
+  captureId: string;
+  amount?: string;
+  currency?: string;
+  noteToPayer?: string;
+  requestId?: string;
+}
+
+export interface RefundResponse {
+  id: string;
+  status: "COMPLETED" | "PENDING" | "FAILED";
+  amount?: {
+    value: string;
+    currency_code: string;
+  };
+  note_to_payer?: string;
+  create_time?: string;
+  update_time?: string;
+  links?: PayPalOrderLink[];
+}

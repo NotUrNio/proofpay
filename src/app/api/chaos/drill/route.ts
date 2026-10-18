@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runChaosDrill } from "@/lib/paypal/chaos";
+import { assertAuthorizedRole } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // Role check: Only reviewers can trigger failure chaos drills
+  const auth = assertAuthorizedRole(req, ["reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
+
   try {
     const body = await req.json();
     const { drillType, jobId } = body;
