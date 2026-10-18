@@ -127,7 +127,7 @@ Every metric reported below is backed by committed code, reproducible test suite
 ---
 
 ## 🔗 Try It Out
-- **GitHub Repository**: [https://github.com/nityam/proofpay](https://github.com/nityam/proofpay)
+- **GitHub Repository**: [https://github.com/NotUrNio/proofpay](https://github.com/NotUrNio/proofpay)
 - **Hosted Application**: [https://proofpay.onrender.com](https://proofpay.onrender.com)
 - **Demo Accounts**:
   - Client: `alice@proofpay.io`

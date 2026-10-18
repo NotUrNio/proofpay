@@ -1,7 +1,7 @@
 # ProofPay — Hackathon Evaluator & Judging Guide
 
 > **Project**: ProofPay (Autonomous AI-Verified Milestone Escrow & Instant Payouts)  
-> **Repository**: [https://github.com/nityam/proofpay](https://github.com/nityam/proofpay)  
+> **Repository**: [https://github.com/NotUrNio/proofpay](https://github.com/NotUrNio/proofpay)  
 > **Hosted Deployment**: `https://proofpay.onrender.com` *(Render deployment ready via `render.yaml`)*
 
 ---
@@ -72,7 +72,7 @@ ProofPay uses role-based access control with pre-seeded demo accounts. In the to
 ### 2. Setup Commands
 ```bash
 # Clone the repository
-git clone https://github.com/nityam/proofpay.git
+git clone https://github.com/NotUrNio/proofpay.git
 cd proofpay
 
 # Install dependencies

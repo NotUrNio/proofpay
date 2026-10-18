@@ -91,7 +91,7 @@ flowchart TD
 ### 2. Setup & Configuration
 ```bash
 # 1. Clone the repository
-git clone https://github.com/nityam/proofpay.git
+git clone https://github.com/NotUrNio/proofpay.git
 cd proofpay
 
 # 2. Install dependencies

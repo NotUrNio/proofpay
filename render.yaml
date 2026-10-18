@@ -5,7 +5,7 @@ services:
     plan: free
     region: oregon
     buildCommand: pnpm install && pnpm build
-    startCommand: pnpm start
+    startCommand: pnpm demo:seed && pnpm start
     healthCheckPath: /api/jobs
     envVars:
       - key: DATABASE_URL
@@ -33,8 +33,6 @@ services:
       - key: PAYPAL_WEBHOOK_ID
         sync: false
       - key: GEMINI_API_KEY
-        sync: false
-      - key: AG_STUDIO_LICENSE_KEY
         sync: false
 
 databases:
