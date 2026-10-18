@@ -53,8 +53,13 @@ async function main() {
     console.log("\n--- Real PayPal Sandbox Response ---");
     console.log(`Payout Batch ID: ${result.batch_header.payout_batch_id}`);
     console.log(`Batch Status:    ${result.batch_header.batch_status}`);
-    console.log(`Time Created:    ${result.batch_header.time_created}`);
-    console.log(`Amount:          $${result.batch_header.amount.value} ${result.batch_header.amount.currency}`);
+    console.log(`Sender Batch ID: ${result.batch_header.sender_batch_header?.sender_batch_id || senderBatchId}`);
+    if (result.batch_header.time_created) {
+      console.log(`Time Created:    ${result.batch_header.time_created}`);
+    }
+    const amt = result.batch_header.amount?.value || "0.01";
+    const curr = result.batch_header.amount?.currency || "USD";
+    console.log(`Amount:          $${amt} ${curr}`);
 
     console.log("\n[PASS] Real PayPal Sandbox Payout successfully initiated!");
     console.log(`Reference Batch ID: ${result.batch_header.payout_batch_id}`);

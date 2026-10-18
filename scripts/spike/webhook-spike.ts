@@ -3,12 +3,12 @@ dotenv.config();
 
 import http from "http";
 import { spawn } from "child_process";
-import { verifyWebhookSignature, isPayPalMock, createPayout } from "../../src/lib/paypal";
+import { verifyWebhookSignature, isPayPalMock, createPayout, getPayPalAccessToken, getPayPalBaseUrl } from "../../src/lib/paypal";
 
 const PORT = 3000;
 
 async function main() {
-  console.log("=== ProofPay Spike: Real PayPal Sandbox Webhook Receiver & Verification ===");
+  console.log("=== ProofPay Spike 3: Real PayPal Sandbox Webhook Receiver & Verification ===");
 
   if (isPayPalMock()) {
     console.error("\n[FAIL] PAYPAL_MOCK is set to true. Spike scripts must NEVER run in mock mode.");
@@ -18,29 +18,18 @@ async function main() {
 
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
 
   if (!clientId || !clientSecret || clientId.includes("your_sandbox_") || clientSecret.includes("your_sandbox_")) {
     console.error("\n[FAIL] Missing real PayPal Sandbox credentials in .env.");
-    console.error("Add valid credentials to .env:");
-    console.error("  PAYPAL_CLIENT_ID=<Your Sandbox Client ID>");
-    console.error("  PAYPAL_CLIENT_SECRET=<Your Sandbox Secret>");
-    console.error("  PAYPAL_WEBHOOK_ID=<Your Sandbox Webhook ID>");
     process.exit(1);
   }
 
-  if (!webhookId || webhookId.includes("your_sandbox_")) {
-    console.error("\n[FAIL] Missing PAYPAL_WEBHOOK_ID in .env.");
-    console.error("To receive and verify real PayPal deliveries:");
-    console.error("1. Start a cloudflared tunnel: npx cloudflared tunnel --url http://localhost:3000");
-    console.error("2. Register the webhook URL in PayPal Developer Sandbox Dashboard: https://<your-tunnel>.trycloudflare.com/api/webhooks/paypal");
-    console.error("3. Subscribe to event: PAYMENT.PAYOUTS-ITEM.SUCCEEDED (or all events)");
-    console.error("4. Copy the Webhook ID and put it in .env as PAYPAL_WEBHOOK_ID");
-    process.exit(1);
-  }
+  let webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  let tunnelProcess: ReturnType<typeof spawn> | null = null;
+  let tunnelUrl: string | null = null;
+  let temporaryWebhookCreated = false;
 
-  console.log(`Using PayPal Webhook ID: ${webhookId}`);
-  console.log(`1. Starting HTTP receiver on port ${PORT}...`);
+  console.log(`1. Starting local HTTP webhook receiver on port ${PORT}...`);
 
   let requestResolver: (val: { rawBody: string; headers: http.IncomingHttpHeaders }) => void;
   const receivedPromise = new Promise<{ rawBody: string; headers: http.IncomingHttpHeaders }>((resolve) => {
@@ -55,6 +44,7 @@ async function main() {
         const rawBody = Buffer.concat(chunks).toString("utf8");
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ received: true }));
+        console.log("   - [HTTP] Incoming PayPal webhook delivery received!");
         requestResolver({ rawBody, headers: req.headers });
       });
     } else {
@@ -63,38 +53,93 @@ async function main() {
     }
   });
 
-  server.listen(PORT, () => {
-    console.log(`   - HTTP listener active on http://localhost:${PORT}/api/webhooks/paypal`);
-  });
+  await new Promise<void>((resolve) => server.listen(PORT, () => resolve()));
+  console.log(`   - HTTP listener active on http://localhost:${PORT}/api/webhooks/paypal`);
 
-  console.log("\n2. Ready to receive real webhook delivery from PayPal Sandbox.");
-  console.log("   Triggering a real $0.01 test payout to cause PayPal to deliver a live webhook event...");
+  // 2. Set up Cloudflared Tunnel & Webhook Registration if not configured
+  if (!webhookId || webhookId.includes("your_sandbox_")) {
+    console.log("\n2. Launching Cloudflared tunnel for public HTTPS endpoint...");
+    tunnelUrl = await new Promise<string>((resolve, reject) => {
+      const proc = spawn("cloudflared", ["tunnel", "--url", `http://localhost:${PORT}`]);
+      tunnelProcess = proc;
 
-  const recipientEmail = process.env.PAYPAL_SANDBOX_PERSONAL_EMAIL || "sb-buyer@business.example.com";
-  const senderBatchId = `webhook_spike_batch_${Date.now()}`;
+      const timeout = setTimeout(() => {
+        reject(new Error("Cloudflared tunnel startup timed out after 20 seconds."));
+      }, 20000);
+
+      proc.stderr.on("data", (data: Buffer) => {
+        const text = data.toString();
+        const match = text.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+        if (match) {
+          clearTimeout(timeout);
+          resolve(match[0]);
+        }
+      });
+
+      proc.on("error", (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
+
+    console.log(`   - Cloudflared tunnel established at: ${tunnelUrl}`);
+    const webhookEndpoint = `${tunnelUrl}/api/webhooks/paypal`;
+    console.log(`   - Webhook Target URL: ${webhookEndpoint}`);
+
+    // Register Webhook via PayPal REST API
+    console.log("\n3. Registering webhook endpoint with PayPal Sandbox...");
+    const token = await getPayPalAccessToken();
+    const registerRes = await fetch(`${getPayPalBaseUrl()}/v1/notifications/webhooks`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: webhookEndpoint,
+        event_types: [{ name: "*" }],
+      }),
+    });
+
+    if (!registerRes.ok) {
+      const errText = await registerRes.text();
+      throw new Error(`Failed to register webhook with PayPal: ${registerRes.status} ${errText}`);
+    }
+
+    const webhookData = (await registerRes.json()) as { id: string };
+    webhookId = webhookData.id;
+    temporaryWebhookCreated = true;
+    console.log(`   - Successfully registered with PayPal! Webhook ID: ${webhookId}`);
+  } else {
+    console.log(`\n2. Using configured Webhook ID from .env: ${webhookId}`);
+  }
+
+  // 3. Trigger Real Payout to produce a live PayPal Webhook
+  console.log("\n4. Triggering real $0.01 payout to produce live webhook delivery from PayPal...");
+  const recipientEmail = process.env.PAYPAL_SANDBOX_PERSONAL_EMAIL || "priya.freelancer.sandbox@example.com";
+  const senderBatchId = `spike_webhook_batch_${Date.now()}`;
 
   try {
     const payoutResult = await createPayout({
       recipientEmail,
       amount: "0.01",
       currency: "USD",
-      note: "ProofPay Real Webhook Spike Trigger",
+      note: "ProofPay Real Webhook Delivery Spike Trigger",
       senderBatchId,
-      senderItemId: `webhook_spike_item_${Date.now()}`,
+      senderItemId: `webhook_item_${Date.now()}`,
       emailSubject: "ProofPay Webhook Test Delivery",
     });
 
-    console.log(`   - Payout created! Batch ID: ${payoutResult.batch_header.payout_batch_id}`);
-    console.log("   - Waiting for PayPal sandbox to deliver the real signed webhook event (timeout: 60s)...");
+    console.log(`   - Payout created! Payout Batch ID: ${payoutResult.batch_header.payout_batch_id}`);
+    console.log("   - Awaiting delivery from PayPal Sandbox servers (timeout: 90s)...");
 
-    // Wait for the incoming real webhook delivery
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Timed out after 60s waiting for PayPal webhook delivery through tunnel.")), 60000)
+      setTimeout(() => reject(new Error("Timed out after 90s waiting for PayPal Sandbox delivery.")), 90000)
     );
 
     const { rawBody, headers } = await Promise.race([receivedPromise, timeout]);
 
-    console.log("\n3. Real PayPal HTTP Webhook Event received!");
+    console.log("\n5. Real PayPal Sandbox Webhook HTTP POST received!");
     console.log(`   - Transmission ID:   ${headers["paypal-transmission-id"]}`);
     console.log(`   - Transmission Time: ${headers["paypal-transmission-time"]}`);
     console.log(`   - Cert URL:          ${headers["paypal-cert-url"]}`);
@@ -104,7 +149,8 @@ async function main() {
     console.log(`   - Event Type:        ${parsedEvent.event_type}`);
     console.log(`   - Event ID:          ${parsedEvent.id}`);
 
-    console.log("\n4. Verifying real cryptographic signature with PayPal Sandbox API...");
+    // 6. Cryptographic signature verification using raw, unparsed request body
+    console.log("\n6. Verifying cryptographic signature with PayPal Sandbox API using raw body...");
     const isVerified = await verifyWebhookSignature({
       authAlgo: String(headers["paypal-auth-algo"]),
       certUrl: String(headers["paypal-cert-url"]),
@@ -118,6 +164,7 @@ async function main() {
     if (isVerified) {
       console.log("\n[PASS] Real PayPal Sandbox Webhook Signature Verified Successfully!");
       console.log(`Verified Real Event ID: ${parsedEvent.id}`);
+      console.log(`Webhook ID:             ${webhookId}`);
     } else {
       console.error("\n[FAIL] PayPal reported verification_status !== SUCCESS for real webhook payload.");
       process.exit(1);
@@ -126,7 +173,22 @@ async function main() {
     console.error("\n[FAIL] Webhook Spike Error:", err);
     process.exit(1);
   } finally {
-    server?.close();
+    if (temporaryWebhookCreated && webhookId) {
+      try {
+        const token = await getPayPalAccessToken();
+        await fetch(`${getPayPalBaseUrl()}/v1/notifications/webhooks/${webhookId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log(`\n(Cleaned up temporary sandbox webhook ID ${webhookId})`);
+      } catch {
+        // Ignore cleanup error
+      }
+    }
+    server.close();
+    if (tunnelProcess) {
+      (tunnelProcess as any).kill();
+    }
   }
 }
 
