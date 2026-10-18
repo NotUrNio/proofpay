@@ -117,3 +117,4 @@
 - [ ] Role switcher visible in top-right navigation bar
 - [ ] Terminal window open alongside browser ready for `pnpm ledger:verify`
 - [ ] Total recording time: **2:38 - 2:43** (under 2:45 hard limit)
+

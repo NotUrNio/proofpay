@@ -15,8 +15,8 @@ async function seed() {
   await ensureDatabaseSchema();
   console.log("Database schema verified and Postgres triggers initialized.");
 
-  const clientEmail = "sb-dmohp53303471@business.example.com";
-  const freelancerEmail = "sb-ft17i53364262@personal.example.com";
+  const clientEmail = "alice@proofpay.io";
+  const freelancerEmail = "priya@proofpay.io";
 
   // Demo Job 1: PAID (Full autonomous happy path)
   const job1Id = crypto.randomUUID();
@@ -68,7 +68,7 @@ async function seed() {
     previousState: "CREATED",
     newState: "FUNDED",
     actor: "CLIENT",
-    payload: { orderId: "78T605148L229642E", captureId: "7ND58525803953918", amount: "5.00", currency: "USD" },
+    payload: { orderId: "4LF11783H4649862W", captureId: "4GP221272V958470N", amount: "5.00", currency: "USD" },
   });
 
   const [sub1] = await db
@@ -119,7 +119,7 @@ async function seed() {
     previousState: "VERIFIED",
     newState: "PAID",
     actor: "SYSTEM",
-    payload: { payoutBatchId: "RMHBAVB6V7K5G", payoutItemId: "2EMU3NJM2XGU6", amount: "5.00", currency: "USD" },
+    payload: { payoutBatchId: "CPMFG3U4LAXS2", payoutItemId: "A7PB6RVHLGY2U", amount: "5.00", currency: "USD" },
   });
 
   // Demo Job 2: NEEDS_HUMAN (Borderline Palette in Review Queue)

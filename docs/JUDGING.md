@@ -172,3 +172,4 @@ pnpm test
 | **PayPal Payouts REST (Settlement)** | [`src/lib/paypal/payouts.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/paypal/payouts.ts) | Idempotent payout release to freelancer sandbox accounts via `sender_batch_id`. |
 | **PayPal Chaos & Idempotency Proof** | [`src/lib/paypal/chaos.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/paypal/chaos.ts) | Real double-transmission proof and negative testing simulation protocol. |
 | **Immutable Database Ledger** | [`src/lib/ledger/ledger.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/ledger/ledger.ts) | Database triggers + SHA-256 hash chaining walking every historical transition. |
+
