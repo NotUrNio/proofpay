@@ -2,7 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock, DollarSign, Sparkles, AlertTriangle, ShieldCheck, FileCheck } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Sparkles,
+  AlertTriangle,
+  ShieldCheck,
+  FileCheck,
+  History,
+  Sliders,
+  Building2,
+  Inbox,
+} from "lucide-react";
+import { AgGridLedger, LedgerRowData } from "@/components/ledger/AgGridLedger";
 
 interface Job {
   id: string;
@@ -17,25 +31,34 @@ interface Job {
 
 export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [ledgerEvents, setLedgerEvents] = useState<LedgerRowData[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingSeed, setCreatingSeed] = useState(false);
 
-  const fetchJobs = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const res = await fetch("/api/jobs");
-      const data = await res.json();
-      if (data.jobs) {
-        setJobs(data.jobs);
+      const [jobsRes, ledgerRes] = await Promise.all([
+        fetch("/api/jobs"),
+        fetch("/api/ledger?limit=50"),
+      ]);
+      const jobsData = await jobsRes.json();
+      const ledgerData = await ledgerRes.json();
+
+      if (jobsData.jobs) {
+        setJobs(jobsData.jobs);
+      }
+      if (ledgerData.events) {
+        setLedgerEvents(ledgerData.events);
       }
     } catch (err) {
-      console.error("Failed to load jobs", err);
+      console.error("Failed to load dashboard data", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchJobs();
+    fetchDashboardData();
   }, []);
 
   const createSeedJob = async () => {
@@ -47,9 +70,9 @@ export default function DashboardPage() {
         body: JSON.stringify({
           title: "Social Media Banner (Summer Sale)",
           description: "1080x1080 PNG, <= 2MB, contains 'SUMMER SALE', warm brand palette.",
-          clientEmail: "sandbox-buyer@business.example.com",
-          freelancerEmail: "priya-designer@sandbox.paypal.com",
-          amount: "50.00",
+          clientEmail: "sb-dmohp53303471@business.example.com",
+          freelancerEmail: "sb-ft17i53364262@personal.example.com",
+          amount: "5.00",
           currency: "USD",
         }),
       });
@@ -57,7 +80,7 @@ export default function DashboardPage() {
       if (data.job?.id) {
         window.location.href = `/jobs/${data.job.id}`;
       } else {
-        await fetchJobs();
+        await fetchDashboardData();
       }
     } catch (err) {
       console.error("Failed to seed job", err);
@@ -69,27 +92,34 @@ export default function DashboardPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "SETTLED":
+      case "PAID":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Settled (Paid Out)
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Settled (Paid Out)
           </span>
         );
       case "FUNDED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-            <DollarSign className="w-3.5 h-3.5" /> Funded (In Escrow)
+            <DollarSign className="w-3.5 h-3.5 text-blue-600" /> Funded (In Escrow)
           </span>
         );
       case "SUBMITTED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-            <Sparkles className="w-3.5 h-3.5" /> Submitted
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Submitted
+          </span>
+        );
+      case "VERIFYING":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200 animate-pulse">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Verifying (K=3)
           </span>
         );
       case "MANUAL_REVIEW":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-            <AlertTriangle className="w-3.5 h-3.5" /> Human Review Queue
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Human Review Queue
           </span>
         );
       case "REJECTED":
@@ -110,47 +140,55 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-2xl p-8 text-white shadow-md relative overflow-hidden">
-        <div className="max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-blue-200 text-xs font-semibold px-3 py-1 rounded-full">
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-3xl p-8 sm:p-10 text-white shadow-lg relative overflow-hidden">
+        <div className="max-w-3xl space-y-4 relative z-10">
+          <div className="inline-flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-blue-200 text-xs font-bold px-3 py-1 rounded-full">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Zero-LLM Guarded Escrow
+            Zero-LLM Guarded Escrow • PayPal AI Hackathon
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            ProofPay: AI-Verified Autonomous Escrow
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
+            ProofPay: AI-Verified Autonomous Escrow &amp; Instant Settlements
           </h1>
           <p className="text-blue-100 text-sm sm:text-base leading-relaxed">
-            Eliminating 30-day payout delays for freelancers like Priya. Clients fund escrow via PayPal Orders v2, deliverables are verified against strict rubrics, and a pure TypeScript Policy Guard safely authorizes immediate payouts.
+            Eliminating 30-day payment delays for freelancers like Priya. Clients fund escrow via <strong>PayPal Orders v2</strong>, deliverables are checked by multimodal models, and a <strong>pure TypeScript Policy Guard</strong> authorizes instant PayPal Payouts or routes borderline cases to human review.
           </p>
+
           <div className="pt-2 flex flex-wrap gap-3">
             <button
               onClick={createSeedJob}
               disabled={creatingSeed}
-              className="bg-white hover:bg-slate-100 text-blue-900 font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all text-sm flex items-center gap-2"
+              className="bg-white hover:bg-slate-100 text-blue-900 font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all text-sm flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4 text-amber-500" />
-              {creatingSeed ? "Seeding..." : "Quick Launch Demo Seed Job"}
+              {creatingSeed ? "Seeding..." : "Launch Demo Seed Job"}
             </button>
             <Link
-              href="/jobs/new"
-              className="bg-blue-700/60 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl border border-blue-400/40 text-sm transition-all flex items-center gap-2"
+              href="/inbox"
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-sm transition-all flex items-center gap-1.5 shadow-sm"
             >
-              <span>Custom Job</span>
-              <ArrowRight className="w-4 h-4" />
+              <Inbox className="w-4 h-4" />
+              <span>Review Inbox</span>
+            </Link>
+            <Link
+              href="/policy"
+              className="bg-blue-700/60 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl border border-blue-400/40 text-sm transition-all flex items-center gap-1.5"
+            >
+              <Sliders className="w-4 h-4" />
+              <span>Policy Guard</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Jobs Overview Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+      {/* Active Milestones Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Milestone Escrow Pipeline</h2>
-            <p className="text-xs text-slate-500">Real-time status of active milestones and settlements</p>
+            <p className="text-xs text-slate-500">Live status of active escrow milestones and payouts</p>
           </div>
           <button
-            onClick={fetchJobs}
+            onClick={fetchDashboardData}
             className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
           >
             Refresh List
@@ -209,7 +247,7 @@ export default function DashboardPage() {
                     <td className="px-6 py-4 text-right">
                       <Link
                         href={`/jobs/${job.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
                       >
                         <span>View Details</span>
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -222,6 +260,9 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Global AG Grid Interactive Audit Ledger */}
+      <AgGridLedger events={ledgerEvents} onRefresh={fetchDashboardData} />
     </div>
   );
 }

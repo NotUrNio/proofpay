@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
 import { ShieldAlert, ShieldCheck, Zap } from "lucide-react";
+import { MoneyFlowStrip } from "@/components/layout/MoneyFlowStrip";
 
 export const metadata: Metadata = {
   title: "ProofPay ⚡ AI-Verified Escrow & Instant Payouts",
@@ -26,6 +27,9 @@ export default function RootLayout({
           </div>
         )}
 
+        {/* Global Money-Flow Strip at Top */}
+        <MoneyFlowStrip />
+
         {/* Global Navigation Header */}
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -43,8 +47,14 @@ export default function RootLayout({
                 <Link href="/" className="hover:text-blue-600 transition-colors">
                   Dashboard
                 </Link>
-                <Link href="/jobs/new" className="hover:text-blue-600 transition-colors">
-                  Create Job
+                <Link href="/inbox" className="hover:text-blue-600 transition-colors">
+                  Review Inbox
+                </Link>
+                <Link href="/policy" className="hover:text-blue-600 transition-colors">
+                  Policy Guard
+                </Link>
+                <Link href="/studio" className="hover:text-blue-600 transition-colors text-indigo-600 font-semibold">
+                  AG Studio
                 </Link>
               </nav>
             </div>
