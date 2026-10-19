@@ -25,13 +25,15 @@ That is why we built **ProofPay**.
 
 ## 🚀 What It Does
 ProofPay is an end-to-end autonomous escrow and milestone settlement platform:
-1. **Client Funds Job into Platform Escrow**: The client creates a milestone job and authorizes payment upfront via **PayPal Orders v2** (`intent=CAPTURE`). The funds ($5.00) are captured into platform escrow, and a cryptographic **HMAC-SHA256 Signed Mandate** locks the maximum settlement amount and freelancer recipient address.
+1. **Client Funds Job into Platform Escrow**: The client creates a milestone job and authorizes payment upfront via **PayPal Orders v2** (`intent=CAPTURE`), or uses a one-click guided demo scenario with simulated escrow funding (`[SIMULATED]`). A cryptographic **HMAC-SHA256 Signed Mandate** locks the maximum settlement amount and freelancer recipient address.
 2. **Freelancer Submits Work**: Priya uploads her completed deliverable (e.g., promotional banner).
 3. **Deterministic Hard Checks (6ms)**: Before any AI model is invoked, raw bytes are analyzed in pure code: container magic byte verification, dimensions (1080x1080), file size limits ($\le$ 2MB), and memory-level metadata stripping (removing hidden PNG text chunks).
 4. **Multimodal AI Sensor Ensemble**: Google Gemini (`gemini-3.8-flash` with `gemini-3.5-flash-lite` fallback) evaluates the deliverable across rubrics in a $K=3$ run ensemble with non-deterministic temperature, extracting transcribed text, layout balance, and CIEDE2000 color distance.
 5. **Zero-LLM Pure TypeScript Policy Guard**: The model **never** has direct payment authorization authority. A pure TypeScript invariant engine (ZERO AI imports) evaluates 14 deterministic rules: signed mandate expiration, max transaction caps, exact payee email match, daily velocity limits, and consensus confidence thresholds.
-6. **Instant PayPal Payout**: On `AUTO_PAY` verdict, ProofPay immediately invokes the **PayPal Payouts REST API** using an idempotent `sender_batch_id` to deposit funds directly into Priya's PayPal sandbox personal account in under 3 seconds.
-7. **Human Review for Subjective Gray Zones**: If color distance lands in the calibrated gray zone ($\Delta E_{00} \in [11.5, 16.0]$) or confidence drops, ProofPay honestly routes the deliverable to a **Review Inbox** (`/inbox`) rather than hallucinating approval. Reviewers can approve, run counterfactual replay, or execute a real **PayPal Payments v2 refund** back to the client.
+6. **Settlement & Payout Honesty (Guided Demo Simulation vs. Real Sandbox Payouts)**:
+   - **Guided Web Demos**: Use **simulated funding (`isMock=true`) and simulated payouts (`PAYOUT_RELEASED [SIMULATED]`)** so judges can run interactive scenarios repeatedly without draining the shared platform PayPal Sandbox balance.
+   - **Real PayPal Sandbox Funding & Payouts**: Shown in the **recorded end-to-end run (`pnpm demo:run` / `.data/single-real-run.json`)** and in **custom buyer-captured runs** where a real PayPal Orders v2 capture (`isMock=false`), `PAYPAL_MOCK=false`, and `PAYPAL_SANDBOX_PAYEE_EMAIL` are present. Real sandbox payouts are governed by a **hard cap of 5 payouts / $25.00 USD per day** (`MAX_DAILY_REAL_PAYOUT_COUNT=5`, `MAX_DAILY_REAL_PAYOUT_USD=25.00`).
+7. **Human Review for Subjective Gray Zones**: If color distance lands in the calibrated gray zone ($\Delta E_{00} \in [11.5, 16.0]$) or confidence drops, ProofPay honestly routes the deliverable to a **Review Inbox** (`/inbox`) rather than hallucinating approval. Reviewers can approve, run counterfactual replay, or execute a refund (real **PayPal Payments v2 refund** on buyer-captured runs; simulated refund on guided demo runs).
 8. **Cryptographic Append-Only Audit Ledger**: Every state transition is recorded in an immutable PostgreSQL ledger protected by database triggers that raise exceptions on UPDATE/DELETE/TRUNCATE, linked by a SHA-256 cryptographic hash chain.
 
 ---
@@ -41,8 +43,8 @@ ProofPay was built as a full-stack, enterprise-grade Next.js application designe
 
 - **PayPal Platform Integration**:
   - **Orders v2 REST API**: Order creation with `intent=CAPTURE`, buyer approval URL, and capture into platform escrow. Passes `custom_id` linking the PayPal Order to the ProofPay job ID.
-  - **Payments v2 REST API**: Real captured payment refunds (`POST /v2/payments/captures/{id}/refund`) with `PayPal-Request-Id` idempotency.
-  - **Payouts v1 REST API**: Instant single payout settlement (`POST /v1/payments/payouts`) with deterministic `sender_batch_id` idempotency.
+  - **Payments v2 REST API**: Captured payment refunds (`POST /v2/payments/captures/{id}/refund`) with `PayPal-Request-Id` idempotency.
+  - **Payouts v1 REST API**: Single payout settlement (`POST /v1/payments/payouts`) with deterministic `sender_batch_id` idempotency for buyer-captured runs (capped at 5 payouts / $25.00/day), while guided demo runs record simulated payouts (`[SIMULATED]`).
   - **Webhooks v1**: Cryptographic raw-body verification (`POST /v1/notifications/verify-webhook-signature`) and deduplication via PostgreSQL `idempotency_keys`.
 - **Multimodal AI & Verification**:
   - **Google Gemini via Vercel AI SDK**: Multimodal vision with structured JSON schema outputs (`gemini-3.8-flash` primary, `gemini-3.5-flash-lite` fallback).
@@ -78,7 +80,7 @@ ProofPay was built as a full-stack, enterprise-grade Next.js application designe
 Every metric reported below is backed by committed code, reproducible test suites, or live PayPal Sandbox execution logs:
 
 - **100% Deterministic Test Suite Passing**:
-  - **54 passing tests across 8 test suites** in vitest (`pnpm test`): end-to-end slice, guard rules, HMAC mandates, database triggers, boundary checks, chaos drills, security isolation, and PayPal token caching.
+  - **104 passing unit/integration tests across 15 Vitest test suites** (`pnpm test`) plus **12 Playwright end-to-end tests across 3 browsers (36 browser runs)**: end-to-end slice, guard rules, HMAC mandates, database triggers, boundary checks, chaos drills, payout mode accuracy, SSR role/ownership isolation, rate-limit/proxy-hop extraction, and PayPal token caching.
 - **Zero False-Approvals on 28-Fixture Benchmark**:
   - Evaluated on 28 synthetic fixtures (13 Dev / 15 Held-Out):
   - **Overall Accuracy**: **100.0% (28/28)** [95% Wilson CI: 87.9% – 100.0%]
@@ -88,7 +90,7 @@ Every metric reported below is backed by committed code, reproducible test suite
   - **Median Evaluation Latency**: **16 ms** in replay mode
   - **Average Verification Cost**: **$0.00035** per verification (~40,292 tokens across benchmark)
 - **Live PayPal Sandbox Single-Run Traceability**:
-  - Proved complete end-to-end execution on live PayPal Sandbox infrastructure (`PAYPAL_MOCK=false`):
+  - Proved complete end-to-end execution on live PayPal Sandbox infrastructure (`PAYPAL_MOCK=false`, recorded in `.data/single-real-run.json`):
     - **Job ID**: `ef7a9683-8e2e-44b9-80fb-e12b5a2f6568`
     - **PayPal Order ID**: `4LF11783H4649862W` (`custom_id: ef7a9683-8e2e-44b9-80fb-e12b5a2f6568`)
     - **PayPal Capture ID**: `4GP221272V958470N` ($5.00 captured into business account)
@@ -97,8 +99,8 @@ Every metric reported below is backed by committed code, reproducible test suite
     - **Immutable Ledger Trail**: 6 sequential events committed to Postgres trigger-enforced hash chain.
 - **Real Idempotency Proof**:
   - Live double-transmission drill proved that re-transmitting duplicate payout batch ID `batch_idemp_3d600d2c` triggered PayPal HTTP 400 `USER_BUSINESS_ERROR` (Debug ID: `ca4c92b63cdfe`), resulting in **$0.00 duplicate money moved**.
-- **100% Clean Security Scan**:
-  - Zero API keys or secrets in client bundles (`.next/static` verified), zero secrets in repository history.
+- **Bundle & Working-Tree Secret Hygiene**:
+  - Zero API keys or secrets in client bundles (`.next/static` verified) and current `HEAD` working tree; custom Gitleaks rules audit both current files and historical commits so any legacy sandbox test credentials in earlier commits are flagged for rotation.
 
 ---
 

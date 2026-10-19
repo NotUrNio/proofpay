@@ -4,7 +4,12 @@
 > *Track: Autonomous Agentic Commerce / AI & Fintech Integration*  
 > *Tag: `v1.0.0-submission`*
 
-ProofPay is an autonomous milestone escrow and settlement engine that liberates freelancers from waiting weeks for client payment approvals. By fusing PayPal Orders v2, PayPal Payouts REST, and Google Gemini with a Zero-LLM Pure TypeScript Policy Guard, ProofPay objectively evaluates deliverable rubrics and releases real funds in seconds. Every milestone transition is permanently committed to an immutable, trigger-enforced PostgreSQL audit ledger with cryptographic SHA-256 hash chaining.
+ProofPay is an autonomous milestone escrow and settlement engine that liberates freelancers from waiting weeks for client payment approvals. By fusing PayPal Orders v2, PayPal Payouts REST, and Google Gemini with a Zero-LLM Pure TypeScript Policy Guard, ProofPay objectively evaluates deliverable rubrics and releases milestone settlements in seconds. Every milestone transition is permanently committed to an immutable, trigger-enforced PostgreSQL audit ledger with cryptographic SHA-256 hash chaining.
+
+> [!IMPORTANT]
+> **Guided Demos vs. Real PayPal Sandbox Settlement**:
+> - **Guided Web Demos (Bundled Scenarios)**: Use **simulated escrow funding (`isMock=true`) and simulated payouts (`PAYOUT_RELEASED [SIMULATED]`)** so judges can run interactive scenarios repeatedly without depleting the shared platform PayPal Sandbox balance.
+> - **Real PayPal Sandbox Funding & Payouts**: Shown in the **recorded end-to-end run (`pnpm demo:run` / `.data/single-real-run.json`)** and in **custom buyer-captured runs** where a real PayPal Orders v2 capture (`isMock=false`), `PAYPAL_MOCK=false`, and `PAYPAL_SANDBOX_PAYEE_EMAIL` are present. Real sandbox payouts are protected by a **hard cap of 5 payouts / $25.00 USD per day** (`MAX_DAILY_REAL_PAYOUT_COUNT=5`, `MAX_DAILY_REAL_PAYOUT_USD=25.00`).
 
 ---
 
@@ -16,7 +21,7 @@ flowchart TD
         Client["Client (alice@proofpay.io)"]
         CreateJob["Create Milestone Job & Rubrics"]
         SignMandate["HMAC-SHA256 Signed Mandate<br/>(Locks maxAmount, payee, expiry)"]
-        PayPalOrder["PayPal Orders v2 (intent=CAPTURE)"]
+        PayPalOrder["PayPal Orders v2 (intent=CAPTURE)<br/>or Guided Demo Simulated Escrow"]
         EscrowCapture["Escrow Captured: $5.00 USD<br/>(custom_id = Job ID)"]
         Client --> CreateJob --> SignMandate --> PayPalOrder --> EscrowCapture
     end
@@ -53,8 +58,8 @@ flowchart TD
         Guard --> NeedsHuman
         Guard --> Reject
         
-        PayPalPayout["PayPal Payouts REST API<br/>(Instant Payout via sender_batch_id)"]
-        SettledFunds["Priya Receives $5.00 USD<br/>(< 3 seconds settlement)"]
+        PayPalPayout["PayPal Payouts REST API<br/>(Real Sandbox on Buyer-Captured Runs;<br/>Simulated on Guided Demos)"]
+        SettledFunds["Settlement Recorded on Ledger<br/>(Hard Cap: 5 Real Payouts / $25/day)"]
         AutoPay --> PayPalPayout --> SettledFunds
         
         ReviewInbox["Human Review Queue (/inbox)"]
@@ -86,7 +91,7 @@ flowchart TD
 ### 1. Prerequisites
 - **Node.js** 20+ (Node v26 supported)
 - **pnpm** (or `npm`)
-- **Docker** (for local PostgreSQL)
+- **Docker** (for local PostgreSQL; falls back automatically to embedded PGlite if `DATABASE_URL` is unset)
 
 ### 2. Setup & Configuration
 ```bash
@@ -104,9 +109,12 @@ Populate `.env` with your PayPal Sandbox credentials and Gemini key:
 - `PAYPAL_CLIENT_ID`: Sandbox REST app Client ID
 - `PAYPAL_CLIENT_SECRET`: Sandbox REST app Secret
 - `PAYPAL_BASE_URL`: `https://api-m.sandbox.paypal.com`
+- `PAYPAL_SANDBOX_PAYEE_EMAIL`: PayPal Sandbox personal payee email for real sandbox payouts
 - `MANDATE_SIGNING_SECRET`: Random 32+ character secret string
 - `GEMINI_API_KEY`: Google Gemini API Key
-- `PAYPAL_MOCK`: `false` for live PayPal Sandbox calls; `true` for offline simulation.
+- `PAYPAL_MOCK`: `false` for live PayPal Sandbox calls on buyer-captured runs; `true` for offline simulation
+- `MAX_DAILY_REAL_PAYOUT_COUNT` / `MAX_DAILY_REAL_PAYOUT_USD`: Hard daily cap on real PayPal Sandbox payouts (default `5` payouts / `25.00` USD per day)
+- `CLIENT_IP_TRUSTED_PROXY_HOPS`: Number of rightmost public `X-Forwarded-For` proxy hops to skip as trusted proxies (integer `0..10`, default `0`)
 
 ### 3. Start Database & Push Schema
 ```bash
@@ -121,7 +129,7 @@ pnpm db:push
 ```bash
 pnpm demo:seed
 ```
-Seeds demo accounts, funded jobs, signed mandates, deliverable submissions, and ledger history.
+Seeds demo accounts, funded jobs, signed mandates, deliverable submissions, and ledger history (enforcing a single-instance lock and local-only database guard).
 
 ### 5. Launch Development Server
 ```bash
@@ -133,7 +141,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 👥 Demo Logins & Role-Based Access Control
 
-ProofPay enforces server-side role-based access control. Use the **Role Switcher** in the top navigation bar to switch personas:
+ProofPay enforces server-side role and ownership access control (`canUserAccessJob` + Next.js 15 `forbidden()`). Use the **Role Switcher** in the top navigation bar to switch personas:
 
 | Demo Role | Email Address | Password | Permissions & Available Routes |
 | :--- | :--- | :--- | :--- |
@@ -142,7 +150,7 @@ ProofPay enforces server-side role-based access control. Use the **Role Switcher
 | **Reviewer** | `reviewer@proofpay.io` | `demo-pass-123` | Human Review Inbox (`/inbox`), Policy Editor (`/policy`), Chaos Negative Testing (`/chaos`), Analytics Workspace (`/studio`) |
 
 > [!IMPORTANT]
-> **Credential Separation**: Demo app accounts (`alice@proofpay.io`, `priya@proofpay.io`, `reviewer@proofpay.io`) are decoupled from PayPal sandbox credentials. PayPal Sandbox business and personal credentials live exclusively in the backend `.env` file and are never exposed to clients or checked into source control.
+> **Credential Separation**: Demo app accounts (`alice@proofpay.io`, `priya@proofpay.io`, `reviewer@proofpay.io`) are decoupled from PayPal sandbox credentials. PayPal Sandbox business and personal credentials live exclusively in backend environment variables (`PAYPAL_SANDBOX_PAYEE_EMAIL`, `PAYPAL_SANDBOX_PERSONAL_EMAIL`, `PAYPAL_SANDBOX_BUSINESS_EMAIL`) and are never exposed to clients.
 
 ---
 
@@ -157,7 +165,9 @@ When accessing the hosted deployment on Render's free tier (`https://proofpay-68
 
 ## 💳 Live Single-Run Proof on PayPal Sandbox (End-to-End Traceability)
 
-The following real end-to-end execution was run through the ProofPay service stack against live **PayPal Sandbox** (`PAYPAL_MOCK=false`) using real buyer authentication:
+While the interactive guided demos in the web UI use **simulated funding and simulated payouts (`[SIMULATED]`)** to prevent unbacked payouts from draining the shared platform sandbox balance, real PayPal Sandbox funding and payouts are executed in the recorded single-run (`pnpm demo:run`, stored in `.data/single-real-run.json`) and in custom buyer-captured runs (subject to the hard daily cap of **5 payouts / $25.00 USD per day**).
+
+The following real end-to-end execution was recorded through the ProofPay service stack against live **PayPal Sandbox** (`PAYPAL_MOCK=false`) using real buyer authentication:
 
 | Execution Artifact | Identifier / Value | Description & Sandbox Verification |
 | :--- | :--- | :--- |
