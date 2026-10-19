@@ -3,11 +3,12 @@ import { db, jobs, criteria, mandates, submissions, verdicts, payments, policies
 import { appendLedgerEvent } from "@/db/ledger";
 import { verifySubmission, CriterionDefinition, SubmissionData } from "@/lib/verifier";
 import { evaluatePolicyGuard, SignedMandate } from "@/lib/guard";
-import { createPayout, isPayPalMock } from "@/lib/paypal";
+import { createPayout, isPayPalMock, dispatchJobPayout, shouldSimulatePayoutForJob, RealPayoutGuardError } from "@/lib/paypal";
 import { assertAuthorizedRole } from "@/lib/auth/roles";
 import { checkDemoRateLimits, getClientIp } from "@/lib/rate-limit";
-import { eq, sum } from "drizzle-orm";
+import { and, eq, gte, sum } from "drizzle-orm";
 import crypto from "crypto";
+
 
 export async function POST(
   req: NextRequest,
@@ -72,7 +73,8 @@ export async function POST(
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    const isMock = isPayPalMock();
+    const isMock = shouldSimulatePayoutForJob(job, isPayPalMock());
+
 
     // 2. Insert Submission
     const [submission] = await db
@@ -290,18 +292,76 @@ export async function POST(
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
 
-      // Call PayPal Payouts API
-      let payoutResult;
+      const fundingPayments = await db
+        .select({
+          type: payments.type,
+          status: payments.status,
+          isMock: payments.isMock,
+          paypalId: payments.paypalId,
+        })
+        .from(payments)
+        .where(eq(payments.jobId, id));
+
+      const startOfUtcDay = new Date();
+      startOfUtcDay.setUTCHours(0, 0, 0, 0);
+      const todayRealPayouts = await db
+        .select({ amount: payments.amount })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.type, "PAYOUT"),
+            eq(payments.isMock, false),
+            gte(payments.createdAt, startOfUtcDay)
+          )
+        );
+
+      let dispatched;
       try {
-        payoutResult = await createPayout({
-          recipientEmail: job.freelancerEmail,
-          amount: job.amount,
-          currency: job.currency,
-          note: `ProofPay automated settlement for milestone: ${job.title}`,
+        dispatched = await dispatchJobPayout({
+          job: {
+            id: job.id,
+            title: job.title,
+            freelancerEmail: job.freelancerEmail,
+            amount: job.amount,
+            currency: job.currency,
+          },
+          fundingPayments,
+          todayRealPayouts,
           senderBatchId,
           senderItemId: `item_${id}_${Date.now()}`,
+          note: `ProofPay automated settlement for milestone: ${job.title}`,
         });
       } catch (payoutErr: any) {
+        if (payoutErr instanceof RealPayoutGuardError) {
+          await appendLedgerEvent({
+            jobId: id,
+            eventType: "PAYOUT_BLOCKED_BY_GUARD",
+            previousState: "GUARD_EVALUATED",
+            newState: "PAYOUT_BLOCKED",
+            actor: "GUARD",
+            isMock: false,
+            payload: {
+              error: payoutErr.code,
+              reason: payoutErr.message,
+            },
+          });
+
+          const statusCode =
+            payoutErr.code === "DAILY_REAL_PAYOUT_CAP_EXCEEDED" ? 429 : 400;
+          return NextResponse.json(
+            {
+              success: false,
+              error: payoutErr.code,
+              message: payoutErr.message,
+              jobStatus: "VERIFIED",
+              decision: "AUTO_PAY",
+              guard: guardResult,
+              verdict,
+            },
+            { status: statusCode }
+          );
+        }
+
         console.error("[Payout] Payout API error:", payoutErr);
         const errDetails = payoutErr.details || payoutErr.message || "";
         const isInsufficientFunds =
@@ -316,7 +376,7 @@ export async function POST(
             previousState: "GUARD_EVALUATED",
             newState: "FUNDS_DEPLETED",
             actor: "PAYPAL_API",
-            isMock,
+            isMock: false,
             payload: {
               error: "INSUFFICIENT_FUNDS",
               reason: "Platform Sandbox balance depleted over unbacked demo runs",
@@ -341,6 +401,7 @@ export async function POST(
         throw payoutErr;
       }
 
+      const { payoutResult, isSimulated, mode, uiModeLabel } = dispatched;
       const payoutItemId = payoutResult.batch_header.payout_batch_id;
 
       // Record Payment
@@ -352,20 +413,20 @@ export async function POST(
         amount: job.amount,
         currency: job.currency,
         status: "COMPLETED",
-        isMock,
+        isMock: isSimulated,
         rawResponse: payoutResult,
       });
 
       await db.update(jobs).set({ status: "SETTLED", updatedAt: new Date() }).where(eq(jobs.id, id));
 
-      // Append to Ledger: PAYOUT_INITIATED (only labelled [SIMULATED] if isMock is true)
+      // Append to Ledger: PAYOUT_INITIATED (labelled [SIMULATED] whenever isSimulated is true)
       await appendLedgerEvent({
         jobId: id,
-        eventType: isMock ? "PAYOUT_INITIATED [SIMULATED]" : "PAYOUT_INITIATED",
+        eventType: isSimulated ? "PAYOUT_INITIATED [SIMULATED]" : "PAYOUT_INITIATED",
         previousState: "GUARD_EVALUATED",
         newState: "SETTLED",
         actor: "PAYPAL_API",
-        isMock,
+        isMock: isSimulated,
         payload: {
           recipientEmail: job.freelancerEmail,
           amount: job.amount,
@@ -373,7 +434,8 @@ export async function POST(
           payoutBatchId: payoutItemId,
           senderBatchId,
           batchStatus: payoutResult.batch_header.batch_status,
-          mode: isMock ? "SIMULATED_TEST_MODE" : "REAL_PAYPAL_SANDBOX",
+          mode,
+          isSimulated,
         },
       });
 
@@ -383,14 +445,19 @@ export async function POST(
         guard: guardResult,
         decision: "AUTO_PAY",
         jobStatus: "SETTLED",
+        modeLabel: uiModeLabel,
         payout: {
           payoutBatchId: payoutItemId,
           recipientEmail: job.freelancerEmail,
           amount: job.amount,
           currency: job.currency,
+          isSimulated,
+          mode,
+          uiModeLabel,
         },
       });
     }
+
 
     if (guardResult.decision === "NEEDS_HUMAN") {
       await db.insert(approvals).values({

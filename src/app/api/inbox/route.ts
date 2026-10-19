@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, jobs, verdicts, submissions, mandates, policies, payments } from "@/db";
-import { eq, desc, inArray, and } from "drizzle-orm";
+import { eq, desc, inArray, and, gte } from "drizzle-orm";
 import { evaluatePolicyGuard } from "@/lib/guard";
-import { createPayout } from "@/lib/paypal/payouts";
+import { dispatchJobPayout, RealPayoutGuardError } from "@/lib/paypal";
 import { refundCapturedPayment } from "@/lib/paypal/orders";
 import { appendLedgerEvent } from "@/db/ledger";
 import { assertAuthorizedRole } from "@/lib/auth/roles";
+
 
 export const dynamic = "force-dynamic";
 
@@ -167,22 +168,76 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Execute instant PayPal payout
-      const isMock = process.env.PAYPAL_MOCK === "true";
+      // Execute PayPal payout via canonical guard
       const senderBatchId = `batch_rev_${job.id.slice(0, 8)}_${Date.now()}`;
       const senderItemId = `item_rev_${job.id.slice(0, 8)}`;
 
-      let payoutRes;
+      const fundingPayments = await db
+        .select({
+          type: payments.type,
+          status: payments.status,
+          isMock: payments.isMock,
+          paypalId: payments.paypalId,
+        })
+        .from(payments)
+        .where(eq(payments.jobId, job.id));
+
+      const startOfUtcDay = new Date();
+      startOfUtcDay.setUTCHours(0, 0, 0, 0);
+      const todayRealPayouts = await db
+        .select({ amount: payments.amount })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.type, "PAYOUT"),
+            eq(payments.isMock, false),
+            gte(payments.createdAt, startOfUtcDay)
+          )
+        );
+
+      let dispatched;
       try {
-        payoutRes = await createPayout({
-          recipientEmail: job.freelancerEmail,
-          amount: job.amount,
-          currency: job.currency,
-          note: `ProofPay Milestone Settled (Approved via Human Review): ${job.title}`,
+        dispatched = await dispatchJobPayout({
+          job: {
+            id: job.id,
+            title: job.title,
+            freelancerEmail: job.freelancerEmail,
+            amount: job.amount,
+            currency: job.currency,
+          },
+          fundingPayments,
+          todayRealPayouts,
           senderBatchId,
           senderItemId,
+          note: `ProofPay Milestone Settled (Approved via Human Review): ${job.title}`,
         });
       } catch (payoutErr: any) {
+        if (payoutErr instanceof RealPayoutGuardError) {
+          await appendLedgerEvent({
+            jobId: job.id,
+            eventType: "PAYOUT_BLOCKED_BY_GUARD",
+            previousState: job.status,
+            newState: "PAYOUT_BLOCKED",
+            actor: "GUARD",
+            isMock: false,
+            payload: {
+              error: payoutErr.code,
+              reviewerEmail,
+              reason: payoutErr.message,
+            },
+          });
+
+          const statusCode =
+            payoutErr.code === "DAILY_REAL_PAYOUT_CAP_EXCEEDED" ? 429 : 400;
+          return NextResponse.json(
+            {
+              error: payoutErr.code,
+              message: payoutErr.message,
+            },
+            { status: statusCode }
+          );
+        }
+
         console.error("[Inbox Approval Payout] Error:", payoutErr);
         const errDetails = payoutErr.details || payoutErr.message || "";
         const isInsufficientFunds =
@@ -197,7 +252,7 @@ export async function POST(req: NextRequest) {
             previousState: job.status,
             newState: "FUNDS_DEPLETED",
             actor: "ADMIN",
-            isMock,
+            isMock: false,
             payload: {
               error: "INSUFFICIENT_FUNDS",
               reviewerEmail,
@@ -218,6 +273,7 @@ export async function POST(req: NextRequest) {
         throw payoutErr;
       }
 
+      const { payoutResult: payoutRes, isSimulated, mode, uiModeLabel } = dispatched;
       const payoutBatchId = payoutRes.batch_header.payout_batch_id;
       const payoutItemId = senderItemId;
 
@@ -236,18 +292,18 @@ export async function POST(req: NextRequest) {
         amount: job.amount,
         currency: job.currency,
         status: "SUCCESS",
-        isMock,
+        isMock: isSimulated,
         rawResponse: payoutRes as unknown as Record<string, unknown>,
       });
 
       // Append immutable ledger event
       await appendLedgerEvent({
         jobId: job.id,
-        eventType: isMock ? "PAYOUT_RELEASED [SIMULATED]" : "PAYOUT_RELEASED",
+        eventType: isSimulated ? "PAYOUT_RELEASED [SIMULATED]" : "PAYOUT_RELEASED",
         previousState: job.status,
         newState: "PAID",
         actor: "ADMIN",
-        isMock,
+        isMock: isSimulated,
         payload: {
           payoutBatchId,
           payoutItemId,
@@ -255,7 +311,8 @@ export async function POST(req: NextRequest) {
           currency: job.currency,
           reviewerEmail,
           note: "Approved via human review queue",
-          mode: isMock ? "SIMULATED_TEST_MODE" : "REAL_PAYPAL_SANDBOX",
+          mode,
+          isSimulated,
         },
       });
 
@@ -263,7 +320,11 @@ export async function POST(req: NextRequest) {
         success: true,
         decision: "APPROVED",
         payoutBatchId,
+        isSimulated,
+        mode,
+        modeLabel: uiModeLabel,
       });
+
     } else if (action === "reject" || action === "reject_and_refund") {
       // Find captured payment for this job to refund escrow
       const [fundingPayment] = await db

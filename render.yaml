@@ -32,8 +32,19 @@ services:
         sync: false
       - key: PAYPAL_WEBHOOK_ID
         sync: false
+      - key: PAYPAL_SANDBOX_PAYEE_EMAIL
+        sync: false
+      - key: PAYPAL_SANDBOX_PERSONAL_EMAIL
+        sync: false
+      - key: PAYPAL_SANDBOX_BUSINESS_EMAIL
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: MAX_DAILY_REAL_PAYOUT_USD
+        value: "25.00"
+      - key: MAX_DAILY_REAL_PAYOUT_COUNT
+        value: "5"
+
 
 databases:
   - name: proofpay-db

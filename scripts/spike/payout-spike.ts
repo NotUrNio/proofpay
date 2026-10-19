@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
-import { createPayout, isPayPalMock } from "../../src/lib/paypal";
+import { createPayout, isPayPalMock, resolveConfiguredSandboxPayeeEmail } from "../../src/lib/paypal";
 import crypto from "crypto";
 
 async function main() {
@@ -15,21 +15,19 @@ async function main() {
 
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-  const recipientEmail =
-    process.env.PAYPAL_SANDBOX_PERSONAL_EMAIL ||
-    process.argv[2] ||
-    "freelancer@example.test"; // User can pass as argument or env
+  const recipientEmail = process.argv[2] || resolveConfiguredSandboxPayeeEmail();
 
   if (!clientId || !clientSecret || clientId.includes("your_sandbox_") || clientSecret.includes("your_sandbox_")) {
     console.error("\n[FAIL] Missing real PayPal Sandbox credentials.");
     console.error("Add valid credentials to .env:");
     console.error("  PAYPAL_CLIENT_ID=<Your Sandbox Client ID>");
     console.error("  PAYPAL_CLIENT_SECRET=<Your Sandbox Secret>");
-    console.error("  PAYPAL_SANDBOX_PERSONAL_EMAIL=<A sandbox personal/buyer account email>");
+    console.error("  PAYPAL_SANDBOX_PAYEE_EMAIL=<A sandbox personal/payee account email>");
     console.error("\nYou can find sandbox test accounts under:");
     console.error("  https://developer.paypal.com/dashboard/accounts");
     process.exit(1);
   }
+
 
   const senderBatchId = `spike_batch_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
   const senderItemId = `spike_item_${Date.now()}`;

@@ -12,7 +12,15 @@ import { signMandate } from "../src/lib/guard/mandate";
 import { evaluatePolicyGuard } from "../src/lib/guard/guard";
 import { runHardChecks } from "../src/lib/verify/hard-checks";
 import { runLlmVerifierEnsemble } from "../src/lib/verify/llm-verifier";
-import { createOrder, getOrder, captureOrder, createPayout, getPayoutBatch } from "../src/lib/paypal";
+import {
+  createOrder,
+  getOrder,
+  captureOrder,
+  createPayout,
+  getPayoutBatch,
+  resolveConfiguredSandboxPayeeEmail,
+  resolveConfiguredSandboxBuyerEmail,
+} from "../src/lib/paypal";
 import { eq } from "drizzle-orm";
 
 async function promptUser(questionText: string): Promise<string> {
@@ -43,12 +51,13 @@ async function main() {
   await ensureDatabaseSchema();
   console.log("[1/7] Database schema verified and Postgres triggers active.");
 
-  // 2. Create Job in DB
+  // 2. Create Job in DB (requires configured sandbox payee & buyer env vars; fails loudly if missing)
   const jobId = crypto.randomUUID();
   const amount = "5.00";
   const currency = "USD";
-  const clientEmail = "client@example.test";
-  const freelancerEmail = "freelancer@example.test";
+  const freelancerEmail = resolveConfiguredSandboxPayeeEmail();
+  const clientEmail = resolveConfiguredSandboxBuyerEmail();
+
 
   const [job] = await db
     .insert(jobs)
@@ -452,12 +461,16 @@ async function main() {
     timestamp: new Date().toISOString(),
   };
 
-  fs.writeFileSync(
-    path.resolve(process.cwd(), ".data/single-real-run.json"),
-    JSON.stringify(singleRunSummary, null, 2),
-    "utf-8"
-  );
+  const singleRunPath = path.resolve(process.cwd(), ".data/single-real-run.json");
+  if (!fs.existsSync(singleRunPath) || process.env.OVERWRITE_SINGLE_RUN_JSON === "true") {
+    fs.writeFileSync(
+      singleRunPath,
+      JSON.stringify(singleRunSummary, null, 2),
+      "utf-8"
+    );
+  }
 }
+
 
 main().catch((err) => {
   console.error("Demo run failed:", err);

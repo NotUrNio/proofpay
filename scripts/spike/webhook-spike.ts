@@ -3,7 +3,8 @@ dotenv.config();
 
 import http from "http";
 import { spawn } from "child_process";
-import { verifyWebhookSignature, isPayPalMock, createPayout, getPayPalAccessToken, getPayPalBaseUrl } from "../../src/lib/paypal";
+import { verifyWebhookSignature, isPayPalMock, createPayout, getPayPalAccessToken, getPayPalBaseUrl, resolveConfiguredSandboxPayeeEmail } from "../../src/lib/paypal";
+
 
 const PORT = 3000;
 
@@ -116,7 +117,8 @@ async function main() {
 
   // 3. Trigger Real Payout to produce a live PayPal Webhook
   console.log("\n4. Triggering real $0.01 payout to produce live webhook delivery from PayPal...");
-  const recipientEmail = process.env.PAYPAL_SANDBOX_PERSONAL_EMAIL || "priya.freelancer.sandbox@example.com";
+  const recipientEmail = resolveConfiguredSandboxPayeeEmail();
+
   const senderBatchId = `spike_webhook_batch_${Date.now()}`;
 
   try {
