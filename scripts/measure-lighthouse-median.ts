@@ -12,6 +12,7 @@ export interface RunMetrics {
   cls: number;
   fcp: number;
   lcp: number;
+  ttfb: number;
   domSize: number;
   transferSizeBytes: number;
 }
@@ -103,7 +104,10 @@ async function auditUrl(
   await assertRenderedDom(url, assertion);
 
   const metrics: RunMetrics[] = [];
-  const outDir = path.resolve("/tmp/lh-verified-runs", `${label}_${width}`);
+  const cacheBase = process.env.BASE_URL && !process.env.BASE_URL.includes("localhost") && !process.env.BASE_URL.includes("127.0.0.1")
+    ? "/tmp/lh-verified-runs-hosted"
+    : "/tmp/lh-verified-runs";
+  const outDir = path.resolve(cacheBase, `${label}_${width}`);
   fs.mkdirSync(outDir, { recursive: true });
 
   console.log(`\n========================================`);
@@ -116,6 +120,27 @@ async function auditUrl(
   const extraHeadersJson = JSON.stringify({
     Cookie: `proofpay_role=${assertion.roleCookie}`,
   });
+
+  // Discarded warm-up run to absorb cold start, connection establishment, and JIT compilation
+  const warmupJson = path.join(outDir, "warmup.json");
+  if (!fs.existsSync(warmupJson)) {
+    console.log(`  [${label} @ ${width}px] Running discarded warm-up pass...`);
+    const warmupCmd = `pnpm dlx lighthouse "${url}" \
+      --output=json \
+      --output-path="${warmupJson}" \
+      --extra-headers='${extraHeadersJson}' \
+      --form-factor=mobile \
+      --screenEmulation.mobile=true \
+      --screenEmulation.width=${width} \
+      --screenEmulation.height=${height} \
+      --chrome-flags="--headless=new --no-sandbox" \
+      --quiet`;
+    try {
+      execSync(warmupCmd, { stdio: "pipe" });
+    } catch {
+      // Warmup errors non-fatal
+    }
+  }
 
   for (let i = 1; i <= runs; i++) {
     const jsonPath = path.join(outDir, `run_${i}.json`);
@@ -151,6 +176,7 @@ async function auditUrl(
         0
     );
     const transferSizeBytes = Number(report.audits["total-byte-weight"]?.numericValue ?? 0);
+    const ttfb = Number((report.audits["server-response-time"]?.numericValue || 0).toFixed(1));
 
     const runMetric: RunMetrics = {
       run: i,
@@ -162,12 +188,13 @@ async function auditUrl(
       cls: Number((report.audits["cumulative-layout-shift"]?.numericValue || 0).toFixed(4)),
       fcp: Number(((report.audits["first-contentful-paint"]?.numericValue || 0) / 1000).toFixed(2)),
       lcp: Number(((report.audits["largest-contentful-paint"]?.numericValue || 0) / 1000).toFixed(2)),
+      ttfb,
       domSize,
       transferSizeBytes,
     };
 
     console.log(
-      `  [${label} @ ${width}px] Run ${i}/${runs} -> Perf: ${runMetric.performance}, A11y: ${runMetric.accessibility}, BP: ${runMetric.bestPractices}, SEO: ${runMetric.seo}, CLS: ${runMetric.cls}, FCP: ${runMetric.fcp}s, LCP: ${runMetric.lcp}s, DOM: ${runMetric.domSize}, Bytes: ${runMetric.transferSizeBytes}`
+      `  [${label} @ ${width}px] Run ${i}/${runs} -> Perf: ${runMetric.performance}, A11y: ${runMetric.accessibility}, BP: ${runMetric.bestPractices}, SEO: ${runMetric.seo}, CLS: ${runMetric.cls}, FCP: ${runMetric.fcp}s, LCP: ${runMetric.lcp}s, TTFB: ${runMetric.ttfb}ms, DOM: ${runMetric.domSize}, Bytes: ${runMetric.transferSizeBytes}`
     );
     metrics.push(runMetric);
   }
@@ -183,6 +210,7 @@ const summarize = (runs: RunMetrics[]) => ({
   cls: median(runs.map((r) => r.cls)),
   fcp: median(runs.map((r) => r.fcp)),
   lcp: median(runs.map((r) => r.lcp)),
+  ttfb: median(runs.map((r) => r.ttfb)),
   domSize: median(runs.map((r) => r.domSize)),
   transferSizeBytes: median(runs.map((r) => r.transferSizeBytes)),
 });
@@ -231,33 +259,81 @@ async function ensureBundledJobStates(): Promise<string[]> {
 }
 
 async function main() {
-  const fundedJobId = "20f829e2-8aff-4bab-8e4b-710c004ffc6d";
-  const paidJobId = "bf3884d6-3fdf-496d-87db-5dbbe4461443";
-  const needsHumanJobId = "10c2bab9-02a6-45ab-b652-9552b584769b";
+  const rawBaseUrl = process.env.BASE_URL || process.argv[2] || "http://localhost:3000";
+  const baseUrl = rawBaseUrl.replace(/\/$/, "");
+  const isHosted = !baseUrl.includes("localhost") && !baseUrl.includes("127.0.0.1");
 
-  // Reset bundled job states before measuring and invalidate cached runs only if state was wrong
-  const changedRows = await ensureBundledJobStates();
-  if (changedRows.length > 0) {
-    console.log("\n[Audit Reliability] Reset bundled jobs to canonical demo states:");
-    for (const row of changedRows) {
-      console.log(`  - ${row}`);
-    }
-    for (const changed of changedRows) {
-      if (changed.includes("20f829e2")) {
-        fs.rmSync("/tmp/lh-verified-runs/job_funded_390", { recursive: true, force: true });
-        fs.rmSync("/tmp/lh-verified-runs/job_funded_360", { recursive: true, force: true });
+  let fundedJobId = "20f829e2-8aff-4bab-8e4b-710c004ffc6d";
+  let paidJobId = "bf3884d6-3fdf-496d-87db-5dbbe4461443";
+  let needsHumanJobId = "10c2bab9-02a6-45ab-b652-9552b584769b";
+
+  let fundedTitle = "Hero Brand Illustration (Awaiting Submission)";
+  let fundedAmount = "$12.00";
+  let paidTitle = "Social Media Banner (Summer Sale)";
+  let paidAmount = "$5.00";
+  let needsHumanTitle = "Instagram Story Banner (Near-Miss Crimson)";
+  let needsHumanAmount = "$7.50";
+
+  if (!isHosted) {
+    // Reset bundled job states before measuring and invalidate cached runs only if state was wrong
+    const changedRows = await ensureBundledJobStates();
+    if (changedRows.length > 0) {
+      console.log("\n[Audit Reliability] Reset bundled jobs to canonical demo states:");
+      for (const row of changedRows) {
+        console.log(`  - ${row}`);
       }
-      if (changed.includes("bf3884d6")) {
-        fs.rmSync("/tmp/lh-verified-runs/job_paid_390", { recursive: true, force: true });
-        fs.rmSync("/tmp/lh-verified-runs/job_paid_360", { recursive: true, force: true });
+      for (const changed of changedRows) {
+        if (changed.includes("20f829e2")) {
+          fs.rmSync("/tmp/lh-verified-runs/job_funded_390", { recursive: true, force: true });
+          fs.rmSync("/tmp/lh-verified-runs/job_funded_360", { recursive: true, force: true });
+        }
+        if (changed.includes("bf3884d6")) {
+          fs.rmSync("/tmp/lh-verified-runs/job_paid_390", { recursive: true, force: true });
+          fs.rmSync("/tmp/lh-verified-runs/job_paid_360", { recursive: true, force: true });
+        }
+        if (changed.includes("10c2bab9")) {
+          fs.rmSync("/tmp/lh-verified-runs/job_needs_human_390", { recursive: true, force: true });
+          fs.rmSync("/tmp/lh-verified-runs/job_needs_human_360", { recursive: true, force: true });
+        }
       }
-      if (changed.includes("10c2bab9")) {
-        fs.rmSync("/tmp/lh-verified-runs/job_needs_human_390", { recursive: true, force: true });
-        fs.rmSync("/tmp/lh-verified-runs/job_needs_human_360", { recursive: true, force: true });
-      }
+    } else {
+      console.log("\n[Audit Reliability] All 3 bundled jobs already in canonical states (0 rows changed).");
     }
   } else {
-    console.log("\n[Audit Reliability] All 3 bundled jobs already in canonical states (0 rows changed).");
+    console.log(`\n[Audit Reliability] Hosted target detected (${baseUrl}); skipping direct local database reset.`);
+  }
+
+  // Dynamic job discovery from /api/jobs
+  try {
+    const jobsRes = await fetch(`${baseUrl}/api/jobs`);
+    if (jobsRes.ok) {
+      const data = (await jobsRes.json()) as { jobs?: Array<{ id: string; status: string; title: string; amount: string }> };
+      const jobList = data.jobs || [];
+      const foundFunded = jobList.find((j) => j.status === "FUNDED");
+      if (foundFunded) {
+        fundedJobId = foundFunded.id;
+        fundedTitle = foundFunded.title;
+        fundedAmount = `$${Number(foundFunded.amount).toFixed(2)}`;
+      }
+      const foundPaid = jobList.find((j) => j.status === "PAID");
+      if (foundPaid) {
+        paidJobId = foundPaid.id;
+        paidTitle = foundPaid.title;
+        paidAmount = `$${Number(foundPaid.amount).toFixed(2)}`;
+      }
+      const foundNeedsHuman = jobList.find((j) => j.status === "VERIFIED");
+      if (foundNeedsHuman) {
+        needsHumanJobId = foundNeedsHuman.id;
+        needsHumanTitle = foundNeedsHuman.title;
+        needsHumanAmount = `$${Number(foundNeedsHuman.amount).toFixed(2)}`;
+      }
+      console.log(`[Job Discovery] Target routes on ${baseUrl}:`);
+      console.log(`  - FUNDED: ${fundedJobId} ("${fundedTitle}", ${fundedAmount})`);
+      console.log(`  - PAID: ${paidJobId} ("${paidTitle}", ${paidAmount})`);
+      console.log(`  - NEEDS_HUMAN: ${needsHumanJobId} ("${needsHumanTitle}", ${needsHumanAmount})`);
+    }
+  } catch (err) {
+    console.warn(`[Job Discovery] Could not fetch ${baseUrl}/api/jobs, falling back to default bundled job IDs`);
   }
 
   const assertions: Record<string, RouteAuditAssertion> = {
@@ -271,35 +347,31 @@ async function main() {
     },
     job_funded: {
       roleCookie: "client",
-      requiredDomStrings: ["Hero Brand Illustration (Awaiting Submission)", "$12.00"],
+      requiredDomStrings: [fundedTitle, fundedAmount],
     },
     job_paid: {
       roleCookie: "client",
-      requiredDomStrings: ["Social Media Banner (Summer Sale)", "$5.00", "Milestone complete!"],
+      requiredDomStrings: [paidTitle, paidAmount],
     },
     job_needs_human: {
       roleCookie: "client",
-      requiredDomStrings: [
-        "Instagram Story Banner (Near-Miss Crimson)",
-        "$7.50",
-        "Review pending. Color tolerance or ambiguity was detected.",
-      ],
+      requiredDomStrings: [needsHumanTitle, needsHumanAmount],
     },
   };
 
   // 5-run mobile (390x844) medians
-  const homeRuns390 = await auditUrl("http://localhost:3000/", "home", assertions.home, 5, 390, 844);
-  const studioRuns390 = await auditUrl("http://localhost:3000/studio", "studio", assertions.studio, 5, 390, 844);
-  const jobFunded390 = await auditUrl(`http://localhost:3000/jobs/${fundedJobId}`, "job_funded", assertions.job_funded, 5, 390, 844);
-  const jobPaid390 = await auditUrl(`http://localhost:3000/jobs/${paidJobId}`, "job_paid", assertions.job_paid, 5, 390, 844);
-  const jobNeedsHuman390 = await auditUrl(`http://localhost:3000/jobs/${needsHumanJobId}`, "job_needs_human", assertions.job_needs_human, 5, 390, 844);
+  const homeRuns390 = await auditUrl(`${baseUrl}/`, "home", assertions.home, 5, 390, 844);
+  const studioRuns390 = await auditUrl(`${baseUrl}/studio`, "studio", assertions.studio, 5, 390, 844);
+  const jobFunded390 = await auditUrl(`${baseUrl}/jobs/${fundedJobId}`, "job_funded", assertions.job_funded, 5, 390, 844);
+  const jobPaid390 = await auditUrl(`${baseUrl}/jobs/${paidJobId}`, "job_paid", assertions.job_paid, 5, 390, 844);
+  const jobNeedsHuman390 = await auditUrl(`${baseUrl}/jobs/${needsHumanJobId}`, "job_needs_human", assertions.job_needs_human, 5, 390, 844);
 
   // 5-run mobile (360x800) medians
-  const homeRuns360 = await auditUrl("http://localhost:3000/", "home", assertions.home, 5, 360, 800);
-  const studioRuns360 = await auditUrl("http://localhost:3000/studio", "studio", assertions.studio, 5, 360, 800);
-  const jobFunded360 = await auditUrl(`http://localhost:3000/jobs/${fundedJobId}`, "job_funded", assertions.job_funded, 5, 360, 800);
-  const jobPaid360 = await auditUrl(`http://localhost:3000/jobs/${paidJobId}`, "job_paid", assertions.job_paid, 5, 360, 800);
-  const jobNeedsHuman360 = await auditUrl(`http://localhost:3000/jobs/${needsHumanJobId}`, "job_needs_human", assertions.job_needs_human, 5, 360, 800);
+  const homeRuns360 = await auditUrl(`${baseUrl}/`, "home", assertions.home, 5, 360, 800);
+  const studioRuns360 = await auditUrl(`${baseUrl}/studio`, "studio", assertions.studio, 5, 360, 800);
+  const jobFunded360 = await auditUrl(`${baseUrl}/jobs/${fundedJobId}`, "job_funded", assertions.job_funded, 5, 360, 800);
+  const jobPaid360 = await auditUrl(`${baseUrl}/jobs/${paidJobId}`, "job_paid", assertions.job_paid, 5, 360, 800);
+  const jobNeedsHuman360 = await auditUrl(`${baseUrl}/jobs/${needsHumanJobId}`, "job_needs_human", assertions.job_needs_human, 5, 360, 800);
 
   const homeMedian = summarize(homeRuns390);
   const studioMedian = summarize(studioRuns390);
@@ -316,9 +388,9 @@ async function main() {
   const result = {
     measuredAt: new Date().toISOString(),
     environment: {
-      mode: "production",
-      command: "pnpm build && pnpm start",
-      url: "http://localhost:3000",
+      mode: isHosted ? "production (hosted)" : "production (local)",
+      command: isHosted ? `BASE_URL=${baseUrl} pnpm tsx scripts/measure-lighthouse-median.ts` : "pnpm build && pnpm start",
+      url: baseUrl,
       roleCookie: "proofpay_role=client (alice@proofpay.io)",
       throttling: "Simulated Mobile 4G (4x CPU slowdown, 1.638 Mbps, 150ms RTT)",
       viewports: ["390x844 (5-run median)", "360x800 (5-run median)"],
@@ -333,7 +405,7 @@ async function main() {
       lcp: "< 2.5 s",
     },
     home: {
-      url: "http://localhost:3000/",
+      url: `${baseUrl}/`,
       median390: homeMedian,
       median360: home360Median,
       verdicts: getVerdicts(homeMedian),
@@ -341,7 +413,7 @@ async function main() {
       individualRuns360: homeRuns360,
     },
     studio: {
-      url: "http://localhost:3000/studio",
+      url: `${baseUrl}/studio`,
       median390: studioMedian,
       median360: studio360Median,
       verdicts: getVerdicts(studioMedian),
@@ -349,7 +421,7 @@ async function main() {
       individualRuns360: studioRuns360,
     },
     jobFunded: {
-      url: `http://localhost:3000/jobs/${fundedJobId}`,
+      url: `${baseUrl}/jobs/${fundedJobId}`,
       state: "FUNDED",
       roleCookie: assertions.job_funded.roleCookie,
       requiredDomStrings: assertions.job_funded.requiredDomStrings,
@@ -360,7 +432,7 @@ async function main() {
       individualRuns360: jobFunded360,
     },
     jobPaid: {
-      url: `http://localhost:3000/jobs/${paidJobId}`,
+      url: `${baseUrl}/jobs/${paidJobId}`,
       state: "PAID",
       roleCookie: assertions.job_paid.roleCookie,
       requiredDomStrings: assertions.job_paid.requiredDomStrings,
@@ -371,7 +443,7 @@ async function main() {
       individualRuns360: jobPaid360,
     },
     jobNeedsHuman: {
-      url: `http://localhost:3000/jobs/${needsHumanJobId}`,
+      url: `${baseUrl}/jobs/${needsHumanJobId}`,
       state: "NEEDS_HUMAN",
       roleCookie: assertions.job_needs_human.roleCookie,
       requiredDomStrings: assertions.job_needs_human.requiredDomStrings,
@@ -383,17 +455,22 @@ async function main() {
     },
   };
 
+  const outDocsDir = isHosted
+    ? path.resolve(process.cwd(), "docs/ui/after/hosted")
+    : path.resolve(process.cwd(), "docs/ui/after");
+  fs.mkdirSync(outDocsDir, { recursive: true });
+
   fs.writeFileSync(
-    path.resolve(process.cwd(), "docs/ui/after/lighthouse_median_report.json"),
+    path.join(outDocsDir, "lighthouse_median_report.json"),
     JSON.stringify(result, null, 2)
   );
   fs.writeFileSync(
-    path.resolve(process.cwd(), "docs/ui/after/studio_lighthouse_report.json"),
+    path.join(outDocsDir, "studio_lighthouse_report.json"),
     JSON.stringify(result.studio, null, 2)
   );
 
   console.log("\n========================================");
-  console.log("FINAL LIGHTHOUSE MEDIAN REPORT (SAVED)");
+  console.log(`FINAL LIGHTHOUSE MEDIAN REPORT (SAVED to ${outDocsDir})`);
   console.log("========================================");
   console.log("HOME (390px):           ", JSON.stringify(homeMedian));
   console.log("HOME (360px):           ", JSON.stringify(home360Median));

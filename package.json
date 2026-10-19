@@ -24,7 +24,8 @@
     "eval": "tsx eval/run-eval.ts",
     "eval:live": "tsx eval/run-eval.ts --live",
     "demo:run": "tsx scripts/demo-run.ts",
-    "demo:seed": "tsx scripts/seed-demo.ts"
+    "demo:seed": "tsx scripts/seed-demo.ts",
+    "preflight": "tsx scripts/preflight.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.1.10",

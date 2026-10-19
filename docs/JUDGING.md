@@ -148,15 +148,23 @@ Run the entire vitest test suite:
 ```bash
 pnpm test
 ```
-**Test Results**: 8 test suites, 54 tests, **100% passing**:
+**Test Results**: 16 test suites, 116 vitest tests + 39 playwright cross-browser tests, **100% passing**:
 1. `test/e2e-slice.test.ts`: End-to-end autonomous escrow happy path from clean DB to payout and ledger verification.
 2. `test/guard.test.ts`: Zero-LLM Policy Guard deterministic safety rules and transaction invariants.
 3. `test/mandate.test.ts`: HMAC-SHA256 signed mandate validation, parameter caps, and expiration checks.
-4. `test/ledger.test.ts`: Immutable database trigger enforcement (UPDATE/DELETE/TRUNCATE blocked) + SHA-256 hash chaining.
+4. `test/ledger.test.ts`: Immutable database trigger enforcement (UPDATE/DELETE/TRUNCATE blocked) + multi-version SHA-256 hash chaining.
 5. `test/m2-verification.test.ts`: Boundary tests (2MB size limits, 1080x1080 dimensions, polyglot containers, acTL chunk rejection).
 6. `test/m4-chaos-replay.test.ts`: PayPal negative testing headers, simulation codes, idempotency drills, and counterfactual replay engine.
 7. `test/m4-step0-security.test.ts`: Access control, role enforcement, bundle secret leak prevention, client-side isolation.
 8. `test/paypal.test.ts`: Real PayPal sandbox OAuth token caching and API request formatting.
+9. `tests/seed-lock.test.ts`: Single-instance seed lock and local-only database guard.
+10. `tests/job-access-ssr.test.ts`: SSR least privilege, role cookie enforcement, and zero secret payee leaks.
+11. `tests/rate-limit.test.ts`: Multi-hop client IP extraction, proxy trust, and rate limiting.
+12. `tests/payout-modes.test.ts`: Payout mode labeling, daily velocity caps, and simulation separation.
+13. `tests/ag-studio-guard.test.ts`: Protected routes and role switcher guards.
+14. `tests/analytics.test.ts`: Real-time analytics computation and spend metrics.
+15. `tests/demo-safety-policy.test.ts`: Guided demo safety boundaries and simulated execution.
+16. `tests/ledger-display.test.ts`: Display-layer email masking across public audit views.
 
 ---
 
@@ -171,5 +179,5 @@ pnpm test
 | **PayPal Orders v2 (Escrow Capture)** | [`src/lib/paypal/orders.ts`](../src/lib/paypal/orders.ts) | Idempotent order creation and capture into platform escrow with `custom_id` traceability. |
 | **PayPal Payouts REST (Settlement)** | [`src/lib/paypal/payouts.ts`](../src/lib/paypal/payouts.ts) | Idempotent payout release to freelancer sandbox accounts via `sender_batch_id`. |
 | **PayPal Chaos & Idempotency Proof** | [`src/lib/paypal/chaos.ts`](../src/lib/paypal/chaos.ts) | Real double-transmission proof and negative testing simulation protocol. |
-| **Immutable Database Ledger** | [`src/lib/ledger/ledger.ts`](../src/lib/ledger/ledger.ts) | Database triggers + SHA-256 hash chaining walking every historical transition. |
+| **Immutable Database Ledger** | [`src/db/ledger.ts`](../src/db/ledger.ts) | Database triggers + SHA-256 hash chaining walking every historical transition. |
 

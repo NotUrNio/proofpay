@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Check,
 } from "lucide-react";
+import { maskEmail } from "@/lib/ledger-display";
 
 interface InboxItem {
   job: {
@@ -151,7 +152,7 @@ export default function InboxPage() {
       if (data.success) {
         setActionMessage(
           action === "approve"
-            ? `Milestone approved. $${items[selectedIndex]?.job.amount} USD dispatched to ${items[selectedIndex]?.job.freelancerEmail} via PayPal Payouts.`
+            ? `Milestone approved. $${items[selectedIndex]?.job.amount} USD dispatched to ${maskEmail(items[selectedIndex]?.job.freelancerEmail || "")} via PayPal Payouts.`
             : "Milestone rejected. Escrow funds marked for return to client."
         );
         await fetchInbox();
@@ -313,7 +314,7 @@ export default function InboxPage() {
                     </h4>
 
                     <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                      <span>Priya ({item.job.freelancerEmail.split("@")[0]})</span>
+                      <span>Priya ({maskEmail(item.job.freelancerEmail)})</span>
                       <span className="font-mono text-[10px] text-slate-500">
                         {item.job.id.slice(0, 8)}...
                       </span>
@@ -384,7 +385,7 @@ export default function InboxPage() {
                   <span>Dry-Run Settlement Impact:</span>
                 </div>
                 <p className="text-slate-300 leading-relaxed">
-                  If you click <strong>Approve</strong>: <strong>${parseFloat(activeItem.job.amount).toFixed(2)} USD</strong> will be released immediately to <strong>{activeItem.job.freelancerEmail}</strong> via PayPal Payouts. The Policy Guard will perform a final verification of the HMAC mandate cap and payee match prior to moving money.
+                  If you click <strong>Approve</strong>: <strong>${parseFloat(activeItem.job.amount).toFixed(2)} USD</strong> will be released immediately to <strong>{maskEmail(activeItem.job.freelancerEmail)}</strong> via PayPal Payouts. The Policy Guard will perform a final verification of the HMAC mandate cap and payee match prior to moving money.
                 </p>
                 <p className="text-slate-400 text-[11px]">
                   If you click <strong>Reject</strong>: Payout is blocked and escrow funds remain locked for client refund.
@@ -447,7 +448,7 @@ export default function InboxPage() {
 
             <p className="text-xs text-slate-300 leading-relaxed">
               {showConfirmModal === "approve"
-                ? `Are you sure you want to approve this milestone? This will immediately dispatch a live PayPal Payout of $${activeItem.job.amount} USD to ${activeItem.job.freelancerEmail}. This action is irreversible.`
+                ? `Are you sure you want to approve this milestone? This will immediately dispatch a live PayPal Payout of $${activeItem.job.amount} USD to ${maskEmail(activeItem.job.freelancerEmail)}. This action is irreversible.`
                 : `Are you sure you want to reject this deliverable? Escrow funds will not be disbursed.`}
             </p>
 

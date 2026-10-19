@@ -125,7 +125,7 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
     let jobsQueryCount = 0;
     const origSelect = db.select.bind(db);
     const selectSpy = vi.spyOn(db, "select").mockImplementation((...args: any[]) => {
-      const builder: any = origSelect(...args);
+      const builder: any = (origSelect as any)(...args);
       const origFrom = builder.from.bind(builder);
       builder.from = (table: any) => {
         if (table === jobs) {
@@ -154,7 +154,7 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
     let jobsQueryCount = 0;
     const origSelect = db.select.bind(db);
     const selectSpy = vi.spyOn(db, "select").mockImplementation((...args: any[]) => {
-      const builder: any = origSelect(...args);
+      const builder: any = (origSelect as any)(...args);
       const origFrom = builder.from.bind(builder);
       builder.from = (table: any) => {
         if (table === jobs) {

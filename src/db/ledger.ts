@@ -62,8 +62,9 @@ export function canonicalJsonStringify(obj: unknown): string {
 export function stripUndefinedDeep<T>(val: T): T {
   if (val === undefined) return undefined as unknown as T;
   if (val === null || typeof val !== "object") return val;
-  if (typeof (val as { toJSON?: () => unknown }).toJSON === "function") {
-    return stripUndefinedDeep((val as { toJSON: () => unknown }).toJSON());
+  const withToJSON = val as unknown as { toJSON?: () => unknown };
+  if (typeof withToJSON.toJSON === "function") {
+    return stripUndefinedDeep(withToJSON.toJSON()) as T;
   }
   if (Array.isArray(val)) {
     return val

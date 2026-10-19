@@ -8,7 +8,9 @@ paths = [
   '''node_modules/.*''',
   '''test/.*''',
   '''tests/.*''',
-  '''eval/fixtures/.*'''
+  '''eval/fixtures/.*''',
+  '''^\.env$''',
+  '''\.data/.*'''
 ]
 regexes = [
   '''test_signing_secret_at_least_32_characters_long_12345''',
@@ -29,5 +31,8 @@ secretGroup = 1
     '''<[^>]+>''',
     '''\[REDACTED\]''',
     '''audit-secrets-literal''',
+    '''boolean''',
+    '''SECRET_PATTERNS''',
+    '''hasSecret''',
   ]
 

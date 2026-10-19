@@ -30,22 +30,24 @@
 
 ---
 
-### [0:25 – 1:05] The Happy Path: Real PayPal Orders Capture to Instant Payout
-- **Visual**: Switch role to **Client** (`alice@proofpay.io`).
-  1. Click **"New Milestone Job"** (`/jobs/new`).
-  2. Select pre-filled template: *"Summer Sale Banner"* ($5.00 USD, payee `priya@proofpay.io`).
-  3. Click **"Create Job & Sign Mandate"**. Show the signed HMAC-SHA256 mandate parameters.
-  4. Click **"Fund Escrow via PayPal"**. Show PayPal Orders v2 approval & capture.
-  5. Switch role to **Freelancer** (`priya@proofpay.io`).
+### [0:25 – 1:05] The Happy Path: Autonomous Verification to Instant Payout
+- **Visual**: Use the top-bar role switcher to select **Client** (`Alice (Client)`).
+  1. Click **"New Milestone Job"** (`/jobs/new`) or view the **"Guided 60-Second Sandbox Demo"** on `/`.
+  2. In the 3-step creation wizard: select *"Social Media Banner (Square 1:1)"* ($5.00 USD, payee `priya@proofpay.io`).
+  3. Show Step 3: Intent Mandate parameters and progressive disclosure of CIEDE2000 $\Delta E$ rules.
+  4. Note the honest execution modes:
+     - **Guided Demo Mode**: Uses simulated escrow funding (`[SIMULATED]`) so reviewers can test without credentials.
+     - **Real Sandbox Mode**: In the recorded run (`pnpm demo:run`), Alice funds platform escrow using PayPal Orders v2 (`intent=CAPTURE`), and the Order/Capture IDs are cryptographically locked into the mandate.
+  5. Switch role to **Freelancer** (`Priya (Freelancer)`).
   6. Click **"Submit Deliverable"** (`/jobs/[id]/submit`).
   7. Upload `eval/fixtures/case_01_compliant_warm_grid.png`.
   8. Click **"Verify & Release Payout"**.
-  9. Show the live verification pipeline: Deterministic Hard Checks pass in 6ms $\to$ Gemini visual ensemble confirms brand palette and typography $\to$ Pure TypeScript Policy Guard approves $\to$ **PayPal Payouts REST API releases $5.00 instantly**.
+  9. Show the live verification pipeline: Deterministic Hard Checks pass in 6ms $\to$ Gemini visual ensemble confirms brand palette and typography $\to$ Pure TypeScript Policy Guard approves $\to$ **PayPal Payouts REST API releases $5.00 instantly** (governed by the 5 payouts / $25.00/day real cap).
   10. Highlight real IDs on screen: Order `4LF11783H4649862W`, Capture `4GP221272V958470N`, Payout Batch `CPMFG3U4LAXS2`, Payout Item `A7PB6RVHLGY2U`.
 - **Voiceover**:
-  > *"Watch the happy path. Alice creates a 50-dollar mandate and funds platform escrow upfront using PayPal Orders v2 with capture intent. The transaction ID and cryptographic cap are locked into a signed mandate.*
+  > *"Watch the happy path. Alice sets up a milestone mandate with verifiable brand rules and funds platform escrow upfront. The transaction ID and cryptographic cap are locked into a signed HMAC mandate.*
   > *Priya uploads her banner deliverable. ProofPay executes deterministic hard checks on raw bytes in six milliseconds, runs a multimodal Gemini ensemble on sanitized pixels, and feeds the verdict into our Zero-LLM Policy Guard.*
-  > *All invariants pass. ProofPay immediately invokes PayPal's Payouts REST API with a unique sender batch ID—settling real funds to Priya in under three seconds."*
+  > *All invariants pass. ProofPay immediately invokes PayPal's Payouts REST API with a unique sender batch ID—settling funds to Priya in under three seconds."*
 
 ---
 

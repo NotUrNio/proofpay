@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { SignatureCheckpointRoute } from "@/components/pipeline/SignatureCheckpointRoute";
 import { GuidedDemoScenarios } from "@/components/demo/GuidedDemoScenarios";
+import { maskEmail } from "@/lib/ledger-display";
 
 interface Job {
   id: string;
@@ -301,9 +302,9 @@ export default function HomePage() {
                       {job.description}
                     </p>
                     <div className="flex items-center gap-3 text-[11px] text-slate-400">
-                      <span>Freelancer: {job.freelancerEmail}</span>
+                      <span>Freelancer: {maskEmail(job.freelancerEmail)}</span>
                       <span>•</span>
-                      <span>Client: {job.clientEmail}</span>
+                      <span>Client: {maskEmail(job.clientEmail)}</span>
                     </div>
                   </div>
 

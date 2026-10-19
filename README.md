@@ -86,6 +86,33 @@ flowchart TD
 
 ---
 
+## 📸 Application Screenshots
+
+| Landing Page (Autonomous Escrow) | Guided Demo Outcome (Instant Payout) |
+| :---: | :---: |
+| ![Landing Page](docs/screenshots/01_landing_1440px.png) | ![Guided Demo Outcome](docs/screenshots/02_guided_demo_outcome_1440px.png) |
+| *Landing overview with live jobs and role switcher* | *Autonomous payout released upon rubric verification* |
+
+| Milestone Creation & Intent Mandate | Gray Zone Review Pending Verdict |
+| :---: | :---: |
+| ![Milestone Creation](docs/screenshots/03_new_job_step3_1440px.png) | ![Gray Zone Verdict](docs/screenshots/04_verdict_needs_human_1440px.png) |
+| *Step 3: Contractual rules & progressive parameters* | *Inspection panel showing CIEDE2000 ΔE near-miss* |
+
+| Review Inbox (Human-in-the-Loop) | Policy Editor & Replay Console |
+| :---: | :---: |
+| ![Review Inbox](docs/screenshots/05_inbox_1440px.png) | ![Policy Editor](docs/screenshots/06_policy_1440px.png) |
+| *Reviewer console for gray-zone approvals & refunds* | *Live simulator for safety invariants & replaying history* |
+
+| Settlement Analytics Studio | Cryptographic Audit Ledger |
+| :---: | :---: |
+| ![Analytics Studio](docs/screenshots/07_studio_1440px.png) | ![Audit Ledger](docs/screenshots/08_ledger_1440px.png) |
+| *Recharts spend velocity & model agreement rates* | *AG Grid immutable ledger with SHA-256 hash chains* |
+
+> [!NOTE]
+> All views are responsive and verified across desktop (1440px) and mobile (390px / 360px) viewports (see [`docs/screenshots/`](docs/screenshots/) for full mobile capture suite).
+
+---
+
 ## 🚀 Quickstart from Clean Clone
 
 ### 1. Prerequisites

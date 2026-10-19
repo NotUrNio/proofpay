@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { SignatureCheckpointRoute, CheckpointStepId } from "@/components/pipeline/SignatureCheckpointRoute";
 import { VerdictInspectionPanel } from "@/components/verdict/VerdictInspectionPanel";
+import { maskEmail } from "@/lib/ledger-display";
 
 export interface Criterion {
   id: string;
@@ -232,7 +233,7 @@ export function JobDetailClient({
         return "Review pending. Color tolerance or ambiguity was detected. Alex will review the deliverable in the Review Inbox.";
       case "PAID":
       case "SETTLED":
-        return `Milestone complete! Payout of $${parseFloat(job.amount).toFixed(2)} USD was dispatched to ${job.freelancerEmail} via PayPal Payouts.`;
+        return `Milestone complete! Payout of $${parseFloat(job.amount).toFixed(2)} USD was dispatched to ${maskEmail(job.freelancerEmail)} via PayPal Payouts.`;
       case "REJECTED":
         return "Deliverable failed contractual verification. Escrow funds remain safely locked for client refund.";
       default:
@@ -378,7 +379,7 @@ export function JobDetailClient({
               {mandate.signature}
             </div>
             <div className="text-[10px] text-slate-400 font-sans">
-              Cap: ${mandate.maxAmount} {mandate.currency} • Payee: {mandate.payeeEmail}
+              Cap: ${mandate.maxAmount} {mandate.currency} • Payee: {maskEmail(mandate.payeeEmail)}
             </div>
           </div>
 

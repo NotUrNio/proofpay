@@ -4,9 +4,10 @@ services:
     runtime: node
     plan: free
     region: oregon
+    autoDeploy: false
     buildCommand: pnpm install && pnpm build
-    startCommand: pnpm demo:seed && pnpm start
-    healthCheckPath: /api/jobs
+    startCommand: pnpm start
+    healthCheckPath: /
     envVars:
       - key: DATABASE_URL
         fromDatabase:
