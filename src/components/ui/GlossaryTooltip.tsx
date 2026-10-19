@@ -96,3 +96,4 @@ export function GlossaryTooltip({ term, children }: GlossaryTooltipProps) {
     </span>
   );
 }
+

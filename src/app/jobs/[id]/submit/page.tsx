@@ -147,6 +147,7 @@ export default function SubmitDeliverablePage({
           fileSizeBytes: form.fileSizeBytes,
           width: form.width,
           height: form.height,
+          useRecordedReplay: true,
         }),
       });
 
@@ -273,6 +274,7 @@ export default function SubmitDeliverablePage({
           }`}
         >
           <input
+            id="deliverable-file-input"
             type="file"
             ref={fileInputRef}
             onChange={(e) => e.target.files?.[0] && inspectFile(e.target.files[0])}
@@ -407,10 +409,11 @@ export default function SubmitDeliverablePage({
         {/* Action Button */}
         <div className="flex items-center justify-end pt-2">
           <button
+            id="submit-deliverable-btn"
             type="button"
             onClick={handleSubmit}
             disabled={submitting || (!selectedFile && !form.base64Data)}
-            className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
               submitting || (!selectedFile && !form.base64Data)
                 ? "bg-[#21262D] text-slate-500 cursor-not-allowed border border-[#30363D]"
                 : "bg-[#2EA043] hover:bg-[#238636] text-white shadow-md"

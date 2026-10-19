@@ -254,9 +254,10 @@ export default function NewJobPage() {
 
               <div className="flex justify-end">
                 <button
+                  id="jobs-new-step1-next"
                   type="button"
                   onClick={() => setStep(2)}
-                  className="bg-[#21262D] hover:bg-[#30363D] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+                  className="bg-[#21262D] hover:bg-[#30363D] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                 >
                   <span>Continue to Amount & Payee</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -332,9 +333,10 @@ export default function NewJobPage() {
                   Back
                 </button>
                 <button
+                  id="jobs-new-step2-next"
                   type="button"
                   onClick={() => setStep(3)}
-                  className="bg-[#21262D] hover:bg-[#30363D] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+                  className="bg-[#21262D] hover:bg-[#30363D] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                 >
                   <span>Continue to Verification Rules</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -489,9 +491,10 @@ export default function NewJobPage() {
             )}
 
             <button
+              id="jobs-new-submit-btn"
               type="submit"
               disabled={submitting}
-              className="bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2"
+              className="bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>
