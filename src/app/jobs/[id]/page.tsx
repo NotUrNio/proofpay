@@ -43,8 +43,8 @@ export async function generateMetadata({
   const { id } = await params;
   try {
     const cookieStore = await cookies();
-    const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "reviewer") as UserRole;
-    const user = DEMO_USERS[roleValue] || DEMO_USERS.reviewer;
+    const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "client") as UserRole;
+    const user = DEMO_USERS[roleValue] || DEMO_USERS.client;
 
     const job = await getJobById(id);
     if (!job) {
@@ -81,8 +81,8 @@ export default async function JobPage({
 
   try {
     const cookieStore = await cookies();
-    const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "reviewer") as UserRole;
-    const user = DEMO_USERS[roleValue] || DEMO_USERS.reviewer;
+    const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "client") as UserRole;
+    const user = DEMO_USERS[roleValue] || DEMO_USERS.client;
 
     const job = await getJobById(id);
     if (!job) {
