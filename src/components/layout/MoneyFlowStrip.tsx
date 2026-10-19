@@ -42,7 +42,7 @@ export function MoneyFlowStrip() {
   }, []);
 
   return (
-    <div className="bg-[#11161D] border-b border-[#30363D] text-slate-300 text-xs">
+    <div className="bg-[#11161D] border-b border-[#30363D] text-slate-300 text-xs min-h-[41px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
           {/* Left: Escrow Checkpoint Metrics */}

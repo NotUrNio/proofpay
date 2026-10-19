@@ -70,12 +70,13 @@ async function auditUrl(url: string, label: string, runs = 5): Promise<RunMetric
 async function main() {
   const homeRuns = await auditUrl("http://localhost:3000/", "home", 5);
 
-  // Fetch first job ID
-  const jobListRaw = execSync("curl -s http://localhost:3000/api/jobs", { encoding: "utf-8" });
-  const jobList = JSON.parse(jobListRaw);
-  const jobId = jobList.jobs?.[0]?.id || "6ea724dd-e839-45d4-8dfc-d57e83ad8a04";
+  const fundedJobId = "20f829e2-8aff-4bab-8e4b-710c004ffc6d";
+  const paidJobId = "bf3884d6-3fdf-496d-87db-5dbbe4461443";
+  const needsHumanJobId = "10c2bab9-02a6-45ab-b652-9552b584769b";
 
-  const jobRuns = await auditUrl(`http://localhost:3000/jobs/${jobId}`, "job", 5);
+  const fundedRuns = await auditUrl(`http://localhost:3000/jobs/${fundedJobId}`, "job_funded", 5);
+  const paidRuns = await auditUrl(`http://localhost:3000/jobs/${paidJobId}`, "job_paid", 5);
+  const needsHumanRuns = await auditUrl(`http://localhost:3000/jobs/${needsHumanJobId}`, "job_needs_human", 5);
 
   const summarize = (runs: RunMetrics[]) => ({
     performance: median(runs.map((r) => r.performance)),
@@ -87,8 +88,20 @@ async function main() {
     lcp: median(runs.map((r) => r.lcp)),
   });
 
+  const getVerdicts = (m: ReturnType<typeof summarize>) => ({
+    performance: m.performance >= 85 ? "PASS" : "FAIL",
+    accessibility: m.accessibility >= 95 ? "PASS" : "FAIL",
+    bestPractices: m.bestPractices >= 90 ? "PASS" : "FAIL",
+    seo: m.seo >= 90 ? "PASS" : "FAIL",
+    cls: m.cls < 0.1 ? "PASS" : "FAIL",
+    fcp: m.fcp < 1.8 ? "PASS" : "FAIL",
+    lcp: m.lcp < 2.5 ? "PASS" : "FAIL",
+  });
+
   const homeMedian = summarize(homeRuns);
-  const jobMedian = summarize(jobRuns);
+  const fundedMedian = summarize(fundedRuns);
+  const paidMedian = summarize(paidRuns);
+  const needsHumanMedian = summarize(needsHumanRuns);
 
   const result = {
     measuredAt: new Date().toISOString(),
@@ -111,31 +124,30 @@ async function main() {
     },
     home: {
       url: "http://localhost:3000/",
-      individualRuns: homeRuns,
       median: homeMedian,
-      verdicts: {
-        performance: homeMedian.performance >= 85 ? "PASS" : "FAIL",
-        accessibility: homeMedian.accessibility >= 95 ? "PASS" : "FAIL",
-        bestPractices: homeMedian.bestPractices >= 90 ? "PASS" : "FAIL",
-        seo: homeMedian.seo >= 90 ? "PASS" : "FAIL",
-        cls: homeMedian.cls < 0.1 ? "PASS" : "FAIL",
-        fcp: homeMedian.fcp < 1.8 ? "PASS" : "FAIL",
-        lcp: homeMedian.lcp < 2.5 ? "PASS" : "FAIL",
-      },
+      verdicts: getVerdicts(homeMedian),
+      individualRuns: homeRuns,
     },
-    job: {
-      url: `http://localhost:3000/jobs/${jobId}`,
-      individualRuns: jobRuns,
-      median: jobMedian,
-      verdicts: {
-        performance: jobMedian.performance >= 85 ? "PASS" : "FAIL",
-        accessibility: jobMedian.accessibility >= 95 ? "PASS" : "FAIL",
-        bestPractices: jobMedian.bestPractices >= 90 ? "PASS" : "FAIL",
-        seo: jobMedian.seo >= 90 ? "PASS" : "FAIL",
-        cls: jobMedian.cls < 0.1 ? "PASS" : "FAIL",
-        fcp: jobMedian.fcp < 1.8 ? "PASS" : "FAIL",
-        lcp: jobMedian.lcp < 2.5 ? "PASS" : "FAIL",
-      },
+    jobFunded: {
+      url: `http://localhost:3000/jobs/${fundedJobId}`,
+      state: "FUNDED",
+      median: fundedMedian,
+      verdicts: getVerdicts(fundedMedian),
+      individualRuns: fundedRuns,
+    },
+    jobPaid: {
+      url: `http://localhost:3000/jobs/${paidJobId}`,
+      state: "PAID",
+      median: paidMedian,
+      verdicts: getVerdicts(paidMedian),
+      individualRuns: paidRuns,
+    },
+    jobNeedsHuman: {
+      url: `http://localhost:3000/jobs/${needsHumanJobId}`,
+      state: "NEEDS_HUMAN (VERIFIED)",
+      median: needsHumanMedian,
+      verdicts: getVerdicts(needsHumanMedian),
+      individualRuns: needsHumanRuns,
     },
   };
 
@@ -147,10 +159,11 @@ async function main() {
   console.log("\n========================================");
   console.log("FINAL 5-RUN MEDIAN REPORT (SAVED)");
   console.log("========================================");
-  console.log("HOME (Median of 5 runs):", JSON.stringify(result.home.median, null, 2));
-  console.log("HOME VERDICTS:", JSON.stringify(result.home.verdicts, null, 2));
-  console.log("JOB PAGE (Median of 5 runs):", JSON.stringify(result.job.median, null, 2));
-  console.log("JOB PAGE VERDICTS:", JSON.stringify(result.job.verdicts, null, 2));
+  console.log("HOME (Median):", JSON.stringify(result.home.median, null, 2));
+  console.log("JOB FUNDED (Median):", JSON.stringify(result.jobFunded.median, null, 2));
+  console.log("JOB PAID (Median):", JSON.stringify(result.jobPaid.median, null, 2));
+  console.log("JOB NEEDS_HUMAN (Median):", JSON.stringify(result.jobNeedsHuman.median, null, 2));
 }
 
 main().catch(console.error);
+
