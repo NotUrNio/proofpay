@@ -81,6 +81,33 @@ export function assertAuthorizedRole(
 }
 
 /**
+ * Checks whether a given session user has permission to view/manage a specific job.
+ * Reviewer: accesses all jobs for human triage and audit.
+ * Bundled demo templates: accessible to all personas for guided drills.
+ * Client: accesses jobs where clientEmail matches user.email.
+ * Freelancer: accesses jobs where freelancerEmail matches user.email.
+ */
+export function canUserAccessJob(
+  user: SessionUser,
+  job: { id: string; clientEmail: string; freelancerEmail: string; amount?: string }
+): boolean {
+  if (user.role === "reviewer") return true;
+  if (user.role === "client" && job.clientEmail.toLowerCase() === user.email.toLowerCase()) return true;
+  if (user.role === "freelancer" && job.freelancerEmail.toLowerCase() === user.email.toLowerCase()) return true;
+
+  // Check demo template allowance
+  const demoIds = [
+    "20f829e2-8aff-4bab-8e4b-710c004ffc6d",
+    "bf3884d6-3fdf-496d-87db-5dbbe4461443",
+    "10c2bab9-02a6-45ab-b652-9552b584769b",
+    "ef7a9683-8e2e-44b9-80fb-e12b5a2f6568",
+  ];
+  if (demoIds.includes(job.id)) return true;
+
+  return false;
+}
+
+/**
  * Simple in-memory sliding window rate limiter for costly AI operations (submissions).
  */
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();

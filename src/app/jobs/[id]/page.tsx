@@ -1,383 +1,173 @@
-"use client";
+import { db, jobs, criteria, mandates, submissions, verdicts, payments } from "@/db";
+import { eq, desc } from "drizzle-orm";
+import { JobDetailClient } from "./JobDetailClient";
+import type { Metadata } from "next";
 
-import { useEffect, useState, use } from "react";
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+    if (!job) {
+      return {
+        title: "Milestone Details — ProofPay",
+        description: "Autonomous milestone escrow and cryptographic verification details.",
+      };
+    }
+    return {
+      title: `${job.title} — ProofPay Milestone`,
+      description: job.description || "ProofPay autonomous escrow milestone details and checkpoint verification.",
+    };
+  } catch (err) {
+    return {
+      title: "Milestone Details — ProofPay",
+      description: "ProofPay milestone escrow details.",
+    };
+  }
+}
+
+import { cookies } from "next/headers";
+import { ROLE_COOKIE_NAME, DEMO_USERS, UserRole, canUserAccessJob } from "@/lib/auth/roles";
+import { ShieldAlert, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  DollarSign,
-  ShieldCheck,
-  AlertTriangle,
-  Upload,
-  Lock,
-  ExternalLink,
-  Copy,
-  Check,
-  ChevronRight,
-  FileCheck,
-} from "lucide-react";
-import { SignatureCheckpointRoute, CheckpointStepId } from "@/components/pipeline/SignatureCheckpointRoute";
-import { VerdictInspectionPanel } from "@/components/verdict/VerdictInspectionPanel";
 
-interface Criterion {
-  id: string;
-  name: string;
-  type: string;
-  isHardCheck: boolean;
-  ruleSpec: Record<string, unknown>;
-}
-
-interface Mandate {
-  jobId: string;
-  maxAmount: string;
-  currency: string;
-  payeeEmail: string;
-  scope: string;
-  expiresAt: string;
-  signature: string;
-}
-
-interface Verdict {
-  overallPassed: boolean;
-  confidence: string;
-  reasoning: string;
-  perCriteriaResults: Array<{
-    name: string;
-    passed: boolean;
-    confidence?: number;
-    reason?: string;
-    evidence?: string;
-  }>;
-}
-
-interface Submission {
-  id: string;
-  fileUrl?: string;
-  mimeType?: string;
-  fileSizeBytes?: string;
-  textContent?: string;
-  metadata?: { width?: number; height?: number };
-  createdAt: string;
-}
-
-interface Payment {
-  id: string;
-  type: string;
-  paypalId: string;
-  amount: string;
-  currency: string;
-  status: string;
-  isMock: boolean;
-  createdAt: string;
-}
-
-interface JobData {
-  job: {
-    id: string;
-    title: string;
-    description: string;
-    clientEmail: string;
-    freelancerEmail: string;
-    amount: string;
-    currency: string;
-    status: string;
-    createdAt: string;
-  };
-  criteria: Criterion[];
-  mandate: Mandate;
-  submissions: Submission[];
-  verdict: Verdict | null;
-  payments: Payment[];
-  isMock: boolean;
-}
-
-export default function JobDetailPage({
+export default async function JobPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const [data, setData] = useState<JobData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [funding, setFunding] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { id } = await params;
 
-  const fetchJob = async () => {
-    try {
-      const res = await fetch(`/api/jobs/${id}`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
-    } catch (err) {
-      console.error("Failed to load job", err);
-    } finally {
-      setLoading(false);
+  try {
+    const cookieStore = await cookies();
+    const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "reviewer") as UserRole;
+    const user = DEMO_USERS[roleValue] || DEMO_USERS.reviewer;
+
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+    if (!job) {
+      return <JobDetailClient initialData={null} jobId={id} />;
     }
-  };
 
-  useEffect(() => {
-    fetchJob();
-  }, [id]);
-
-  const handleFundEscrow = async () => {
-    setFunding(true);
-    try {
-      const res = await fetch(`/api/jobs/${id}/fund`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create_order" }),
-      });
-      const resData = await res.json();
-      if (resData.approveUrl) {
-        window.location.href = resData.approveUrl;
-      } else {
-        await fetchJob();
-      }
-    } catch (err) {
-      console.error("Failed to fund escrow:", err);
-    } finally {
-      setFunding(false);
-    }
-  };
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(label);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  if (loading) {
-    return (
-      <div className="max-w-5xl mx-auto space-y-6 min-h-[1400px]" aria-busy="true">
-        {/* Top bar skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-32 rounded skeleton-shimmer" />
-          <div className="h-4 w-28 rounded skeleton-shimmer" />
-        </div>
-        {/* Hero milestone card skeleton */}
-        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-56 skeleton-shimmer" />
-        {/* Checkpoint route skeleton */}
-        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-44 skeleton-shimmer" />
-        {/* Verdict / Inspection panel skeleton */}
-        <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-96 skeleton-shimmer" />
-        {/* Rules & Mandate cards skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-72 skeleton-shimmer" />
-          <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 h-72 skeleton-shimmer" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!data || !data.job) {
-    return (
-      <div className="max-w-2xl mx-auto py-12 text-center space-y-3">
-        <h2 className="text-xl font-bold text-white">Milestone Not Found</h2>
-        <p className="text-xs text-slate-400">The requested milestone ID does not exist in the sandbox database.</p>
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-blue-400 font-semibold">
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Overview
-        </Link>
-      </div>
-    );
-  }
-
-  const { job, mandate, verdict, submissions, payments } = data;
-
-  // Determine current checkpoint step
-  let currentStep: CheckpointStepId = "funded";
-  if (job.status === "CREATED") currentStep = "funded";
-  else if (job.status === "FUNDED") currentStep = "submitted";
-  else if (job.status === "SUBMITTED") currentStep = "checked";
-  else if (job.status === "VERIFYING" || job.status === "MANUAL_REVIEW") currentStep = "guard";
-  else if (job.status === "PAID" || job.status === "SETTLED") currentStep = "settled";
-
-  // What happens next plain-language explanation
-  const getNextActionMessage = () => {
-    switch (job.status) {
-      case "CREATED":
-        return "Milestone created. Alice must fund the $50.00 USD escrow via PayPal Orders to lock funds.";
-      case "FUNDED":
-        return `Escrow funded! Priya can now submit the final deliverable. Once submitted, verification begins immediately.`;
-      case "SUBMITTED":
-      case "VERIFYING":
-        return "Deliverable submitted. Deterministic hard checks and multimodal model sensors are actively running.";
-      case "MANUAL_REVIEW":
-        return "Color tolerance was borderline (DeltaE in gray zone). Alex will review the deliverable in the Review Inbox.";
-      case "PAID":
-      case "SETTLED":
-        return `Milestone complete! Payout of $${parseFloat(job.amount).toFixed(2)} USD was dispatched to ${job.freelancerEmail} via PayPal Payouts.`;
-      case "REJECTED":
-        return "Deliverable failed contractual verification. Escrow funds remain safely locked for client refund.";
-      default:
-        return "Awaiting next pipeline stage.";
-    }
-  };
-
-  const latestSubmission = submissions && submissions.length > 0 ? submissions[0] : null;
-
-  return (
-    <div className="max-w-5xl mx-auto space-y-6 min-h-[1400px]" aria-live="polite">
-      {/* Back Link */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to overview</span>
-        </Link>
-        <span className="text-[11px] font-mono text-slate-400">
-          Job ID: {job.id.slice(0, 8)}...
-        </span>
-      </div>
-
-      {/* 1. Header Box */}
-      <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              {job.title}
-            </h1>
-            <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
-              {job.description}
-            </p>
-          </div>
-
-          <div className="text-right flex-shrink-0">
-            <div className="font-mono font-bold text-2xl text-white">
-              ${parseFloat(job.amount).toFixed(2)} {job.currency}
+    // Enforce role and ownership authorization
+    if (!canUserAccessJob(user, job)) {
+      return (
+        <div className="min-h-[60vh] flex items-center justify-center p-4">
+          <div className="bg-[#161B22] border border-rose-900/60 rounded-2xl p-8 max-w-md w-full text-center space-y-4 shadow-xl">
+            <div className="w-12 h-12 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-400 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-6 h-6" />
             </div>
-            <div className="text-[11px] text-slate-400">Protected Escrow</div>
-          </div>
-        </div>
-
-        {/* What Happens Next Callout */}
-        <div className="bg-[#0D1117] border border-[#21262D] rounded-xl p-3.5 flex items-start gap-3 text-xs">
-          <div className="w-6 h-6 rounded-lg bg-blue-950 border border-blue-800 text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Lock className="w-3.5 h-3.5" />
-          </div>
-          <div className="space-y-0.5">
-            <span className="font-semibold text-white block">What Happens Next:</span>
-            <p className="text-slate-300 leading-relaxed">{getNextActionMessage()}</p>
-          </div>
-        </div>
-
-        {/* Action Buttons for Current State */}
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          {job.status === "CREATED" && (
-            <button
-              type="button"
-              onClick={handleFundEscrow}
-              disabled={funding}
-              className="bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>{funding ? "Connecting to PayPal..." : `Fund Escrow ($${job.amount} USD)`}</span>
-            </button>
-          )}
-
-          {job.status === "FUNDED" && (
-            <Link
-              href={`/jobs/${job.id}/submit`}
-              className="bg-[#2EA043] hover:bg-[#238636] text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Submit Deliverable as Priya</span>
-            </Link>
-          )}
-
-          {job.status === "MANUAL_REVIEW" && (
-            <Link
-              href="/inbox"
-              className="bg-[#D29922] hover:bg-[#BB8009] text-black text-xs font-bold px-4 py-2 rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Triage in Review Inbox as Alex</span>
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* 2. Signature Checkpoint Route Component */}
-      <SignatureCheckpointRoute
-        currentStep={currentStep}
-        statusText={`Milestone state: ${job.status}`}
-      />
-
-      {/* 3. Verdict Inspection Panel if verdict exists */}
-      {verdict && (
-        <VerdictInspectionPanel
-          overallPassed={verdict.overallPassed}
-          confidence={verdict.confidence}
-          reasoning={verdict.reasoning}
-          perCriteriaResults={verdict.perCriteriaResults}
-          mimeType={latestSubmission?.mimeType}
-          width={latestSubmission?.metadata?.width}
-          height={latestSubmission?.metadata?.height}
-          decision={job.status === "PAID" ? "AUTO_PAY" : job.status === "MANUAL_REVIEW" ? "NEEDS_HUMAN" : "REJECT"}
-        />
-      )}
-
-      {/* 4. Traceable Sandbox IDs (Orders, Payouts, HMAC Mandate) */}
-      <div className="bg-[#161B22] border border-[#30363D] rounded-2xl p-6 shadow-xl space-y-4">
-        <h3 className="font-bold text-sm text-white">
-          Contract Mandate & PayPal Sandbox References
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-          {/* Mandate Signature */}
-          <div className="bg-[#0D1117] border border-[#21262D] rounded-xl p-3.5 space-y-1.5">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] font-sans font-semibold text-slate-300">
-                HMAC-SHA256 Mandate
-              </span>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(mandate.signature, "mandate")}
-                className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold text-white">403: Access Denied</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Signed in as <strong>{user.name}</strong>. You do not own this private milestone and are not designated as its recipient or reviewer.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 bg-[#21262D] hover:bg-[#30363D] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm"
               >
-                {copiedId === "mandate" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedId === "mandate" ? "Copied" : "Copy"}</span>
-              </button>
-            </div>
-            <div className="text-[11px] text-slate-400 truncate">
-              {mandate.signature}
-            </div>
-            <div className="text-[10px] text-slate-400 font-sans">
-              Cap: ${mandate.maxAmount} {mandate.currency} • Payee: {mandate.payeeEmail}
-            </div>
-          </div>
-
-          {/* PayPal Payout or Capture reference */}
-          <div className="bg-[#0D1117] border border-[#21262D] rounded-xl p-3.5 space-y-1.5">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] font-sans font-semibold text-slate-300">
-                PayPal Sandbox Trace
-              </span>
-              <a
-                href="https://www.sandbox.paypal.com"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1"
-              >
-                <span>Dashboard</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-            <div className="text-[11px] text-slate-300 truncate">
-              {payments && payments.length > 0 ? (
-                <span>{payments[0].type}: {payments[0].paypalId}</span>
-              ) : (
-                <span className="text-slate-400">Awaiting payment capture</span>
-              )}
-            </div>
-            <div className="text-[10px] text-slate-400 font-sans">
-              Linked via custom_id / sender_item_id
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Return to Overview</span>
+              </Link>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      );
+    }
+
+    const jobCriteria = await db.select().from(criteria).where(eq(criteria.jobId, id));
+    const [mandate] = await db.select().from(mandates).where(eq(mandates.jobId, id)).limit(1);
+    const jobSubmissions = await db
+      .select()
+      .from(submissions)
+      .where(eq(submissions.jobId, id))
+      .orderBy(desc(submissions.createdAt));
+    const latestSubmission = jobSubmissions[0] || null;
+
+    let latestVerdict = null;
+    if (latestSubmission) {
+      const [v] = await db
+        .select()
+        .from(verdicts)
+        .where(eq(verdicts.submissionId, latestSubmission.id))
+        .limit(1);
+      latestVerdict = v || null;
+    }
+
+    const jobPayments = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.jobId, id))
+      .orderBy(desc(payments.createdAt));
+
+    const initialData = {
+      job: {
+        ...job,
+        createdAt: job.createdAt.toISOString(),
+      },
+      criteria: jobCriteria.map((c) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        isHardCheck: c.isHardCheck,
+        ruleSpec: (c.ruleSpec as Record<string, unknown>) || {},
+      })),
+      mandate: mandate
+        ? {
+            jobId: mandate.jobId,
+            maxAmount: mandate.maxAmount,
+            currency: mandate.currency,
+            payeeEmail: mandate.payeeEmail,
+            scope: mandate.scope,
+            expiresAt: mandate.expiresAt.toISOString(),
+            signature: mandate.signature,
+          }
+        : {
+            jobId: id,
+            maxAmount: job.amount,
+            currency: job.currency,
+            payeeEmail: job.freelancerEmail,
+            scope: "default",
+            expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+            signature: "UNSET",
+          },
+      submissions: jobSubmissions.map((s) => ({
+        id: s.id,
+        fileUrl: s.fileUrl || undefined,
+        mimeType: s.mimeType || undefined,
+        fileSizeBytes: s.fileSizeBytes || undefined,
+        textContent: s.textContent || undefined,
+        metadata: (s.metadata as { width?: number; height?: number }) || undefined,
+        createdAt: s.createdAt.toISOString(),
+      })),
+      verdict: latestVerdict
+        ? {
+            overallPassed: latestVerdict.overallPassed,
+            confidence: latestVerdict.confidence,
+            reasoning: latestVerdict.reasoning,
+            perCriteriaResults: (latestVerdict.perCriteriaResults as any) || [],
+          }
+        : null,
+      payments: jobPayments.map((p) => ({
+        id: p.id,
+        type: p.type,
+        paypalId: p.paypalId,
+        amount: p.amount,
+        currency: p.currency,
+        status: p.status,
+        isMock: p.isMock,
+        createdAt: p.createdAt.toISOString(),
+      })),
+      isMock: process.env.PAYPAL_MOCK === "true",
+    };
+
+    return <JobDetailClient initialData={initialData} jobId={id} />;
+  } catch (err) {
+    console.error("Error loading job on server:", err);
+    return <JobDetailClient initialData={null} jobId={id} />;
+  }
 }
