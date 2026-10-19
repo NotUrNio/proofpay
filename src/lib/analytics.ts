@@ -177,9 +177,9 @@ export function loadEvalBenchmarkData(): EvalMetrics & { modelAgreement: ModelAg
       wilsonIntervalLow: wilsonLow,
       wilsonIntervalHigh: wilsonHigh,
       totalBenchmarkCases: cases.length || raw.sampleSize?.total || 28,
-      primaryModel: raw.modelId || "gemini-3.8-flash",
-      fallbackModel: "gemini-3.5-flash-lite",
-      sampleSizeCaveat: `Benchmark dataset N=${cases.length || 28} across dev & held-out adversarial variations.`,
+      primaryModel: `${raw.modelId || "gemini-3.8-flash"} + gemini-3.5-flash-lite`,
+      fallbackModel: "gemini-3.5-flash-lite (automatic quota fallback)",
+      sampleSizeCaveat: `N=${cases.length || 28} (${raw.sampleSize?.dev ?? 13} Dev / ${raw.sampleSize?.heldOut ?? 15} Held-Out). Serving: 14 gemini-3.8-flash (primary) + 8 gemini-3.5-flash-lite (fallback); 6 cases rejected pre-model by deterministic checks. Replay mode re-runs recorded model responses offline.`,
       categories,
       modelAgreement: {
         runsK: raw.runsK || 3,

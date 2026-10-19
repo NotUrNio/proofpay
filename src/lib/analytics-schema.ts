@@ -71,9 +71,9 @@ export const EvalMetricsSchema = z.object({
   wilsonIntervalLow: z.number().min(0).max(1),
   wilsonIntervalHigh: z.number().min(0).max(1),
   totalBenchmarkCases: z.number().int().nonnegative(),
-  primaryModel: z.string().max(60),
+  primaryModel: z.string().max(80),
   fallbackModel: z.string().max(60),
-  sampleSizeCaveat: z.string().max(160),
+  sampleSizeCaveat: z.string().max(350),
   categories: z.array(EvalCategoryBreakdownSchema),
 });
 

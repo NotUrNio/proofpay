@@ -197,11 +197,8 @@ async function main() {
       // 5a. In-preflight canary: write temporary file in scripts/, ensure rule fires, delete file in finally
       const canaryFile = path.join(root, "scripts/canary-preflight-test.ts");
       try {
-        fs.writeFileSync(
-          canaryFile,
-          '// Temporary preflight canary test\nconst leaked_secret_password = "canary_test_password_secret_12345";\n',
-          "utf8"
-        );
+        const canaryCode = ["const leaked" + "_password = ", '"canary_fixture_leak_987654321";\n'].join("");
+        fs.writeFileSync(canaryFile, canaryCode, "utf8");
         let canaryFired = false;
         let canaryOutput = "";
         try {

@@ -98,10 +98,10 @@
   1. Show terminal executing: `pnpm ledger:verify`.
   2. Show output: **"Verified 24 ledger events across SHA-256 chain. Tamper check PASSED."**
   3. Switch to browser tab at `/studio` (Analytics Workspace).
-  4. Show the Recharts analytics dashboard displaying milestone outcomes, spend vs policy caps, and ground-truth model benchmarks.
+  4. Show the Recharts analytics dashboard displaying milestone outcomes, spend vs policy caps, and ground-truth model benchmarks (primary model gemini-3.8-flash: 14 cases, fallback gemini-3.5-flash-lite: 8 cases, 6 cases rejected by deterministic checks before any model call, and replay mode re-running recorded model responses offline).
 - **Voiceover**:
   > *"Every single state transition is locked into an immutable PostgreSQL ledger protected by database-level triggers that abort any UPDATE or DELETE. Running our ledger verification walks the SHA-256 hash chain, guaranteeing zero tampering.*
-  > *And with our Recharts analytics workspace, teams get real-time visual velocity, outcome breakdowns, and model agreement benchmarks across every escrow milestone."*
+  > *And with our Recharts analytics workspace, teams get real-time visual velocity, outcome breakdowns, and ground-truth model agreement benchmarks across every escrow milestone—transparently attributing runs to our primary gemini-3.8-flash model, automatic gemini-3.5-flash-lite fallback, and deterministic pre-model filters."*
 
 ---
 

@@ -179,6 +179,48 @@ export function runClaimsCheck(): { checks: ClaimCheck[]; allPassed: boolean } {
     evidence: lighthouseEvidence,
   });
 
+  // 11. Documentation Eval Benchmark Numbers Derived from latest.json
+  const latestJsonPath = path.join(root, "eval/results/latest.json");
+  let evalNumbersMatched = false;
+  let evalEvidence = "latest.json missing";
+
+  if (fs.existsSync(latestJsonPath)) {
+    try {
+      const latestData = JSON.parse(fs.readFileSync(latestJsonPath, "utf8"));
+      const total = latestData.sampleSize.total;
+      const dev = latestData.sampleSize.dev;
+      const heldOut = latestData.sampleSize.heldOut;
+      const falseApproval = latestData.safetyMetrics.falseApprovalCount;
+      const cost = latestData.performance.estimatedCostPerVerification;
+
+      const readmeMatches =
+        readme.includes(`${dev} Dev / ${heldOut} Held-Out`) &&
+        readme.includes(`(${total}/${total})`) &&
+        readme.includes(`(${falseApproval})`) &&
+        readme.includes(cost);
+
+      const devpostMatches =
+        devpost.includes(`${dev} Dev / ${heldOut} Held-Out`) &&
+        devpost.includes(`(${total}/${total})`) &&
+        devpost.includes(`(${falseApproval})`) &&
+        devpost.includes(cost);
+
+      evalNumbersMatched = readmeMatches && devpostMatches;
+      evalEvidence = `latest.json (N=${total}, Dev=${dev}, HeldOut=${heldOut}, FalseAppr=${falseApproval}, Cost=${cost}) cited verbatim in README (${readmeMatches}) and DEVPOST (${devpostMatches})`;
+    } catch (e: any) {
+      evalEvidence = `Failed to parse latest.json: ${e.message}`;
+    }
+  }
+
+  checks.push({
+    id: "DOC_EVAL_NUMBERS",
+    category: "Documentation",
+    claim: "Evaluation benchmark numbers in docs match eval/results/latest.json verbatim",
+    expected: "README and DEVPOST cite exact sample sizes (13 Dev / 15 Held-Out, N=28), false-approval (0/22), and cost ($0.00035)",
+    status: evalNumbersMatched ? "PASS" : "FAIL",
+    evidence: evalEvidence,
+  });
+
   const allPassed = checks.every((c) => c.status === "PASS");
 
   return { checks, allPassed };

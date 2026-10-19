@@ -256,7 +256,7 @@ pnpm eval:live
 | **Median Latency** | **16 ms** | — | Instant replay cache; ~1.8s live |
 | **Token Consumption** | **40,292 total** | — | 31,824 prompt tokens / 8,468 completion tokens |
 | **Verification Cost** | **$0.00035 / run** | — | Total API cost: $0.00985 across entire benchmark |
-| **Serving Models** | `gemini-3.8-flash` (primary)<br>`gemini-3.5-flash-lite` (fallback) | — | Automatic quota-limit fallback verified live |
+| **Serving Models** | `gemini-3.8-flash` (primary: 14 cases)<br>`gemini-3.5-flash-lite` (fallback: 8 cases)<br>6 cases rejected by deterministic checks before any model call | — | Dynamic routing from `servingModels` (22 model-served); replay mode re-runs recorded model responses offline |
 
 ---
 
@@ -322,8 +322,10 @@ ProofPay implements defense-in-depth across 5 distinct security boundaries:
 ## 🤖 AI & Sponsor Tools Used
 
 ### Runtime AI Models:
-- **Google Gemini 3.8 Flash** (`gemini-3.8-flash`): Primary multimodal vision model for structured JSON rubric analysis.
-- **Google Gemini 3.5 Flash Lite** (`gemini-3.5-flash-lite`): Fast, cost-efficient fallback model invoked automatically if primary model quota limits are reached.
+- **Google Gemini 3.8 Flash** (`gemini-3.8-flash`): Primary multimodal vision model for structured JSON rubric analysis (served 14 benchmark cases).
+- **Google Gemini 3.5 Flash Lite** (`gemini-3.5-flash-lite`): Fast, cost-efficient fallback model invoked automatically if primary model quota limits are reached (served 8 benchmark cases).
+- **Deterministic Pre-Model Checks**: 6 benchmark cases rejected by deterministic byte-level checks before any model call.
+- **Offline Replay Mode**: Re-runs recorded model responses offline for deterministic, zero-API-cost benchmark evaluation.
 - **Vercel AI SDK** (`@ai-sdk/google` v1.1.10): Standardized provider interface for structured object generation (`generateObject`).
 
 ### Development Tools:

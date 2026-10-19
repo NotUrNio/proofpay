@@ -28,7 +28,7 @@ ProofPay is an end-to-end autonomous escrow and milestone settlement platform:
 1. **Client Funds Job into Platform Escrow**: The client creates a milestone job and authorizes payment upfront via **PayPal Orders v2** (`intent=CAPTURE`), or uses a one-click guided demo scenario with simulated escrow funding (`[SIMULATED]`). A cryptographic **HMAC-SHA256 Signed Mandate** locks the maximum settlement amount and freelancer recipient address.
 2. **Freelancer Submits Work**: Priya uploads her completed deliverable (e.g., promotional banner).
 3. **Deterministic Hard Checks (6ms)**: Before any AI model is invoked, raw bytes are analyzed in pure code: container magic byte verification, dimensions (1080x1080), file size limits ($\le$ 2MB), and memory-level metadata stripping (removing hidden PNG text chunks).
-4. **Multimodal AI Sensor Ensemble**: Google Gemini (`gemini-3.8-flash` with `gemini-3.5-flash-lite` fallback) evaluates the deliverable across rubrics in a $K=3$ run ensemble with non-deterministic temperature, extracting transcribed text, layout balance, and CIEDE2000 color distance.
+4. **Multimodal AI Sensor Ensemble**: Google Gemini (`gemini-3.8-flash` primary with automatic `gemini-3.5-flash-lite` fallback; counts from `servingModels`: 14 primary, 8 fallback, 6 cases rejected by deterministic checks before any model call; replay mode re-runs recorded model responses offline) evaluates the deliverable across rubrics in a $K=3$ run ensemble with non-deterministic temperature, extracting transcribed text, layout balance, and CIEDE2000 color distance.
 5. **Zero-LLM Pure TypeScript Policy Guard**: The model **never** has direct payment authorization authority. A pure TypeScript invariant engine (ZERO AI imports) evaluates 14 deterministic rules: signed mandate expiration, max transaction caps, exact payee email match, daily velocity limits, and consensus confidence thresholds.
 6. **Settlement & Payout Honesty (Guided Demo Simulation vs. Real Sandbox Payouts)**:
    - **Guided Web Demos**: Use **simulated funding (`isMock=true`) and simulated payouts (`PAYOUT_RELEASED [SIMULATED]`)** so judges can run interactive scenarios repeatedly without draining the shared platform PayPal Sandbox balance.
@@ -107,6 +107,7 @@ Every metric reported below is backed by committed code, reproducible test suite
   - **110 passing unit/integration tests across 15 Vitest test suites** (`pnpm test`) plus **12 Playwright end-to-end tests across 3 browsers (36 browser runs)**: end-to-end slice, guard rules, HMAC mandates, database triggers, boundary checks, chaos drills, payout mode accuracy, SSR role/ownership isolation, least-privilege role cookie enforcement, rate-limit/proxy-hop extraction, and PayPal token caching.
 - **Zero False-Approvals on 28-Fixture Benchmark**:
   - Evaluated on 28 synthetic fixtures (13 Dev / 15 Held-Out):
+  - **Serving Models Breakdown**: Primary model `gemini-3.8-flash` served 14 cases, automatic fallback `gemini-3.5-flash-lite` served 8 cases; 6 cases were rejected by deterministic checks before any model call. Replay mode re-runs recorded model responses offline.
   - **Overall Accuracy**: **100.0% (28/28)** [95% Wilson CI: 87.9% – 100.0%]
   - **False-Approval Rate**: **0.0% (0/22)** [Target: 0%]
   - **Human Review Routing Rate**: **21.4% (6/28)** for subjective/ambiguous cases

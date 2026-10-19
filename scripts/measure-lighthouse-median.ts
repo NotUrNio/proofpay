@@ -309,28 +309,28 @@ async function main() {
     if (jobsRes.ok) {
       const data = (await jobsRes.json()) as { jobs?: Array<{ id: string; status: string; title: string; amount: string }> };
       const jobList = data.jobs || [];
-      const foundFunded = jobList.find((j) => j.status === "FUNDED");
-      if (foundFunded) {
-        fundedJobId = foundFunded.id;
-        fundedTitle = foundFunded.title;
-        fundedAmount = `$${Number(foundFunded.amount).toFixed(2)}`;
+      const bundledFunded = jobList.find((j) => j.id === "20f829e2-8aff-4bab-8e4b-710c004ffc6d");
+      if (bundledFunded) {
+        fundedJobId = bundledFunded.id;
+        fundedTitle = bundledFunded.title;
+        fundedAmount = `$${Number(bundledFunded.amount).toFixed(2)}`;
       }
-      const foundPaid = jobList.find((j) => j.status === "PAID");
-      if (foundPaid) {
-        paidJobId = foundPaid.id;
-        paidTitle = foundPaid.title;
-        paidAmount = `$${Number(foundPaid.amount).toFixed(2)}`;
+      const bundledPaid = jobList.find((j) => j.id === "bf3884d6-3fdf-496d-87db-5dbbe4461443");
+      if (bundledPaid) {
+        paidJobId = bundledPaid.id;
+        paidTitle = bundledPaid.title;
+        paidAmount = `$${Number(bundledPaid.amount).toFixed(2)}`;
       }
-      const foundNeedsHuman = jobList.find((j) => j.status === "VERIFIED");
-      if (foundNeedsHuman) {
-        needsHumanJobId = foundNeedsHuman.id;
-        needsHumanTitle = foundNeedsHuman.title;
-        needsHumanAmount = `$${Number(foundNeedsHuman.amount).toFixed(2)}`;
+      const bundledNeedsHuman = jobList.find((j) => j.id === "10c2bab9-02a6-45ab-b652-9552b584769b");
+      if (bundledNeedsHuman) {
+        needsHumanJobId = bundledNeedsHuman.id;
+        needsHumanTitle = bundledNeedsHuman.title;
+        needsHumanAmount = `$${Number(bundledNeedsHuman.amount).toFixed(2)}`;
       }
       console.log(`[Job Discovery] Target routes on ${baseUrl}:`);
-      console.log(`  - FUNDED: ${fundedJobId} ("${fundedTitle}", ${fundedAmount})`);
-      console.log(`  - PAID: ${paidJobId} ("${paidTitle}", ${paidAmount})`);
-      console.log(`  - NEEDS_HUMAN: ${needsHumanJobId} ("${needsHumanTitle}", ${needsHumanAmount})`);
+      console.log(`  - FUNDED (bundled): ${fundedJobId} ("${fundedTitle}", ${fundedAmount})`);
+      console.log(`  - PAID (bundled): ${paidJobId} ("${paidTitle}", ${paidAmount})`);
+      console.log(`  - NEEDS_HUMAN (bundled): ${needsHumanJobId} ("${needsHumanTitle}", ${needsHumanAmount})`);
     }
   } catch (err) {
     console.warn(`[Job Discovery] Could not fetch ${baseUrl}/api/jobs, falling back to default bundled job IDs`);

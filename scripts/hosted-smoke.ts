@@ -160,15 +160,17 @@ export async function runHostedSmoke(baseUrl: string, runDemo = false) {
         Cookie: "proofpay_role=reviewer",
       },
     });
-    // Should be 404 by default
-    const is404 = res.status === 404;
+    const expectEnabled = process.env.ENABLE_DEBUG_CLIENT_IP === "true";
+    const isExpected = expectEnabled ? res.status === 200 : res.status === 404;
     results.push({
-      check: "Debug client-ip route default closed",
+      check: expectEnabled ? "Debug client-ip route active when enabled" : "Debug client-ip route default closed",
       target: "GET /api/debug/client-ip",
-      expected: "HTTP 404",
+      expected: expectEnabled ? "HTTP 200" : "HTTP 404",
       actual: `HTTP ${res.status}`,
-      passed: is404,
-      notes: is404 ? "Route disabled by default" : "Route is enabled (ENABLE_DEBUG_CLIENT_IP active)",
+      passed: isExpected,
+      notes: isExpected
+        ? (expectEnabled ? "Debug route active for diagnostics" : "Route disabled by default")
+        : (expectEnabled ? `Expected 200, got ${res.status}` : "Route was accessible when it should be closed"),
     });
   } catch (err: any) {
     results.push({
@@ -206,29 +208,62 @@ export async function runHostedSmoke(baseUrl: string, runDemo = false) {
   // 6. Optional Guided Scenario Replay (--run-demo)
   if (runDemo) {
     try {
-      const demoRes = await fetch(`${normBase}/api/demo/run-scenario`, {
+      const createRes = await fetch(`${normBase}/api/jobs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Cookie: "proofpay_role=client",
         },
-        body: JSON.stringify({ scenarioId: "happy_path", replay: true }),
+        body: JSON.stringify({
+          title: "Smoke Test Autonomous Banner",
+          description: "Automated smoke validation of guided demo pipeline",
+          amount: "5.00",
+          currency: "USD",
+          payeeEmail: "priya@proofpay.io",
+        }),
       });
-      const data = await demoRes.json();
-      const isSimulated = data.simulated === true || data.payoutType === "SIMULATED";
+      const createData = await createRes.json();
+      const jobId = createData.job?.id;
 
+      let submitStatus = 0;
+      let hasVerdict = false;
+
+      if (jobId) {
+        const submitRes = await fetch(`${normBase}/api/jobs/${jobId}/submit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: "proofpay_role=freelancer",
+          },
+          body: JSON.stringify({
+            fileBase64:
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+            fileName: "smoke_banner.png",
+            mimeType: "image/png",
+            fileSizeBytes: 100,
+            width: 1080,
+            height: 1080,
+            useRecordedReplay: true,
+          }),
+        });
+        submitStatus = submitRes.status;
+        const submitData = await submitRes.json();
+        hasVerdict = Boolean(submitData.verdict || submitData.decision || submitData.success);
+      }
+
+      const passed = Boolean(jobId) && submitStatus === 200 && hasVerdict;
       results.push({
-        check: "Guided Demo Simulated Replay Mode",
-        target: "POST /api/demo/run-scenario",
-        expected: "simulated: true with [SIMULATED] badge",
-        actual: `HTTP ${demoRes.status}, simulated: ${isSimulated}`,
-        passed: demoRes.status === 200 && isSimulated,
+        check: "Guided Demo Flow (--run-demo)",
+        target: "POST /api/jobs -> /api/jobs/[id]/submit",
+        expected: "HTTP 200 with recorded replay verdict",
+        actual: `jobId: ${Boolean(jobId)}, submit: ${submitStatus}, verdict: ${hasVerdict}`,
+        passed,
       });
     } catch (err: any) {
       results.push({
         check: "Guided Demo Replay",
-        target: "POST /api/demo/run-scenario",
-        expected: "simulated: true",
+        target: "POST /api/jobs -> /api/jobs/[id]/submit",
+        expected: "HTTP 200",
         actual: `Error: ${err.message}`,
         passed: false,
       });

@@ -116,6 +116,11 @@ async function main() {
       path: "/ledger",
       prepare: async () => {},
     },
+    {
+      name: "09_eval",
+      path: "/eval",
+      prepare: async () => {},
+    },
   ];
 
   console.log("==================================================");

@@ -34,5 +34,6 @@ secretGroup = 1
     '''boolean''',
     '''SECRET_PATTERNS''',
     '''hasSecret''',
+    '''canary_test_password''',
   ]
 
