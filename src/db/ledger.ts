@@ -18,17 +18,38 @@ export interface AppendLedgerParams {
  * regardless of key insertion order or PostgreSQL JSONB column reordering.
  */
 export function canonicalJsonStringify(obj: unknown): string {
-  if (obj === null || typeof obj !== "object") {
-    return JSON.stringify(obj);
+  if (obj === null || obj === undefined || typeof obj !== "object") {
+    return JSON.stringify(obj ?? null);
+  }
+  if (typeof (obj as { toJSON?: () => unknown }).toJSON === "function") {
+    return canonicalJsonStringify((obj as { toJSON: () => unknown }).toJSON());
   }
   if (Array.isArray(obj)) {
-    return "[" + obj.map(canonicalJsonStringify).join(",") + "]";
+    return (
+      "[" +
+      obj
+        .map((item) =>
+          item === undefined || typeof item === "function" || typeof item === "symbol"
+            ? "null"
+            : canonicalJsonStringify(item)
+        )
+        .join(",") +
+      "]"
+    );
   }
-  const sortedKeys = Object.keys(obj as Record<string, unknown>).sort();
+  const record = obj as Record<string, unknown>;
+  const sortedKeys = Object.keys(record)
+    .filter(
+      (key) =>
+        record[key] !== undefined &&
+        typeof record[key] !== "function" &&
+        typeof record[key] !== "symbol"
+    )
+    .sort();
   return (
     "{" +
     sortedKeys
-      .map((key) => JSON.stringify(key) + ":" + canonicalJsonStringify((obj as Record<string, unknown>)[key]))
+      .map((key) => JSON.stringify(key) + ":" + canonicalJsonStringify(record[key]))
       .join(",") +
     "}"
   );
@@ -103,6 +124,53 @@ export interface LedgerVerificationResult {
   reason?: string;
 }
 
+export interface VerifiableLedgerEvent {
+  id: string;
+  jobId: string;
+  eventType: string;
+  newState: string;
+  actor: string;
+  isMock: boolean;
+  payload: unknown;
+  signatureOrHash: string | null;
+}
+
+/**
+ * Pure offline cryptographic SHA-256 hash chain verification over an ordered list of ledger events.
+ */
+export function verifyLedgerEventsOffline(
+  events: VerifiableLedgerEvent[],
+  serializer: (obj: unknown) => string = canonicalJsonStringify
+): LedgerVerificationResult {
+  let currentHash = "0000000000000000000000000000000000000000000000000000000000000000";
+
+  for (let i = 0; i < events.length; i++) {
+    const evt = events[i];
+    const payloadString = serializer(evt.payload);
+    const hashContent = `${currentHash}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|${evt.isMock}|${payloadString}`;
+    const expectedHash = crypto.createHash("sha256").update(hashContent).digest("hex");
+
+    if (evt.signatureOrHash !== expectedHash) {
+      return {
+        valid: false,
+        totalEventsVerified: i,
+        brokenRowId: evt.id,
+        brokenRowIndex: i,
+        expectedHash,
+        actualHash: evt.signatureOrHash,
+        reason: `Cryptographic hash chain broken at event #${i + 1} (${evt.eventType}, ID: ${evt.id})`,
+      };
+    }
+
+    currentHash = evt.signatureOrHash;
+  }
+
+  return {
+    valid: true,
+    totalEventsVerified: events.length,
+  };
+}
+
 /**
  * Validates the cryptographic SHA-256 integrity hash chain across audit events.
  * Walks events in chronological order per-job and verifies tamper-evidence.
@@ -115,33 +183,7 @@ export async function verifyLedgerChain(jobId?: string): Promise<LedgerVerificat
       .where(eq(ledgerEvents.jobId, jobId))
       .orderBy(asc(ledgerEvents.sequenceNumber));
 
-    let currentHash = "0000000000000000000000000000000000000000000000000000000000000000";
-
-    for (let i = 0; i < events.length; i++) {
-      const evt = events[i];
-      const payloadString = canonicalJsonStringify(evt.payload);
-      const hashContent = `${currentHash}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|${evt.isMock}|${payloadString}`;
-      const expectedHash = crypto.createHash("sha256").update(hashContent).digest("hex");
-
-      if (evt.signatureOrHash !== expectedHash) {
-        return {
-          valid: false,
-          totalEventsVerified: i,
-          brokenRowId: evt.id,
-          brokenRowIndex: i,
-          expectedHash,
-          actualHash: evt.signatureOrHash,
-          reason: `Cryptographic hash chain broken at event #${i + 1} (${evt.eventType}, ID: ${evt.id})`,
-        };
-      }
-
-      currentHash = evt.signatureOrHash;
-    }
-
-    return {
-      valid: true,
-      totalEventsVerified: events.length,
-    };
+    return verifyLedgerEventsOffline(events);
   }
 
   // Global verification across all distinct jobs

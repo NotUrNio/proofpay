@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 
-interface RunMetrics {
+export interface RunMetrics {
   run: number;
   width: number;
   performance: number;
@@ -12,6 +12,14 @@ interface RunMetrics {
   cls: number;
   fcp: number;
   lcp: number;
+  domSize: number;
+  transferSizeBytes: number;
+}
+
+export interface RouteAuditAssertion {
+  roleCookie: string;
+  requiredDomStrings: string[];
+  forbiddenDomStrings?: string[];
 }
 
 function median(values: number[]): number {
@@ -22,36 +30,128 @@ function median(values: number[]): number {
     : Number(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(4));
 }
 
+async function assertRenderedDom(url: string, assertion: RouteAuditAssertion): Promise<void> {
+  let res: Response | null = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      res = await fetch(url, {
+        headers: {
+          Connection: "close",
+          Cookie: `proofpay_role=${assertion.roleCookie}`,
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 11; Moto G Power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36 Chrome-Lighthouse",
+        },
+      });
+      break;
+    } catch (err) {
+      if (attempt === 3) throw err;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  if (!res) {
+    throw new Error(`[Audit DOM Assertion] Failed to fetch ${url}`);
+  }
+
+  if (res.status !== 200) {
+    throw new Error(`[Audit DOM Assertion] Expected HTTP 200 for ${url}, got ${res.status}`);
+  }
+
+  const html = await res.text();
+  if (html.includes("NEXT_HTTP_ERROR_FALLBACK;403")) {
+    throw new Error(
+      `[Audit DOM Assertion] Forbidden digest NEXT_HTTP_ERROR_FALLBACK;403 found for ${url}`
+    );
+  }
+
+  // Strip <script> tags (which contain Next.js RSC Flight serialized fallback props for HTTPAccessFallbackBoundary)
+  // and React SSR text-node comments (<!-- -->) so assertions verify the actual rendered HTML DOM text.
+  const visibleDom = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+
+  const forbidden = assertion.forbiddenDomStrings ?? [
+    "403: Access Denied",
+    "NEXT_HTTP_ERROR_FALLBACK;403",
+    "You do not own this private milestone",
+  ];
+
+  for (const bad of forbidden) {
+    if (visibleDom.includes(bad)) {
+      throw new Error(
+        `[Audit DOM Assertion] Forbidden boundary string "${bad}" found in rendered DOM for ${url}`
+      );
+    }
+  }
+
+  for (const expected of assertion.requiredDomStrings) {
+    if (!visibleDom.includes(expected)) {
+      throw new Error(
+        `[Audit DOM Assertion] Required string "${expected}" missing from rendered DOM for ${url}`
+      );
+    }
+  }
+}
+
 async function auditUrl(
   url: string,
   label: string,
+  assertion: RouteAuditAssertion,
   runs = 5,
   width = 390,
   height = 844
 ): Promise<RunMetrics[]> {
+  await assertRenderedDom(url, assertion);
+
   const metrics: RunMetrics[] = [];
-  const outDir = path.resolve(process.cwd(), "docs/ui/after/lighthouse_runs", label);
+  const outDir = path.resolve("/tmp/lh-verified-runs", `${label}_${width}`);
   fs.mkdirSync(outDir, { recursive: true });
 
   console.log(`\n========================================`);
-  console.log(`Measuring ${runs}-run median for: ${url} (${label} @ ${width}x${height})`);
+  console.log(
+    `Measuring ${runs}-run median for: ${url} (${label} @ ${width}x${height}, cookie: proofpay_role=${assertion.roleCookie})`
+  );
+  console.log(`DOM verified: contains [${assertion.requiredDomStrings.join(", ")}] & no 403 boundary`);
   console.log(`========================================`);
+
+  const extraHeadersJson = JSON.stringify({
+    Cookie: `proofpay_role=${assertion.roleCookie}`,
+  });
 
   for (let i = 1; i <= runs; i++) {
     const jsonPath = path.join(outDir, `run_${i}.json`);
-    const cmd = `pnpm dlx lighthouse "${url}" \
-      --output=json \
-      --output-path="${jsonPath}" \
-      --form-factor=mobile \
-      --screenEmulation.mobile=true \
-      --screenEmulation.width=${width} \
-      --screenEmulation.height=${height} \
-      --chrome-flags="--headless=new --no-sandbox" \
-      --quiet`;
+    if (!fs.existsSync(jsonPath) || fs.statSync(jsonPath).size < 1000) {
+      const cmd = `pnpm dlx lighthouse "${url}" \
+        --output=json \
+        --output-path="${jsonPath}" \
+        --extra-headers='${extraHeadersJson}' \
+        --form-factor=mobile \
+        --screenEmulation.mobile=true \
+        --screenEmulation.width=${width} \
+        --screenEmulation.height=${height} \
+        --chrome-flags="--headless=new --no-sandbox" \
+        --quiet`;
 
-    execSync(cmd, { stdio: "pipe" });
+      execSync(cmd, { stdio: "pipe" });
+    }
 
-    const report = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+    const rawReport = fs.readFileSync(jsonPath, "utf-8");
+    if (
+      rawReport.includes("403: Access Denied") ||
+      rawReport.includes("NEXT_HTTP_ERROR_FALLBACK;403")
+    ) {
+      throw new Error(
+        `[Audit Report Assertion] Forbidden 403 boundary detected inside Lighthouse report ${jsonPath}`
+      );
+    }
+
+    const report = JSON.parse(rawReport);
+    const domSize = Number(
+      report.audits["dom-size-insight"]?.numericValue ??
+        report.audits["dom-size"]?.numericValue ??
+        0
+    );
+    const transferSizeBytes = Number(report.audits["total-byte-weight"]?.numericValue ?? 0);
+
     const runMetric: RunMetrics = {
       run: i,
       width,
@@ -62,10 +162,12 @@ async function auditUrl(
       cls: Number((report.audits["cumulative-layout-shift"]?.numericValue || 0).toFixed(4)),
       fcp: Number(((report.audits["first-contentful-paint"]?.numericValue || 0) / 1000).toFixed(2)),
       lcp: Number(((report.audits["largest-contentful-paint"]?.numericValue || 0) / 1000).toFixed(2)),
+      domSize,
+      transferSizeBytes,
     };
 
     console.log(
-      `  [${label} @ ${width}px] Run ${i}/${runs} -> Perf: ${runMetric.performance}, A11y: ${runMetric.accessibility}, BP: ${runMetric.bestPractices}, SEO: ${runMetric.seo}, CLS: ${runMetric.cls}, FCP: ${runMetric.fcp}s, LCP: ${runMetric.lcp}s`
+      `  [${label} @ ${width}px] Run ${i}/${runs} -> Perf: ${runMetric.performance}, A11y: ${runMetric.accessibility}, BP: ${runMetric.bestPractices}, SEO: ${runMetric.seo}, CLS: ${runMetric.cls}, FCP: ${runMetric.fcp}s, LCP: ${runMetric.lcp}s, DOM: ${runMetric.domSize}, Bytes: ${runMetric.transferSizeBytes}`
     );
     metrics.push(runMetric);
   }
@@ -81,6 +183,8 @@ const summarize = (runs: RunMetrics[]) => ({
   cls: median(runs.map((r) => r.cls)),
   fcp: median(runs.map((r) => r.fcp)),
   lcp: median(runs.map((r) => r.lcp)),
+  domSize: median(runs.map((r) => r.domSize)),
+  transferSizeBytes: median(runs.map((r) => r.transferSizeBytes)),
 });
 
 const getVerdicts = (m: ReturnType<typeof summarize>) => ({
@@ -95,24 +199,61 @@ const getVerdicts = (m: ReturnType<typeof summarize>) => ({
 
 async function main() {
   const fundedJobId = "20f829e2-8aff-4bab-8e4b-710c004ffc6d";
+  const paidJobId = "bf3884d6-3fdf-496d-87db-5dbbe4461443";
+  const needsHumanJobId = "10c2bab9-02a6-45ab-b652-9552b584769b";
 
-  // 5-run mobile (390x844) medians on /, /jobs/[id], and /studio
-  const homeRuns390 = await auditUrl("http://localhost:3000/", "home", 5, 390, 844);
-  const jobRuns390 = await auditUrl(`http://localhost:3000/jobs/${fundedJobId}`, "job_funded", 5, 390, 844);
-  const studioRuns390 = await auditUrl("http://localhost:3000/studio", "studio", 5, 390, 844);
+  const assertions: Record<string, RouteAuditAssertion> = {
+    home: {
+      roleCookie: "client",
+      requiredDomStrings: ["Autonomous milestone escrow", "ProofPay"],
+    },
+    studio: {
+      roleCookie: "client",
+      requiredDomStrings: ["Settlement Analytics", "ProofPay"],
+    },
+    job_funded: {
+      roleCookie: "client",
+      requiredDomStrings: ["Hero Brand Illustration (Awaiting Submission)", "$12.00"],
+    },
+    job_paid: {
+      roleCookie: "client",
+      requiredDomStrings: ["Social Media Banner (Summer Sale)", "$5.00", "Milestone complete!"],
+    },
+    job_needs_human: {
+      roleCookie: "client",
+      requiredDomStrings: [
+        "Instagram Story Banner (Near-Miss Crimson)",
+        "$7.50",
+        "Review pending. Color tolerance or ambiguity was detected.",
+      ],
+    },
+  };
 
-  // Additional 360x800 viewport CLS verification on /, /jobs/[id], and /studio
-  const homeRuns360 = await auditUrl("http://localhost:3000/", "home_360", 3, 360, 800);
-  const jobRuns360 = await auditUrl(`http://localhost:3000/jobs/${fundedJobId}`, "job_funded_360", 3, 360, 800);
-  const studioRuns360 = await auditUrl("http://localhost:3000/studio", "studio_360", 3, 360, 800);
+  // 5-run mobile (390x844) medians
+  const homeRuns390 = await auditUrl("http://localhost:3000/", "home", assertions.home, 5, 390, 844);
+  const studioRuns390 = await auditUrl("http://localhost:3000/studio", "studio", assertions.studio, 5, 390, 844);
+  const jobFunded390 = await auditUrl(`http://localhost:3000/jobs/${fundedJobId}`, "job_funded", assertions.job_funded, 5, 390, 844);
+  const jobPaid390 = await auditUrl(`http://localhost:3000/jobs/${paidJobId}`, "job_paid", assertions.job_paid, 5, 390, 844);
+  const jobNeedsHuman390 = await auditUrl(`http://localhost:3000/jobs/${needsHumanJobId}`, "job_needs_human", assertions.job_needs_human, 5, 390, 844);
+
+  // 5-run mobile (360x800) medians
+  const homeRuns360 = await auditUrl("http://localhost:3000/", "home", assertions.home, 5, 360, 800);
+  const studioRuns360 = await auditUrl("http://localhost:3000/studio", "studio", assertions.studio, 5, 360, 800);
+  const jobFunded360 = await auditUrl(`http://localhost:3000/jobs/${fundedJobId}`, "job_funded", assertions.job_funded, 5, 360, 800);
+  const jobPaid360 = await auditUrl(`http://localhost:3000/jobs/${paidJobId}`, "job_paid", assertions.job_paid, 5, 360, 800);
+  const jobNeedsHuman360 = await auditUrl(`http://localhost:3000/jobs/${needsHumanJobId}`, "job_needs_human", assertions.job_needs_human, 5, 360, 800);
 
   const homeMedian = summarize(homeRuns390);
-  const jobMedian = summarize(jobRuns390);
   const studioMedian = summarize(studioRuns390);
+  const jobFundedMedian = summarize(jobFunded390);
+  const jobPaidMedian = summarize(jobPaid390);
+  const jobNeedsHumanMedian = summarize(jobNeedsHuman390);
 
   const home360Median = summarize(homeRuns360);
-  const job360Median = summarize(jobRuns360);
   const studio360Median = summarize(studioRuns360);
+  const jobFunded360Median = summarize(jobFunded360);
+  const jobPaid360Median = summarize(jobPaid360);
+  const jobNeedsHuman360Median = summarize(jobNeedsHuman360);
 
   const result = {
     measuredAt: new Date().toISOString(),
@@ -120,8 +261,9 @@ async function main() {
       mode: "production",
       command: "pnpm build && pnpm start",
       url: "http://localhost:3000",
+      roleCookie: "proofpay_role=client (alice@proofpay.io)",
       throttling: "Simulated Mobile 4G (4x CPU slowdown, 1.638 Mbps, 150ms RTT)",
-      viewports: ["390x844 (5-run median)", "360x800 (3-run median CLS check)"],
+      viewports: ["390x844 (5-run median)", "360x800 (5-run median)"],
     },
     targets: {
       performance: ">= 85",
@@ -140,15 +282,6 @@ async function main() {
       individualRuns390: homeRuns390,
       individualRuns360: homeRuns360,
     },
-    jobFunded: {
-      url: `http://localhost:3000/jobs/${fundedJobId}`,
-      state: "FUNDED",
-      median390: jobMedian,
-      median360: job360Median,
-      verdicts: getVerdicts(jobMedian),
-      individualRuns390: jobRuns390,
-      individualRuns360: jobRuns360,
-    },
     studio: {
       url: "http://localhost:3000/studio",
       median390: studioMedian,
@@ -156,6 +289,39 @@ async function main() {
       verdicts: getVerdicts(studioMedian),
       individualRuns390: studioRuns390,
       individualRuns360: studioRuns360,
+    },
+    jobFunded: {
+      url: `http://localhost:3000/jobs/${fundedJobId}`,
+      state: "FUNDED",
+      roleCookie: assertions.job_funded.roleCookie,
+      requiredDomStrings: assertions.job_funded.requiredDomStrings,
+      median390: jobFundedMedian,
+      median360: jobFunded360Median,
+      verdicts: getVerdicts(jobFundedMedian),
+      individualRuns390: jobFunded390,
+      individualRuns360: jobFunded360,
+    },
+    jobPaid: {
+      url: `http://localhost:3000/jobs/${paidJobId}`,
+      state: "PAID",
+      roleCookie: assertions.job_paid.roleCookie,
+      requiredDomStrings: assertions.job_paid.requiredDomStrings,
+      median390: jobPaidMedian,
+      median360: jobPaid360Median,
+      verdicts: getVerdicts(jobPaidMedian),
+      individualRuns390: jobPaid390,
+      individualRuns360: jobPaid360,
+    },
+    jobNeedsHuman: {
+      url: `http://localhost:3000/jobs/${needsHumanJobId}`,
+      state: "NEEDS_HUMAN",
+      roleCookie: assertions.job_needs_human.roleCookie,
+      requiredDomStrings: assertions.job_needs_human.requiredDomStrings,
+      median390: jobNeedsHumanMedian,
+      median360: jobNeedsHuman360Median,
+      verdicts: getVerdicts(jobNeedsHumanMedian),
+      individualRuns390: jobNeedsHuman390,
+      individualRuns360: jobNeedsHuman360,
     },
   };
 
@@ -171,15 +337,20 @@ async function main() {
   console.log("\n========================================");
   console.log("FINAL LIGHTHOUSE MEDIAN REPORT (SAVED)");
   console.log("========================================");
-  console.log("HOME (390px Median):", JSON.stringify(homeMedian));
-  console.log("HOME (360px Median):", JSON.stringify(home360Median));
-  console.log("JOB (390px Median): ", JSON.stringify(jobMedian));
-  console.log("JOB (360px Median): ", JSON.stringify(job360Median));
-  console.log("STUDIO (390px Med): ", JSON.stringify(studioMedian));
-  console.log("STUDIO (360px Med): ", JSON.stringify(studio360Median));
+  console.log("HOME (390px):           ", JSON.stringify(homeMedian));
+  console.log("HOME (360px):           ", JSON.stringify(home360Median));
+  console.log("STUDIO (390px):         ", JSON.stringify(studioMedian));
+  console.log("STUDIO (360px):         ", JSON.stringify(studio360Median));
+  console.log("JOB FUNDED (390px):     ", JSON.stringify(jobFundedMedian));
+  console.log("JOB FUNDED (360px):     ", JSON.stringify(jobFunded360Median));
+  console.log("JOB PAID (390px):       ", JSON.stringify(jobPaidMedian));
+  console.log("JOB PAID (360px):       ", JSON.stringify(jobPaid360Median));
+  console.log("JOB NEEDS_HUMAN (390px):", JSON.stringify(jobNeedsHumanMedian));
+  console.log("JOB NEEDS_HUMAN (360px):", JSON.stringify(jobNeedsHuman360Median));
 }
 
 main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

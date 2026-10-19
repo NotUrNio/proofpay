@@ -96,7 +96,7 @@ Every metric reported below is backed by committed code, reproducible test suite
     - **PayPal Capture ID**: `4GP221272V958470N` ($5.00 captured into business account)
     - **PayPal Payout Batch ID**: `CPMFG3U4LAXS2`
     - **PayPal Payout Item ID**: `A7PB6RVHLGY2U` ($5.00 settled to personal sandbox account)
-    - **Immutable Ledger Trail**: 6 sequential events committed to Postgres trigger-enforced hash chain.
+    - **Immutable Ledger Trail**: 6 sequential events (`3675f0d2...` through `2e6c11f9...`) committed to the Postgres trigger-enforced append-only ledger (the historical `2026-10-18` receipt records `ledgerChainValid: false` because pre-`6ac5a18` `JSON.stringify` broke at Event #2 `JOB_FUNDED` when `JSONB` reordered payload keys by key length; fixed via `canonicalJsonStringify` in `src/db/ledger.ts` and covered by a 6-event regression fixture in `test/ledger.test.ts`).
 - **Real Idempotency Proof**:
   - Live double-transmission drill proved that re-transmitting duplicate payout batch ID `batch_idemp_3d600d2c` triggered PayPal HTTP 400 `USER_BUSINESS_ERROR` (Debug ID: `ca4c92b63cdfe`), resulting in **$0.00 duplicate money moved**.
 - **Bundle & Working-Tree Secret Hygiene**:

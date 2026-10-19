@@ -5,18 +5,22 @@
     "accessibility": 100,
     "bestPractices": 100,
     "seo": 100,
-    "cls": 0.0011,
+    "cls": 0,
     "fcp": 0.75,
-    "lcp": 1.85
+    "lcp": 1.85,
+    "domSize": 800,
+    "transferSizeBytes": 274116
   },
   "median360": {
-    "performance": 99,
+    "performance": 100,
     "accessibility": 100,
     "bestPractices": 100,
     "seo": 100,
-    "cls": 0.0039,
+    "cls": 0.0036,
     "fcp": 0.75,
-    "lcp": 2.16
+    "lcp": 1.85,
+    "domSize": 800,
+    "transferSizeBytes": 274116
   },
   "verdicts": {
     "performance": "PASS",
@@ -31,13 +35,15 @@
     {
       "run": 1,
       "width": 390,
-      "performance": 100,
+      "performance": 99,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0011,
+      "cls": 0.0007,
       "fcp": 0.76,
-      "lcp": 1.85
+      "lcp": 2.01,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     },
     {
       "run": 2,
@@ -46,20 +52,24 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0011,
+      "cls": 0,
       "fcp": 0.75,
-      "lcp": 1.85
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     },
     {
       "run": 3,
       "width": 390,
-      "performance": 99,
+      "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0011,
+      "cls": 0.0007,
       "fcp": 0.75,
-      "lcp": 2.16
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     },
     {
       "run": 4,
@@ -68,20 +78,24 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0011,
-      "fcp": 0.75,
-      "lcp": 1.85
+      "cls": 0,
+      "fcp": 0.76,
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     },
     {
       "run": 5,
       "width": 390,
-      "performance": 100,
+      "performance": 99,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0011,
+      "cls": 0,
       "fcp": 0.75,
-      "lcp": 1.85
+      "lcp": 2.01,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     }
   ],
   "individualRuns360": [
@@ -92,9 +106,11 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0039,
+      "cls": 0.0036,
       "fcp": 0.75,
-      "lcp": 2.16
+      "lcp": 2.16,
+      "domSize": 800,
+      "transferSizeBytes": 274542
     },
     {
       "run": 2,
@@ -103,9 +119,11 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0039,
+      "cls": 0.0036,
       "fcp": 0.75,
-      "lcp": 1.85
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     },
     {
       "run": 3,
@@ -114,9 +132,37 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0039,
+      "cls": 0,
       "fcp": 0.75,
-      "lcp": 2.16
+      "lcp": 2.01,
+      "domSize": 800,
+      "transferSizeBytes": 274116
+    },
+    {
+      "run": 4,
+      "width": 360,
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0,
+      "fcp": 0.75,
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
+    },
+    {
+      "run": 5,
+      "width": 360,
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0.0036,
+      "fcp": 0.75,
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     }
   ]
 }

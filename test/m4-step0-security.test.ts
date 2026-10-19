@@ -378,7 +378,7 @@ describe("Milestone 4 & Step 0 Security & Architectural Boundaries", () => {
       }
     });
 
-    it("ignores x-proofpay-role header in production mode unless ENABLE_TEST_ROLE_HEADER=true", async () => {
+    it("ignores x-proofpay-role header in production mode unless ENABLE_TEST_ROLE_HEADER=true (enabled only in playwright.config.ts)", async () => {
       const prevNodeEnv = process.env.NODE_ENV;
       const prevEnableHeader = process.env.ENABLE_TEST_ROLE_HEADER;
       const prevDebug = process.env.ENABLE_DEBUG_CLIENT_IP;
@@ -404,11 +404,21 @@ describe("Milestone 4 & Step 0 Security & Architectural Boundaries", () => {
         );
         expect(inboxRes.status).toBe(403);
 
-        // When ENABLE_TEST_ROLE_HEADER=true is explicitly set, header is honored
+        // When ENABLE_TEST_ROLE_HEADER=true is explicitly set (as under playwright.config.ts), header is honored
         process.env.ENABLE_TEST_ROLE_HEADER = "true";
         expect(getSessionUser(spoofedHeaderReq).role).toBe("reviewer");
         const allowedDebugRes = await getDebugClientIp(spoofedHeaderReq);
         expect(allowedDebugRes.status).toBe(200);
+
+        // Verify config files: only playwright.config.ts enables ENABLE_TEST_ROLE_HEADER="true";
+        // render.yaml does not enable it and .env.example sets ENABLE_TEST_ROLE_HEADER=false
+        const playwrightConfig = fs.readFileSync(path.resolve(process.cwd(), "playwright.config.ts"), "utf-8");
+        const renderYaml = fs.readFileSync(path.resolve(process.cwd(), "render.yaml"), "utf-8");
+        const envExample = fs.readFileSync(path.resolve(process.cwd(), ".env.example"), "utf-8");
+        expect(playwrightConfig).toContain('process.env.ENABLE_TEST_ROLE_HEADER = "true"');
+        expect(renderYaml).not.toContain("ENABLE_TEST_ROLE_HEADER");
+        expect(envExample).toContain("ENABLE_TEST_ROLE_HEADER=false");
+        expect(envExample).not.toContain("ENABLE_TEST_ROLE_HEADER=true");
       } finally {
         (process.env as Record<string, string | undefined>).NODE_ENV = prevNodeEnv;
         if (prevEnableHeader === undefined) delete process.env.ENABLE_TEST_ROLE_HEADER;

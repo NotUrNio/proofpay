@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -99,7 +99,7 @@ export function JobDetailClient({
   const [funding, setFunding] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const fetchJob = async () => {
+  const fetchJob = useCallback(async () => {
     try {
       const res = await fetch(`/api/jobs/${jobId}`);
       if (res.ok) {
@@ -111,13 +111,17 @@ export function JobDetailClient({
     } finally {
       setLoading(false);
     }
-  };
+  }, [jobId]);
 
   useEffect(() => {
-    if (!initialData) {
+    if (initialData) {
+      setData(initialData);
+      setLoading(false);
+    } else {
+      setLoading(true);
       fetchJob();
     }
-  }, [jobId]);
+  }, [initialData, fetchJob]);
 
   const handleFundEscrow = async () => {
     setFunding(true);

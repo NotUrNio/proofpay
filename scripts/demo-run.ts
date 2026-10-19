@@ -18,6 +18,7 @@ import {
   captureOrder,
   createPayout,
   getPayoutBatch,
+  getPayoutItem,
   resolveConfiguredSandboxPayeeEmail,
   resolveConfiguredSandboxBuyerEmail,
 } from "../src/lib/paypal";
@@ -336,7 +337,8 @@ async function main() {
     },
   });
 
-  console.log(`      Policy Guard Decision: ${guardResult.decision} (${guardResult.allowed ? "ALLOWED" : "BLOCKED"})`);
+  const guardAllowed = guardResult.decision === "AUTO_PAY";
+  console.log(`      Policy Guard Decision: ${guardResult.decision} (${guardAllowed ? "ALLOWED" : "BLOCKED"})`);
   console.log(`      Fired Policy Rules:    ${guardResult.firedRuleIds.join(", ")}`);
 
   if (guardResult.decision !== "AUTO_PAY") {
@@ -351,7 +353,7 @@ async function main() {
     actor: "SYSTEM",
     payload: {
       decision: guardResult.decision,
-      allowed: guardResult.allowed,
+      allowed: guardAllowed,
       firedRules: guardResult.firedRuleIds,
     },
   });
@@ -374,16 +376,27 @@ async function main() {
   const payoutBatchId = payoutBatch.batch_header.payout_batch_id;
   console.log(`      Payout Batch Created: ${payoutBatchId}`);
 
-  // Poll for Payout Item ID
+  // Poll for Payout Batch Status, Payout Item ID, and Payout Item Status
   let payoutItemId = senderItemId;
-  let payoutStatus = payoutBatch.batch_header.batch_status;
+  let payoutBatchStatus: string = payoutBatch.batch_header.batch_status;
+  let payoutItemStatus = "PENDING";
   for (let attempt = 1; attempt <= 10; attempt++) {
     await sleep(2000);
     try {
       const details = await getPayoutBatch(payoutBatchId);
-      payoutStatus = details.batch_header.batch_status;
+      payoutBatchStatus = details.batch_header?.batch_status || payoutBatchStatus;
       if (details.items && details.items.length > 0) {
-        payoutItemId = details.items[0].payout_item_id || details.items[0].payout_item?.payout_item_id || payoutItemId;
+        const firstItem = details.items[0];
+        payoutItemId = firstItem.payout_item_id || firstItem.payout_item?.payout_item_id || payoutItemId;
+        payoutItemStatus = firstItem.transaction_status || payoutItemStatus;
+        if (payoutItemId !== senderItemId && (!firstItem.transaction_status || payoutItemStatus === "PENDING")) {
+          try {
+            const itemDetails = await getPayoutItem(payoutItemId);
+            payoutItemStatus = itemDetails.transaction_status || payoutItemStatus;
+          } catch {
+            // Keep batch-reported item status if item endpoint is not yet ready
+          }
+        }
         break;
       }
     } catch {
@@ -399,7 +412,7 @@ async function main() {
     paypalId: payoutItemId,
     amount: job.amount,
     currency: job.currency,
-    status: "COMPLETED",
+    status: payoutItemStatus === "SUCCESS" || payoutBatchStatus === "SUCCESS" ? "COMPLETED" : payoutBatchStatus,
     isMock: false,
     rawResponse: payoutBatch,
   });
@@ -412,15 +425,17 @@ async function main() {
     actor: "SYSTEM",
     payload: {
       payoutBatchId,
+      payoutBatchStatus,
       payoutItemId,
+      payoutItemStatus,
       amount: job.amount,
       currency: job.currency,
       recipientEmail: freelancerEmail,
-      status: payoutStatus,
+      status: payoutBatchStatus,
     },
   });
-  console.log(`      Payout Batch ID:   ${payoutBatchId}`);
-  console.log(`      Payout Item ID:    ${payoutItemId}`);
+  console.log(`      Payout Batch ID:      ${payoutBatchId} (${payoutBatchStatus})`);
+  console.log(`      Payout Item ID:       ${payoutItemId} (${payoutItemStatus})`);
   console.log(`      Ledger Event 6 ID: ${event6.id} (Hash: ${event6.signatureOrHash.slice(0, 16)}...)`);
 
   // Cryptographic Ledger Verification
@@ -440,8 +455,8 @@ async function main() {
   console.log(`Job ID:               ${job.id}`);
   console.log(`PayPal Order ID:      ${order.id}`);
   console.log(`PayPal Capture ID:    ${captureId}`);
-  console.log(`PayPal Payout Batch:  ${payoutBatchId}`);
-  console.log(`PayPal Payout Item:   ${payoutItemId}`);
+  console.log(`PayPal Payout Batch:  ${payoutBatchId} (status: ${payoutBatchStatus})`);
+  console.log(`PayPal Payout Item:   ${payoutItemId} (status: ${payoutItemStatus})`);
   console.log(`Ledger Events (6):    ${[event1.id, event2.id, event3.id, event4.id, event5.id, event6.id].join(", ")}`);
   console.log(`Traceability Ref:     custom_id = ${job.id}, sender_item_id = ${senderItemId}`);
   console.log("================================================================================\n");
@@ -451,7 +466,9 @@ async function main() {
     orderId: order.id,
     captureId,
     payoutBatchId,
+    payoutBatchStatus,
     payoutItemId,
+    payoutItemStatus,
     ledgerEvents: [event1.id, event2.id, event3.id, event4.id, event5.id, event6.id],
     amount: "5.00",
     currency: "USD",

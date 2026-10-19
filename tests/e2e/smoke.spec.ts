@@ -376,6 +376,55 @@ test.describe("ProofPay UI Redesign Smoke Tests", () => {
     expect(rscBody).not.toContain(secretOwner);
     expect(rscBody).not.toContain(mandateSigPrefix);
   });
+
+  test("13. Least-privilege role cookie enforcement & x-proofpay-role header under Playwright config", async ({
+    page,
+    context,
+  }) => {
+    await context.clearCookies();
+
+    // 1. No cookie -> 403 on mutating and reviewer routes
+    const approveNoCookie = await page.request.post("http://localhost:3000/api/inbox", {
+      data: { jobId: "20f829e2-8aff-4bab-8e4b-710c004ffc6d", action: "approve" },
+    });
+    expect(approveNoCookie.status()).toBe(403);
+
+    const rejectNoCookie = await page.request.post("http://localhost:3000/api/inbox", {
+      data: { jobId: "20f829e2-8aff-4bab-8e4b-710c004ffc6d", action: "reject" },
+    });
+    expect(rejectNoCookie.status()).toBe(403);
+
+    const restoreNoCookie = await page.request.post("http://localhost:3000/api/policy", {
+      data: { action: "restore", versionId: "v1" },
+    });
+    expect(restoreNoCookie.status()).toBe(403);
+
+    const createJobNoCookie = await page.request.post("http://localhost:3000/api/jobs", {
+      data: { title: "Unauthorized Job", amount: "5.00" },
+    });
+    expect(createJobNoCookie.status()).toBe(403);
+
+    const fundNoCookie = await page.request.post(
+      "http://localhost:3000/api/jobs/20f829e2-8aff-4bab-8e4b-710c004ffc6d/fund",
+      { data: { action: "create_order" } }
+    );
+    expect(fundNoCookie.status()).toBe(403);
+
+    const submitNoCookie = await page.request.post(
+      "http://localhost:3000/api/jobs/20f829e2-8aff-4bab-8e4b-710c004ffc6d/submit",
+      { data: { fileName: "sample.png" } }
+    );
+    expect(submitNoCookie.status()).toBe(403);
+
+    // 2. Under Playwright config (ENABLE_TEST_ROLE_HEADER="true"), x-proofpay-role header is honored
+    const roleHeaderRes = await page.request.get("http://localhost:3000/api/auth/role", {
+      headers: { "x-proofpay-role": "reviewer" },
+    });
+    expect(roleHeaderRes.status()).toBe(200);
+    const roleHeaderJson = await roleHeaderRes.json();
+    expect(roleHeaderJson.user.role).toBe("reviewer");
+  });
 });
+
 
 

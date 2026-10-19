@@ -1,13 +1,14 @@
 {
-  "measuredAt": "2026-10-19T05:11:20.058Z",
+  "measuredAt": "2026-10-19T07:09:08.185Z",
   "environment": {
     "mode": "production",
     "command": "pnpm build && pnpm start",
     "url": "http://localhost:3000",
+    "roleCookie": "proofpay_role=client (alice@proofpay.io)",
     "throttling": "Simulated Mobile 4G (4x CPU slowdown, 1.638 Mbps, 150ms RTT)",
     "viewports": [
       "390x844 (5-run median)",
-      "360x800 (3-run median CLS check)"
+      "360x800 (5-run median)"
     ]
   },
   "targets": {
@@ -26,18 +27,22 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0004,
+      "cls": 0,
       "fcp": 0.75,
-      "lcp": 2.31
+      "lcp": 2.46,
+      "domSize": 417,
+      "transferSizeBytes": 197715
     },
     "median360": {
       "performance": 98,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0004,
+      "cls": 0,
       "fcp": 0.75,
-      "lcp": 2.33
+      "lcp": 2.39,
+      "domSize": 417,
+      "transferSizeBytes": 192543
     },
     "verdicts": {
       "performance": "PASS",
@@ -52,13 +57,15 @@
       {
         "run": 1,
         "width": 390,
-        "performance": 100,
+        "performance": 99,
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.76,
-        "lcp": 1.93
+        "lcp": 1.94,
+        "domSize": 417,
+        "transferSizeBytes": 197859
       },
       {
         "run": 2,
@@ -67,9 +74,11 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.31
+        "lcp": 2.46,
+        "domSize": 417,
+        "transferSizeBytes": 197715
       },
       {
         "run": 3,
@@ -78,9 +87,11 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.31
+        "lcp": 2.46,
+        "domSize": 417,
+        "transferSizeBytes": 197715
       },
       {
         "run": 4,
@@ -89,20 +100,24 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.33
+        "lcp": 2.46,
+        "domSize": 417,
+        "transferSizeBytes": 197715
       },
       {
         "run": 5,
         "width": 390,
-        "performance": 98,
+        "performance": 100,
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.31
+        "lcp": 1.92,
+        "domSize": 417,
+        "transferSizeBytes": 197861
       }
     ],
     "individualRuns360": [
@@ -113,20 +128,24 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.33
+        "lcp": 2.39,
+        "domSize": 417,
+        "transferSizeBytes": 192689
       },
       {
         "run": 2,
         "width": 360,
-        "performance": 98,
+        "performance": 100,
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.3
+        "lcp": 1.92,
+        "domSize": 417,
+        "transferSizeBytes": 192543
       },
       {
         "run": 3,
@@ -135,132 +154,37 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0004,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.33
-      }
-    ]
-  },
-  "jobFunded": {
-    "url": "http://localhost:3000/jobs/20f829e2-8aff-4bab-8e4b-710c004ffc6d",
-    "state": "FUNDED",
-    "median390": {
-      "performance": 100,
-      "accessibility": 100,
-      "bestPractices": 96,
-      "seo": 100,
-      "cls": 0.0269,
-      "fcp": 0.75,
-      "lcp": 1.85
-    },
-    "median360": {
-      "performance": 99,
-      "accessibility": 100,
-      "bestPractices": 96,
-      "seo": 100,
-      "cls": 0.0377,
-      "fcp": 0.75,
-      "lcp": 2.15
-    },
-    "verdicts": {
-      "performance": "PASS",
-      "accessibility": "PASS",
-      "bestPractices": "PASS",
-      "seo": "PASS",
-      "cls": "PASS",
-      "fcp": "PASS",
-      "lcp": "PASS"
-    },
-    "individualRuns390": [
-      {
-        "run": 1,
-        "width": 390,
-        "performance": 100,
-        "accessibility": 100,
-        "bestPractices": 96,
-        "seo": 100,
-        "cls": 0.0269,
-        "fcp": 0.75,
-        "lcp": 1.85
-      },
-      {
-        "run": 2,
-        "width": 390,
-        "performance": 100,
-        "accessibility": 100,
-        "bestPractices": 96,
-        "seo": 100,
-        "cls": 0.0269,
-        "fcp": 0.76,
-        "lcp": 1.85
-      },
-      {
-        "run": 3,
-        "width": 390,
-        "performance": 99,
-        "accessibility": 100,
-        "bestPractices": 96,
-        "seo": 100,
-        "cls": 0.0269,
-        "fcp": 0.75,
-        "lcp": 2
+        "lcp": 2.39,
+        "domSize": 417,
+        "transferSizeBytes": 192543
       },
       {
         "run": 4,
-        "width": 390,
-        "performance": 100,
+        "width": 360,
+        "performance": 98,
         "accessibility": 100,
-        "bestPractices": 96,
+        "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0269,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 1.85
+        "lcp": 2.4,
+        "domSize": 417,
+        "transferSizeBytes": 192543
       },
       {
         "run": 5,
-        "width": 390,
-        "performance": 100,
-        "accessibility": 100,
-        "bestPractices": 96,
-        "seo": 100,
-        "cls": 0.0269,
-        "fcp": 0.75,
-        "lcp": 1.85
-      }
-    ],
-    "individualRuns360": [
-      {
-        "run": 1,
         "width": 360,
-        "performance": 99,
+        "performance": 98,
         "accessibility": 100,
-        "bestPractices": 96,
+        "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0377,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.16
-      },
-      {
-        "run": 2,
-        "width": 360,
-        "performance": 99,
-        "accessibility": 100,
-        "bestPractices": 96,
-        "seo": 100,
-        "cls": 0.0377,
-        "fcp": 0.75,
-        "lcp": 2.15
-      },
-      {
-        "run": 3,
-        "width": 360,
-        "performance": 99,
-        "accessibility": 100,
-        "bestPractices": 96,
-        "seo": 100,
-        "cls": 0.0377,
-        "fcp": 0.75,
-        "lcp": 2.15
+        "lcp": 2.38,
+        "domSize": 417,
+        "transferSizeBytes": 192543
       }
     ]
   },
@@ -271,18 +195,22 @@
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0011,
+      "cls": 0,
       "fcp": 0.75,
-      "lcp": 1.85
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     },
     "median360": {
-      "performance": 99,
+      "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
       "seo": 100,
-      "cls": 0.0039,
+      "cls": 0.0036,
       "fcp": 0.75,
-      "lcp": 2.16
+      "lcp": 1.85,
+      "domSize": 800,
+      "transferSizeBytes": 274116
     },
     "verdicts": {
       "performance": "PASS",
@@ -297,13 +225,15 @@
       {
         "run": 1,
         "width": 390,
-        "performance": 100,
+        "performance": 99,
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0011,
+        "cls": 0.0007,
         "fcp": 0.76,
-        "lcp": 1.85
+        "lcp": 2.01,
+        "domSize": 800,
+        "transferSizeBytes": 274116
       },
       {
         "run": 2,
@@ -312,20 +242,24 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0011,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 1.85
+        "lcp": 1.85,
+        "domSize": 800,
+        "transferSizeBytes": 274116
       },
       {
         "run": 3,
         "width": 390,
-        "performance": 99,
+        "performance": 100,
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0011,
+        "cls": 0.0007,
         "fcp": 0.75,
-        "lcp": 2.16
+        "lcp": 1.85,
+        "domSize": 800,
+        "transferSizeBytes": 274116
       },
       {
         "run": 4,
@@ -334,20 +268,24 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0011,
-        "fcp": 0.75,
-        "lcp": 1.85
+        "cls": 0,
+        "fcp": 0.76,
+        "lcp": 1.85,
+        "domSize": 800,
+        "transferSizeBytes": 274116
       },
       {
         "run": 5,
         "width": 390,
-        "performance": 100,
+        "performance": 99,
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0011,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 1.85
+        "lcp": 2.01,
+        "domSize": 800,
+        "transferSizeBytes": 274116
       }
     ],
     "individualRuns360": [
@@ -358,9 +296,11 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0039,
+        "cls": 0.0036,
         "fcp": 0.75,
-        "lcp": 2.16
+        "lcp": 2.16,
+        "domSize": 800,
+        "transferSizeBytes": 274542
       },
       {
         "run": 2,
@@ -369,9 +309,11 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0039,
+        "cls": 0.0036,
         "fcp": 0.75,
-        "lcp": 1.85
+        "lcp": 1.85,
+        "domSize": 800,
+        "transferSizeBytes": 274116
       },
       {
         "run": 3,
@@ -380,9 +322,561 @@
         "accessibility": 100,
         "bestPractices": 100,
         "seo": 100,
-        "cls": 0.0039,
+        "cls": 0,
         "fcp": 0.75,
-        "lcp": 2.16
+        "lcp": 2.01,
+        "domSize": 800,
+        "transferSizeBytes": 274116
+      },
+      {
+        "run": 4,
+        "width": 360,
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 1.85,
+        "domSize": 800,
+        "transferSizeBytes": 274116
+      },
+      {
+        "run": 5,
+        "width": 360,
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0.0036,
+        "fcp": 0.75,
+        "lcp": 1.85,
+        "domSize": 800,
+        "transferSizeBytes": 274116
+      }
+    ]
+  },
+  "jobFunded": {
+    "url": "http://localhost:3000/jobs/20f829e2-8aff-4bab-8e4b-710c004ffc6d",
+    "state": "FUNDED",
+    "roleCookie": "client",
+    "requiredDomStrings": [
+      "Hero Brand Illustration (Awaiting Submission)",
+      "$12.00"
+    ],
+    "median390": {
+      "performance": 99,
+      "accessibility": 95,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0,
+      "fcp": 0.75,
+      "lcp": 2.01,
+      "domSize": 224,
+      "transferSizeBytes": 150512
+    },
+    "median360": {
+      "performance": 99,
+      "accessibility": 95,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0,
+      "fcp": 0.75,
+      "lcp": 2.01,
+      "domSize": 215,
+      "transferSizeBytes": 150320
+    },
+    "verdicts": {
+      "performance": "PASS",
+      "accessibility": "PASS",
+      "bestPractices": "PASS",
+      "seo": "PASS",
+      "cls": "PASS",
+      "fcp": "PASS",
+      "lcp": "PASS"
+    },
+    "individualRuns390": [
+      {
+        "run": 1,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 215,
+        "transferSizeBytes": 150320
+      },
+      {
+        "run": 2,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 224,
+        "transferSizeBytes": 150512
+      },
+      {
+        "run": 3,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 224,
+        "transferSizeBytes": 150512
+      },
+      {
+        "run": 4,
+        "width": 390,
+        "performance": 100,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 1.85,
+        "domSize": 215,
+        "transferSizeBytes": 150512
+      },
+      {
+        "run": 5,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 224,
+        "transferSizeBytes": 150512
+      }
+    ],
+    "individualRuns360": [
+      {
+        "run": 1,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 215,
+        "transferSizeBytes": 150320
+      },
+      {
+        "run": 2,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 215,
+        "transferSizeBytes": 150320
+      },
+      {
+        "run": 3,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2,
+        "domSize": 215,
+        "transferSizeBytes": 150512
+      },
+      {
+        "run": 4,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 215,
+        "transferSizeBytes": 150320
+      },
+      {
+        "run": 5,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 95,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 224,
+        "transferSizeBytes": 150512
+      }
+    ]
+  },
+  "jobPaid": {
+    "url": "http://localhost:3000/jobs/bf3884d6-3fdf-496d-87db-5dbbe4461443",
+    "state": "PAID",
+    "roleCookie": "client",
+    "requiredDomStrings": [
+      "Social Media Banner (Summer Sale)",
+      "$5.00",
+      "Milestone complete!"
+    ],
+    "median390": {
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0,
+      "fcp": 0.75,
+      "lcp": 1.85,
+      "domSize": 279,
+      "transferSizeBytes": 151130
+    },
+    "median360": {
+      "performance": 99,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0,
+      "fcp": 0.75,
+      "lcp": 2.01,
+      "domSize": 279,
+      "transferSizeBytes": 151130
+    },
+    "verdicts": {
+      "performance": "PASS",
+      "accessibility": "PASS",
+      "bestPractices": "PASS",
+      "seo": "PASS",
+      "cls": "PASS",
+      "fcp": "PASS",
+      "lcp": "PASS"
+    },
+    "individualRuns390": [
+      {
+        "run": 1,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 288,
+        "transferSizeBytes": 151130
+      },
+      {
+        "run": 2,
+        "width": 390,
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 1.85,
+        "domSize": 279,
+        "transferSizeBytes": 151130
+      },
+      {
+        "run": 3,
+        "width": 390,
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 1.85,
+        "domSize": 279,
+        "transferSizeBytes": 151276
+      },
+      {
+        "run": 4,
+        "width": 390,
+        "performance": 100,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.76,
+        "lcp": 1.85,
+        "domSize": 279,
+        "transferSizeBytes": 151281
+      },
+      {
+        "run": 5,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 279,
+        "transferSizeBytes": 151130
+      }
+    ],
+    "individualRuns360": [
+      {
+        "run": 1,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 279,
+        "transferSizeBytes": 151130
+      },
+      {
+        "run": 2,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 279,
+        "transferSizeBytes": 151130
+      },
+      {
+        "run": 3,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 288,
+        "transferSizeBytes": 151130
+      },
+      {
+        "run": 4,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 279,
+        "transferSizeBytes": 151130
+      },
+      {
+        "run": 5,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.75,
+        "lcp": 2.01,
+        "domSize": 288,
+        "transferSizeBytes": 151130
+      }
+    ]
+  },
+  "jobNeedsHuman": {
+    "url": "http://localhost:3000/jobs/10c2bab9-02a6-45ab-b652-9552b584769b",
+    "state": "NEEDS_HUMAN",
+    "roleCookie": "client",
+    "requiredDomStrings": [
+      "Instagram Story Banner (Near-Miss Crimson)",
+      "$7.50",
+      "Review pending. Color tolerance or ambiguity was detected."
+    ],
+    "median390": {
+      "performance": 99,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0,
+      "fcp": 0.9,
+      "lcp": 2.16,
+      "domSize": 284,
+      "transferSizeBytes": 151294
+    },
+    "median360": {
+      "performance": 99,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0,
+      "fcp": 0.9,
+      "lcp": 2.16,
+      "domSize": 293,
+      "transferSizeBytes": 151294
+    },
+    "verdicts": {
+      "performance": "PASS",
+      "accessibility": "PASS",
+      "bestPractices": "PASS",
+      "seo": "PASS",
+      "cls": "PASS",
+      "fcp": "PASS",
+      "lcp": "PASS"
+    },
+    "individualRuns390": [
+      {
+        "run": 1,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.91,
+        "lcp": 2.02,
+        "domSize": 284,
+        "transferSizeBytes": 151294
+      },
+      {
+        "run": 2,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 2.16,
+        "domSize": 293,
+        "transferSizeBytes": 151294
+      },
+      {
+        "run": 3,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 2.16,
+        "domSize": 284,
+        "transferSizeBytes": 151294
+      },
+      {
+        "run": 4,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 1.95,
+        "domSize": 284,
+        "transferSizeBytes": 151294
+      },
+      {
+        "run": 5,
+        "width": 390,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 2.16,
+        "domSize": 293,
+        "transferSizeBytes": 151435
+      }
+    ],
+    "individualRuns360": [
+      {
+        "run": 1,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.91,
+        "lcp": 2.16,
+        "domSize": 293,
+        "transferSizeBytes": 151591
+      },
+      {
+        "run": 2,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 2.16,
+        "domSize": 284,
+        "transferSizeBytes": 151294
+      },
+      {
+        "run": 3,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 2,
+        "domSize": 284,
+        "transferSizeBytes": 151294
+      },
+      {
+        "run": 4,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 2.16,
+        "domSize": 293,
+        "transferSizeBytes": 151294
+      },
+      {
+        "run": 5,
+        "width": 360,
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100,
+        "seo": 100,
+        "cls": 0,
+        "fcp": 0.9,
+        "lcp": 2.16,
+        "domSize": 293,
+        "transferSizeBytes": 151294
       }
     ]
   }

@@ -183,16 +183,18 @@ The following real end-to-end execution was recorded through the ProofPay servic
 | **Sender Item ID** | `item_ef7a9683` | Sent on payout item for end-to-end correlation |
 
 ### Cryptographic Audit Ledger Trail (Single-Run Chain)
-All 6 state transitions from this single run were committed to the immutable database-enforced ledger:
+All 6 state transitions from this single run (`2026-10-18T16:07:40.312Z`) were committed to the database-enforced append-only ledger:
 
-| Seq | Event ID | Event Type | Actor | State Transition | Hash Chain Status |
-| :---: | :--- | :--- | :--- | :--- | :---: |
-| 1 | `3675f0d2-d70b-4e55-9ae1-b7411336dcce` | `JOB_CREATED` | `CLIENT` | `null` $\to$ `CREATED` | `GENESIS` |
-| 2 | `41cb32ff-341e-46f3-8e52-5227fed91bfe` | `JOB_FUNDED` | `CLIENT` | `CREATED` $\to$ `FUNDED` | `LINKED` |
-| 3 | `50cf60fa-1dc4-462c-8f01-a8e0baa6fda4` | `DELIVERABLE_SUBMITTED` | `FREELANCER` | `FUNDED` $\to$ `SUBMITTED` | `LINKED` |
-| 4 | `6346027e-edab-4e08-86b0-46532b63092b` | `VERIFICATION_COMPLETED` | `SYSTEM` | `SUBMITTED` $\to$ `VERIFIED` | `LINKED` |
-| 5 | `faa66c66-58b2-4de9-be2f-4bf19105536e` | `GUARD_EVALUATED` | `GUARD` | `VERIFIED` $\to$ `VERIFIED` | `LINKED` |
-| 6 | `2e6c11f9-a4fa-4cda-b5a0-7a334ede0308` | `PAYOUT_RELEASED` | `SYSTEM` | `VERIFIED` $\to$ `PAID` | `VERIFIED` |
+| Seq | Event ID | Event Type | Actor | State Transition | Recorded Hash Prefix | Receipt Verification (`ledgerChainValid: false`) |
+| :---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 (`index 0`) | `3675f0d2-d70b-4e55-9ae1-b7411336dcce` | `JOB_CREATED` | `CLIENT` | `null` $\to$ `CREATED` | `9439d7d4d33f97c3...` | `VERIFIED` (`1/6`; key lengths `5,6,8,11,15` matched `JSONB` order) |
+| 2 (`index 1`) | `41cb32ff-341e-46f3-8e52-5227fed91bfe` | `JOB_FUNDED` | `CLIENT` | `CREATED` $\to$ `FUNDED` | `0eba1fb68e70adc2...` | `MISMATCH AT INDEX 1` (pre-`6ac5a18` `JSON.stringify` vs `JSONB` key-length order) |
+| 3 (`index 2`) | `50cf60fa-1dc4-462c-8f01-a8e0baa6fda4` | `DELIVERABLE_SUBMITTED` | `FREELANCER` | `FUNDED` $\to$ `SUBMITTED` | `14b1c2c94d7da821...` | Chained to `0eba1fb68e70adc2...` |
+| 4 (`index 3`) | `6346027e-edab-4e08-86b0-46532b63092b` | `VERIFICATION_COMPLETED` | `SYSTEM` | `SUBMITTED` $\to$ `VERIFIED` | `31b4195303f70da9...` | Chained to `14b1c2c94d7da821...` |
+| 5 (`index 4`) | `faa66c66-58b2-4de9-be2f-4bf19105536e` | `GUARD_EVALUATED` | `SYSTEM` | `VERIFIED` $\to$ `VERIFIED` | `2b742421c23df820...` | Chained to `31b4195303f70da9...` |
+| 6 (`index 5`) | `2e6c11f9-a4fa-4cda-b5a0-7a334ede0308` | `PAYOUT_RELEASED` | `SYSTEM` | `VERIFIED` $\to$ `PAID` | `9373e914aaa38a5e...` | Chained to `2b742421c23df820...` |
+
+> **Receipt Honesty Note (`ledgerChainValid: false`)**: When this run executed at `2026-10-18T16:07:40.312Z` (prior to commit `6ac5a18`), `appendLedgerEvent` and `verifyLedgerChain` hashed payloads with raw `JSON.stringify(payload)`. Event #1 (`index 0`, `JOB_CREATED`) verified because its keys (`title`, `amount`, `currency`, `clientEmail`, `freelancerEmail`, lengths `5,6,8,11,15`) were already in PostgreSQL `JSONB`'s internal key-length sort order. Event #2 (`index 1`, `JOB_FUNDED`) hashed insertion order `["orderId","captureId","amount","currency","buyerEmail"]` (`0eba1fb68e70adc2...`), whereas `JSONB` returned length-ordered keys `["amount","orderId","currency","captureId","buyerEmail"]` (`2ced456186f2e926...`), causing `verifyLedgerChain` to report `ledgerChainValid: false` (`totalEventsVerified: 1`, `brokenRowIndex: 1`). Canonical key sorting and `undefined`-field normalization (`canonicalJsonStringify` in [`src/db/ledger.ts`](src/db/ledger.ts)) fix this for all subsequent runs (verified by the 6-event fixture regression test in [`test/ledger.test.ts`](test/ledger.test.ts)), while the historical receipt value in `eval/results/single-real-run.json` is preserved unaltered.
 
 Reproduce this flow at any time:
 ```bash
