@@ -32,7 +32,7 @@ if command -v jq >/dev/null 2>&1; then
     rule: .rule,
     cloudflareVerified: .cloudflareVerified,
     hopList: .hopList,
-    trustedProxyHopsConfigured: .trustedProxyHopsConfigured
+    trustedProxyHops: (.trustedProxyHops // .trustedProxyHopsConfigured)
   }'
 else
   cat /tmp/client_ip_response.json

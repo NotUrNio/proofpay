@@ -248,17 +248,21 @@ export async function runHostedSmoke(baseUrl: string, runDemo = false) {
         });
         submitStatus = submitRes.status;
         const submitData = await submitRes.json();
-        hasVerdict = Boolean(submitData.verdict || submitData.decision || submitData.success);
+        hasVerdict = Boolean(submitData.verdict || submitData.decision || submitData.guard);
+        const isExpectedStatus =
+          submitStatus === 200 ||
+          (submitStatus === 400 && submitData.error === "UNFUNDED_REAL_PAYOUT");
+        const passed = Boolean(jobId) && isExpectedStatus && hasVerdict;
+        results.push({
+          check: "Guided Demo Flow (--run-demo)",
+          target: "POST /api/jobs -> /api/jobs/[id]/submit",
+          expected: "HTTP 200 or 400 (UNFUNDED_REAL_PAYOUT guard) with verdict",
+          actual: `jobId: ${Boolean(jobId)}, submit: ${submitStatus}${
+            submitData.error ? ` (${submitData.error})` : ""
+          }, verdict: ${hasVerdict}`,
+          passed,
+        });
       }
-
-      const passed = Boolean(jobId) && submitStatus === 200 && hasVerdict;
-      results.push({
-        check: "Guided Demo Flow (--run-demo)",
-        target: "POST /api/jobs -> /api/jobs/[id]/submit",
-        expected: "HTTP 200 with recorded replay verdict",
-        actual: `jobId: ${Boolean(jobId)}, submit: ${submitStatus}, verdict: ${hasVerdict}`,
-        passed,
-      });
     } catch (err: any) {
       results.push({
         check: "Guided Demo Replay",

@@ -104,8 +104,11 @@ export default function EvalPage() {
                 Benchmark Evaluation Results
               </h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-400">
-              Evaluation across {totalCount} multi-aspect visual deliverable fixtures ({devCount} Dev / {heldOutCount} Held-Out).
+            <p className="text-xs sm:text-sm text-slate-300 font-medium">
+              Results replayed from recorded model responses (offline); {totalCount} author-written cases; interval shows uncertainty.
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Evaluation across {totalCount} multi-aspect visual deliverable fixtures ({devCount} Dev / {heldOutCount} Held-Out). 8 of the 22 model-served cases used the fallback model (gemini-3.5-flash-lite).
             </p>
           </div>
           {data && (

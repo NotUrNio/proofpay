@@ -262,7 +262,7 @@ pnpm eval:live
 
 ### 🎨 Near-Miss Palette Calibration Science (CIEDE2000)
 
-Thresholds $T_{\text{brand}} = 11.5$ and $T_{\text{hard}} = 16.0$ were calibrated **strictly on the Dev split**:
+Thresholds $T_{\text{brand}} = 11.5$ and $T_{\text{hard}} = 16.0$ were chosen before the benchmark, reviewed against it, and evaluated without per-split tuning:
 - **Dev Compliant Maximum**: $\Delta E_{00} = 10.25$ (`case_01`: 10.25, `case_03`: 7.65, `case_25`: 7.89).
 - **Deliberate Gray Zone ($\Delta E_{00} \in [11.5, 16.0]$)**:
   - `case_21` (Crimson Red-Orange, Dev): $\Delta E_{00} = 11.69$
