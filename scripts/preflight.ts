@@ -196,6 +196,14 @@ async function main() {
     runStep(5, "Gitleaks Full History Secrets Scan & Canary", "Security & Privacy", () => {
       // 5a. In-preflight canary: write temporary file in scripts/, ensure rule fires, delete file in finally
       const canaryFile = path.join(root, "scripts/canary-preflight-test.ts");
+      const cleanupCanary = () => {
+        if (fs.existsSync(canaryFile)) {
+          try { fs.unlinkSync(canaryFile); } catch {}
+        }
+      };
+      process.on("SIGINT", cleanupCanary);
+      process.on("SIGTERM", cleanupCanary);
+      process.on("exit", cleanupCanary);
       try {
         const canaryCode = ["const leaked" + "_password = ", '"canary_fixture_leak_987654321";\n'].join("");
         fs.writeFileSync(canaryFile, canaryCode, "utf8");
@@ -214,9 +222,10 @@ async function main() {
           throw new Error("Gitleaks canary failed: scripts-password-or-secret-assignment rule did not fire on canary file");
         }
       } finally {
-        if (fs.existsSync(canaryFile)) {
-          fs.unlinkSync(canaryFile);
-        }
+        cleanupCanary();
+        process.removeListener("SIGINT", cleanupCanary);
+        process.removeListener("SIGTERM", cleanupCanary);
+        process.removeListener("exit", cleanupCanary);
       }
 
       // 5b. Verify accepted historical finding fingerprint in .gitleaksignore

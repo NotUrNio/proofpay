@@ -2,25 +2,29 @@
 
 > **Target Platform**: Render Cloud (Web Service + Managed PostgreSQL)  
 > **Blueprint**: [`render.yaml`](../render.yaml)  
-> **Target Production URL**: `https://proofpay-68qi.onrender.com`
+> **Target Production URL**: `https://proofpay-68qi.onrender.com`  
+> **Production Branch**: `main` (Render Web Service tracks `main`)
 
 ---
 
 ## 📋 Table of Contents
 1. [Pre-Deployment Verification (`pnpm preflight`)](#1-pre-deployment-verification)
-2. [Deploying via Render Dashboard Blueprint](#2-deploying-via-render-dashboard-blueprint)
-3. [Post-Deploy Smoke Test (`hosted-smoke.ts`)](#3-post-deploy-smoke-test)
-4. [Client IP & Proxy Trust Inspection (`check-client-ip.sh`)](#4-client-ip--proxy-trust-inspection)
-5. [Hosted Performance & Lighthouse Audit](#5-hosted-performance--lighthouse-audit)
-6. [Demo State Restoration (`POST /api/demo/reset`)](#6-demo-state-restoration)
-7. [Rollback & Disaster Recovery](#7-rollback--disaster-recovery)
-8. [Managed PostgreSQL 30-Day Free Tier Notice](#8-managed-postgresql-30-day-free-tier-notice)
+2. [Pre-Flight Compliance & Secret Rotation Checklist](#2-pre-flight-compliance--secret-rotation-checklist)
+3. [Branch Merge & Deployment via Render Dashboard](#3-branch-merge--deployment-via-render-dashboard)
+4. [Post-Deploy Smoke Test (`hosted-smoke.ts`)](#4-post-deploy-smoke-test)
+5. [Client IP & Proxy Trust Inspection (Laptop vs. Phone)](#5-client-ip--proxy-trust-inspection-laptop-vs-phone)
+6. [Hosted Performance & Lighthouse Audit](#6-hosted-performance--lighthouse-audit)
+7. [Live Sandbox `demo:run` & PayPal ID Reconciliation](#7-live-sandbox-demorun--paypal-id-reconciliation)
+8. [Live `/eval` Page Verification](#8-live-eval-page-verification)
+9. [Demo State Restoration (`POST /api/demo/reset`)](#9-demo-state-restoration)
+10. [Rollback & Disaster Recovery](#10-rollback--disaster-recovery)
+11. [Managed PostgreSQL 30-Day Free Tier Notice](#11-managed-postgresql-30-day-free-tier-notice)
 
 ---
 
 ## 1. Pre-Deployment Verification
 
-Before triggering any deployment or merging to `main`, execute the 11-step automated preflight suite locally:
+Before merging to `main` or triggering deployment, execute the 11-step automated preflight suite locally:
 
 ```bash
 pnpm preflight
@@ -29,167 +33,227 @@ pnpm preflight
 The preflight runner executes:
 1. TypeScript compilation (`pnpm tsc --noEmit`)
 2. Next.js ESLint (`pnpm lint`)
-3. Vitest unit & integration test suites (16 suites, 116 tests)
+3. Vitest unit & integration test suites
 4. Next.js production build (`pnpm build`)
-5. Gitleaks static secrets scanner (`gitleaks detect`)
-6. Literal secrets audit (`node scripts/audit-secrets-literal.cjs`)
-7. Git-tracked cited files check (`git check-ignore`)
-8. Relative markdown link resolution check across all docs
-9. Environment variable catalog & render.yaml map check
-10. Documentation claims vs. code invariants verification
-11. Render.yaml invariants check (`healthCheckPath: /`, `autoDeploy: false`, no remote seeding)
+5. Gitleaks full-history static secrets scanner (`gitleaks detect` with canary check)
+6. Literal secrets & commits audit
+7. Git-tracked cited files check
+8. Relative markdown link resolution check across all documentation
+9. Environment variable catalog & `render.yaml` map check
+10. Documentation claims vs. code invariants verification (`scripts/check-claims.ts`)
+11. Render deployment specification verification (`healthCheckPath: /api/health`, `autoDeploy: false`, no remote seeding)
 
 > [!IMPORTANT]
-> **GO / NO-GO Gate**: Do NOT deploy if `pnpm preflight` exits with any `NO-GO` status.
+> **GO / NO-GO Gate**: Do NOT proceed with merging or deployment if `pnpm preflight` reports any `NO-GO` step.
 
 ---
 
-## 2. Deploying via Render Dashboard Blueprint
+## 2. Pre-Flight Compliance & Secret Rotation Checklist
 
-Because `render.yaml` specifies `autoDeploy: false`, merging code never triggers an automatic deploy. Every deployment is intentionally triggered by the operator.
+Before triggering production deployment, perform these operator-only checks:
 
-### Initial Blueprint Setup:
-1. Log into your [Render Dashboard](https://dashboard.render.com).
-2. Click **New +** $\to$ **Blueprint**.
-3. Select repository: `https://github.com/NotUrNio/proofpay.git` (or your fork).
-4. Branch: `main` (after merging PR).
-5. Render will detect `render.yaml` and provision:
-   - **Web Service**: `proofpay` (Node.js runtime, Free tier, Oregon region)
-   - **PostgreSQL Database**: `proofpay-db` (Free tier, Oregon region)
+1. **Rotate Sandbox Password & Confirm Old Password Fails**:
+   - In [PayPal Developer Dashboard](https://developer.paypal.com/dashboard) $\to$ **Sandbox Accounts**, select your Sandbox Personal Buyer account.
+   - Click **Manage Account** $\to$ change the account password.
+   - Test authentication with the **old** password (e.g. via PayPal sandbox login or curl) and confirm it fails with an authentication error.
+2. **Hackathon Rules Compliance Check**:
+   - Verify project complies with PayPal AI Hackathon submission criteria.
+   - Verify MIT License is present in `LICENSE`.
+   - Verify no proprietary API keys or confidential credentials are committed in repository history.
+3. **Repository Visibility Check**:
+   - In GitHub repository settings $\to$ **General** $\to$ **Danger Zone** $\to$ verify **Repository visibility** is set to **Public** (or shared with hackathon judges).
+4. **Devpost Text & Disclosure Check**:
+   - Review Devpost submission text against `DEVPOST.md`.
+   - Confirm accurate model attribution (`gemini-3.8-flash` primary vision, `gemini-3.5-flash-lite` quota fallback).
+   - Confirm sample size attribution (28 cases: 13 Dev / 15 Held-Out, 0/22 false approvals, $0.00035 / run).
+   - Confirm prominent disclosure of simulated guided demo runs vs. real PayPal sandbox receipts.
 
-### Set-Manually Secret Variables (Render Dashboard $\to$ Environment):
-The following variables have `sync: false` in `render.yaml` and must be populated manually in the Render dashboard:
+---
 
-| Variable Name | Description | Example / How to Obtain |
-| :--- | :--- | :--- |
-| `PAYPAL_CLIENT_ID` | Sandbox App Client ID | PayPal Developer Dashboard $\to$ Apps & Credentials |
-| `PAYPAL_CLIENT_SECRET` | Sandbox App Client Secret | PayPal Developer Dashboard $\to$ Apps & Credentials |
-| `GEMINI_API_KEY` | Google Gemini API Key | Google AI Studio $\to$ Get API Key |
-| `PAYPAL_WEBHOOK_ID` | Sandbox Webhook ID | PayPal Dashboard $\to$ Webhooks |
-| `PAYPAL_SANDBOX_PAYEE_EMAIL` | Dedicated Sandbox Payee Email | PayPal Dashboard $\to$ Sandbox Accounts |
-| `CLIENT_IP_TRUSTED_PROXY_HOPS`| Reverse proxy hop count | Default: `0` (or `1` if behind Render reverse proxy) |
-| `ENABLE_DEBUG_CLIENT_IP` | Diagnostic endpoint flag | Set to `"true"` during initial post-deploy verification |
+## 3. Branch Merge & Deployment via Render Dashboard
+
+Render's Web Service tracks the `main` branch. Clicking **"Deploy latest commit"** on Render deploys the latest commit of the service's linked branch (`main`). Therefore, you must merge `ui-redesign` into `main` before deploying.
+
+### Step 1: Merge `ui-redesign` into `main` (No Fast-Forward)
+```bash
+# Ensure working tree is clean
+git checkout main
+git pull origin main
+git merge --no-ff ui-redesign -m "Merge branch 'ui-redesign' into main"
+git push origin main
+```
+
+### Step 2: Set Manually Configured Variables in Render Dashboard
+In the [Render Dashboard](https://dashboard.render.com) $\to$ `proofpay` Web Service $\to$ **Environment**:
+
+| Variable Name | Status | Production Value / Instruction |
+| :--- | :---: | :--- |
+| `PAYPAL_CLIENT_ID` | Required | PayPal Developer Sandbox app client ID |
+| `PAYPAL_CLIENT_SECRET` | Required | PayPal Developer Sandbox app client secret |
+| `PAYPAL_WEBHOOK_ID` | Required | PayPal Sandbox webhook listener ID |
+| `GEMINI_API_KEY` | Required | Google AI Studio API key (`AIza...`) |
+| `PAYPAL_SANDBOX_PAYEE_EMAIL` | Required | Dedicated recipient Sandbox PayPal email |
+| `CLIENT_IP_TRUSTED_PROXY_HOPS` | Config | `0` (or `1` if behind Render reverse proxy) |
+| `ENABLE_DEBUG_CLIENT_IP` | Temporary | Set `"true"` for post-deploy check, then set `"false"` |
+| `ENABLE_DEMO_RESET` | Temporary | Set `"true"` for hosted Lighthouse, then set `"false"` |
 
 > [!NOTE]
-> `MANDATE_SIGNING_SECRET` is automatically generated by Render via `generateValue: true` with a 256-bit cryptographically secure string.
+> `DATABASE_URL` is automatically linked from `proofpay-db`. `MANDATE_SIGNING_SECRET` is automatically generated by Render.
 
-6. Click **Apply**.
-7. The web service executes `startCommand: pnpm start`.
-   - On initial boot, `ensureHostedBootstrap()` detects an empty database and seeds the 3 canonical demo jobs (`10c2bab9-...`, `20f829e2-...`, `bf3884d6-...`) without executing remote seed CLI scripts.
+### Step 3: Trigger Manual Deploy
+1. In the `proofpay` Web Service, click **Manual Deploy** $\to$ **Deploy latest commit**.
+2. Render builds the service using `pnpm install && pnpm build` and starts with `pnpm start`.
+3. Verify Render logs show: `[Bootstrap] Seeding 3 bundled demo jobs for judging...` and `[Bootstrap] Complete`.
 
 ---
 
-## 3. Post-Deploy Smoke Test
+## 4. Post-Deploy Smoke Test
 
 Once Render reports **Deploy live**, run the automated post-deployment smoke test:
 
 ```bash
-BASE_URL=https://proofpay-68qi.onrender.com pnpm tsx scripts/hosted-smoke.ts
+pnpm tsx scripts/hosted-smoke.ts https://proofpay-68qi.onrender.com
 ```
 
-### What `hosted-smoke.ts` Verifies:
-- Cold start retry loop (up to 90 seconds for Render free tier spin-up)
+> [!CAUTION]
+> **CRITICAL RESTRICTION**: `hosted-smoke.ts` **must NOT use `--run-demo` against the hosted URL**.  
+> `--run-demo` attempts to submit deliverables and mutate escrow state. Running it against the hosted environment will pollute the judging demo milestone states. Always run `hosted-smoke.ts` without `--run-demo` against the live URL.
+
+### What `hosted-smoke.ts` Verifies (10/10 PASS):
+- Cold start retry handling (up to 90s for free-tier spin-up)
 - Read-only routes return HTTP 200 (`/`, `/studio`, `/ledger`, `/policy`, `/chaos`, `/inbox`, `/api/jobs`)
-- Cookie-less mutation rejection (HTTP 403 when no cookie is sent to `/api/jobs` or `/api/demo/reset`)
-- Persona header bypass rejection (`x-proofpay-role` is ignored in production mode)
-- Secret isolation: responses are scanned for secret leakage
-- Canonical demo job states are present
+- Unauthenticated mutation routes return HTTP 403
+- Role header bypass attempt (`x-proofpay-role`) is ignored in production
+- Zero sensitive credentials leaked in API responses
+- Canonical bundled demo jobs are verified present
 
 ---
 
-## 4. Client IP & Proxy Trust Inspection
+## 5. Client IP & Proxy Trust Inspection (Laptop vs. Phone)
 
-With `ENABLE_DEBUG_CLIENT_IP="true"` enabled in Render, verify reverse-proxy IP extraction:
+Verify client IP resolution using the diagnostic endpoint:
 
-```bash
-./scripts/check-client-ip.sh https://proofpay-68qi.onrender.com
-```
-
-Expected output:
-```json
-{
-  "derivedIp": "203.0.113.195",
-  "rule": "last-public-hop",
-  "cloudflareVerified": false,
-  "hopList": ["203.0.113.195", "10.100.0.1"],
-  "trustedProxyHopsConfigured": 0
-}
-```
-
-If Render's internal proxy IP appears as `derivedIp`, increment `CLIENT_IP_TRUSTED_PROXY_HOPS=1` in the Render dashboard and re-run.
-
-> [!TIP]
-> After verifying client IP derivation, set `ENABLE_DEBUG_CLIENT_IP=false` in the Render dashboard to restore 404 security on the diagnostic route.
+1. In Render Dashboard $\to$ Environment, temporarily set:
+   ```text
+   ENABLE_DEBUG_CLIENT_IP="true"
+   ```
+2. Run diagnostic script against hosted URL:
+   ```bash
+   ./scripts/check-client-ip.sh https://proofpay-68qi.onrender.com
+   ```
+3. **Laptop vs. Phone Verification**:
+   - Access `https://proofpay-68qi.onrender.com/api/debug/client-ip` from your **laptop** (Wi-Fi). Note the `derivedIp`.
+   - Access `https://proofpay-68qi.onrender.com/api/debug/client-ip` from your **mobile phone** (Cellular data). Note the `derivedIp`.
+   - **Verification Requirement**: Confirm that the two requests yield **two distinct public IP addresses**. This confirms that the rate limiter does not collapse all visitors into a single reverse-proxy IP bucket.
+   - If Render's internal proxy IP appears as `derivedIp`, set `CLIENT_IP_TRUSTED_PROXY_HOPS=1` in the dashboard and re-verify.
+4. **Restore 404 Security**:
+   - In Render Dashboard, remove or set `ENABLE_DEBUG_CLIENT_IP="false"`.
+   - Confirm `curl -s -o /dev/null -w "%{http_code}" https://proofpay-68qi.onrender.com/api/debug/client-ip` returns **404**.
 
 ---
 
-## 5. Hosted Performance & Lighthouse Audit
+## 6. Hosted Performance & Lighthouse Audit
 
-Run the automated Lighthouse audit script against the live hosted deployment:
-
-```bash
-BASE_URL=https://proofpay-68qi.onrender.com pnpm tsx scripts/measure-lighthouse-median.ts
-```
-
-- Dynamically discovers job IDs from `https://proofpay-68qi.onrender.com/api/jobs`.
-- Runs 5-run median audits across mobile viewports (390px and 360px) for `/`, `/studio`, and `/jobs/[id]` across `FUNDED`, `PAID`, and `NEEDS_HUMAN` states.
-- Saves the hosted performance report into [`docs/ui/after/hosted/lighthouse_median_report.json`](../docs/ui/after/hosted/lighthouse_median_report.json) without overwriting local benchmark files.
+1. In Render Dashboard $\to$ Environment, temporarily set:
+   ```text
+   ENABLE_DEMO_RESET="true"
+   ```
+   *(Required because the Lighthouse test runner resets demo state to pristine before measuring jobs in funded/paid/needs-human states).*
+2. Execute the 5-run median Lighthouse runner against hosted production:
+   ```bash
+   BASE_URL=https://proofpay-68qi.onrender.com pnpm tsx scripts/measure-lighthouse-median.ts
+   ```
+3. Verify that 5-run median scores across `/`, `/studio`, and `/jobs/:id` meet targets (Performance $\ge 85$, Accessibility $\ge 95$, Best Practices $\ge 90$, SEO = 100, CLS < 0.10).
+4. In Render Dashboard, remove or set `ENABLE_DEMO_RESET="false"` to restore 404 security on the reset route.
 
 ---
 
-## 6. Demo State Restoration
+## 7. Live Sandbox `demo:run` & PayPal ID Reconciliation
 
-When evaluators test the Human Review queue (`/inbox`) and approve the near-miss milestone (`10c2bab9-...`), its state changes to `PAID` in the shared database.
-
-To restore the demo jobs back to their pristine judging states without deleting any append-only ledger rows:
+After credentials are confirmed and rotated, execute a live real-world payment run:
 
 ```bash
-# Via script:
-BASE_URL=https://proofpay-68qi.onrender.com pnpm tsx scripts/reset-demo-state.ts
+pnpm demo:run
+```
 
-# Or via authenticated curl:
+### Reconciliation Steps:
+1. When prompted in the console, open the PayPal Sandbox Approval URL.
+2. Log into your Sandbox Buyer account and approve the $5.00 escrow funding.
+3. Observe terminal output:
+   - Order captured (`Capture ID: 4GP...`)
+   - AI verifier executed (`Decision: AUTO_PAY`)
+   - Instant PayPal Payout released (`Payout Batch ID: CPM...`, `Payout Item ID: A7P...`)
+   - Audit ledger verified (`Ledger Chain Status: VALID`)
+4. Open the [PayPal Developer Sandbox Dashboard](https://developer.paypal.com/dashboard) $\to$ **Activity**:
+   - Confirm the Capture transaction ID matches the console output.
+   - Confirm the Payout Batch transaction ID matches the console output.
+5. Visit `https://proofpay-68qi.onrender.com/ledger`:
+   - Confirm the newly generated payment IDs appear in the append-only ledger audit trail.
+
+---
+
+## 8. Live `/eval` Page Verification
+
+Open `https://proofpay-68qi.onrender.com/eval` in your browser:
+
+1. **Headline Copy**: Verify the prominent text displays:
+   > *"Results replayed from recorded model responses (offline); 28 author-written cases; interval shows uncertainty."*
+2. **Serving Model Breakdown Card**:
+   - Primary Vision (`gemini-3.8-flash`): **14 cases**
+   - Quota Fallback (`gemini-3.5-flash-lite`): **8 cases**
+   - Deterministic Pre-Model Checks: **6 cases**
+3. **Fixture Registry**:
+   - Verify all 28 rows display green `PASS` badges with accurate actual observed outcomes.
+   - Confirm 0 occurrences of false `FAIL` or blank outcomes.
+
+---
+
+## 9. Demo State Restoration
+
+When evaluators test the Human Review queue (`/inbox`) and approve the near-miss milestone (`10c2bab9-...`), its state changes to `PAID` in the hosted database.
+
+To restore demo jobs back to their pristine judging states without deleting any append-only ledger rows:
+
+```bash
+# Set ENABLE_DEMO_RESET=true in Render Dashboard, then run:
 curl -X POST https://proofpay-68qi.onrender.com/api/demo/reset \
   -H "Cookie: proofpay_role=reviewer"
 ```
 
 This resets:
 - Job `10c2bab9-...` $\to$ `VERIFIED` (pending review in `/inbox`)
-- Job `20f829e2-...` $\to$ `FUNDED` (awaiting submission)
-- Job `bf3884d6-...` $\to$ `PAID` (completed autonomous escrow)
-- Preserves all append-only `ledger_events` rows intact.
+- Job `20f829e2-...` $\to$ `FUNDED` (awaiting deliverable)
+- Job `bf3884d6-...` $\to$ `PAID` (completed autonomous payout)
+- Appends an immutable `DEMO_STATE_RESET` ledger event while preserving all audit rows.
 
 ---
 
-## 7. Rollback & Disaster Recovery
+## 10. Rollback & Disaster Recovery
 
 If an issue occurs in production:
 
 ### Recommended Rollback Path:
 1. In the **Render Dashboard** $\to$ **Events** tab.
-2. Find the previous successful deploy.
+2. Locate the previous successful deployment.
 3. Click the three dots $\dots$ $\to$ **Rollback to this deploy**.
-4. Render immediately switches live traffic back to the previous image without building.
+4. Render immediately switches live traffic back to the prior container image without rebuilding.
 
-### Git Revert (if code change needed):
+### Git Revert:
 ```bash
-# Revert merge commit on main (never force-push)
 git checkout main
 git pull origin main
 git revert -m 1 <merge-commit-sha>
 git push origin main
 ```
-Then trigger manual deploy in the Render dashboard.
+Then trigger manual deploy in Render dashboard.
 
 ---
 
-## 8. Managed PostgreSQL 30-Day Free Tier Notice
+## 11. Managed PostgreSQL 30-Day Free Tier Notice
 
 > [!WARNING]
-> **Render Free PostgreSQL Expiration Policy**:
-> Render's free tier PostgreSQL databases automatically expire **30 days after creation**. After 30 days, the database instance is suspended and deleted unless upgraded to a paid plan ($7/month Starter plan).
-
-### Maintenance Action Required Before Day 30:
-1. In the Render Dashboard, navigate to `proofpay-db`.
-2. Check the expiration countdown.
-3. To keep the demo permanently active, upgrade the database to the **Starter** tier ($7/mo), OR:
-4. If remaining on free tier: create a new free database instance, update `DATABASE_URL` in the web service, and the service will automatically re-bootstrap demo rows on boot via `ensureHostedBootstrap()`.
+> Render's free tier PostgreSQL databases automatically expire **30 days after creation**.
+> 
+> To maintain the deployment beyond 30 days:
+> - Upgrade `proofpay-db` to the **Starter** tier ($7/mo), OR:
+> - Create a new free database instance, update `DATABASE_URL` in the web service, and the service will automatically re-bootstrap demo rows on boot via `ensureHostedBootstrap()`.

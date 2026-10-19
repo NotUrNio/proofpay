@@ -221,6 +221,36 @@ export function runClaimsCheck(): { checks: ClaimCheck[]; allPassed: boolean } {
     evidence: evalEvidence,
   });
 
+  // 12. Forbidden Threshold Claim Invariant: Never claim thresholds were 'chosen before the benchmark'
+  const docPaths = [
+    path.join(root, "README.md"),
+    path.join(root, "DEVPOST.md"),
+    path.join(root, "docs/JUDGING.md"),
+    path.join(root, "docs/DEMO_SCRIPT.md"),
+    path.join(root, "src/app/eval/page.tsx"),
+  ];
+  const forbiddenPhrase = "chosen before the benchmark";
+  const violatingFiles: string[] = [];
+  for (const p of docPaths) {
+    if (fs.existsSync(p)) {
+      const content = fs.readFileSync(p, "utf8");
+      if (content.toLowerCase().includes(forbiddenPhrase)) {
+        violatingFiles.push(path.basename(p));
+      }
+    }
+  }
+  const noForbiddenClaim = violatingFiles.length === 0;
+  checks.push({
+    id: "DOC_THRESHOLD_INTEGRITY",
+    category: "Documentation",
+    claim: `Threshold provenance honesty: zero occurrences of "${forbiddenPhrase}"`,
+    expected: `No docs or pages claim thresholds were "${forbiddenPhrase}"`,
+    status: noForbiddenClaim ? "PASS" : "FAIL",
+    evidence: noForbiddenClaim
+      ? `0 occurrences found across ${docPaths.map((p) => path.basename(p)).join(", ")}`
+      : `Forbidden phrase found in: ${violatingFiles.join(", ")}`,
+  });
+
   const allPassed = checks.every((c) => c.status === "PASS");
 
   return { checks, allPassed };

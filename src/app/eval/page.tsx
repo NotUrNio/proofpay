@@ -134,7 +134,7 @@ export default function EvalPage() {
           </div>
           <p className="text-slate-300 leading-relaxed">
             All {totalCount} fixtures were partitioned into Dev ({devCount}) and Held-Out ({heldOutCount}).
-            Policy guard thresholds (confidence threshold 0.85 and color tolerance &Delta;E &le; 14.0) were specified in the invariant architecture and benchmarked across both splits without per-split tuning.
+            Confidence threshold (0.85) was specified in Milestone 1 architecture before the benchmark, while color boundaries (&Delta;E 11.5 - 16.0) were adjusted after seeing initial results to establish an honest human-review gray zone.
             Model serving was dynamically routed: primary model {data?.modelId || "gemini-3.8-flash"} served {serving38} cases, with automatic quota-limit fallback to gemini-3.5-flash-lite serving {serving35} cases; {preModelRejections} cases were rejected by deterministic byte-level checks before any model invocation. Replay mode re-runs recorded model responses offline.
           </p>
           <p className="text-slate-400 text-[11px]">
