@@ -266,7 +266,8 @@ export async function runHostedSmoke(baseUrl: string, runDemo = false) {
 }
 
 if (process.argv[1]?.endsWith("hosted-smoke.ts")) {
-  const url = process.argv[2] || "http://localhost:3000";
+  const urlArg = process.argv.slice(2).find((a) => !a.startsWith("--"));
+  const url = urlArg || process.env.BASE_URL || "http://localhost:3000";
   const runDemo = process.argv.includes("--run-demo");
   runHostedSmoke(url, runDemo)
     .then(() => process.exit(0))

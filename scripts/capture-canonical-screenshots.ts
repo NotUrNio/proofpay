@@ -127,7 +127,8 @@ async function main() {
     await page.setViewportSize({ width: vp.width, height: vp.height });
 
     for (const view of views) {
-      const url = `http://localhost:3000${view.path}`;
+      const baseUrl = (process.env.BASE_URL || "http://localhost:3000").replace(/\/+$/, "");
+      const url = `${baseUrl}${view.path}`;
       console.log(`Capturing ${view.name} at ${vp.label} (${url})...`);
 
       try {

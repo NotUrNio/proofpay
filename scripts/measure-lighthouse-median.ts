@@ -455,7 +455,11 @@ async function main() {
     },
   };
 
-  const outDocsDir = isHosted
+  const outDocsDir = process.env.LIGHTHOUSE_OUT_DIR
+    ? path.resolve(process.cwd(), process.env.LIGHTHOUSE_OUT_DIR)
+    : baseUrl.includes("3199")
+    ? path.resolve(process.cwd(), "docs/ui/after/local-3199")
+    : isHosted
     ? path.resolve(process.cwd(), "docs/ui/after/hosted")
     : path.resolve(process.cwd(), "docs/ui/after");
   fs.mkdirSync(outDocsDir, { recursive: true });
