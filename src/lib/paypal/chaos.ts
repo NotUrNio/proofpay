@@ -514,7 +514,7 @@ export async function runChaosDrill(
 
   // Drill 6: Full End-to-End Pipeline Adversarial Injection Defense Drill
   // Ingests real adversarial fixture (case_17) through Hard Checks -> Gemini Sensor -> Policy Guard
-  const fixturePath = path.resolve(process.cwd(), "eval/fixtures/case_17_adversarial_ignore_rules_prompt.png");
+  const fixturePath = path.resolve(process.cwd(), "eval/fixtures/case_17_adversarial_visible_injection.png");
   let hardChecksPassed = true;
   let modelInjectionSuspected = true;
   let guardDecision = "REJECT";

@@ -15,12 +15,7 @@ type JobRow = typeof jobs.$inferSelect;
 const sameTurnJobCache = new Map<string, Promise<JobRow | null>>();
 let clearScheduled = false;
 
-export function clearJobSsrCache(): void {
-  sameTurnJobCache.clear();
-  clearScheduled = false;
-}
-
-export const getJobById = cache(async (id: string): Promise<JobRow | null> => {
+const getJobById = cache(async (id: string): Promise<JobRow | null> => {
   const existing = sameTurnJobCache.get(id);
   if (existing) {
     return existing;

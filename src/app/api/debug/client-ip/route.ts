@@ -6,9 +6,13 @@ import { getClientIpDetails } from "@/lib/rate-limit";
 // verifies hosted client IP derivation and rate-limit isolation from two distinct networks.
 /**
  * Reviewer-only diagnostic route to verify client IP derivation behind Render/Cloudflare proxy.
- * Checks connecting IP, header source, Cloudflare verification, and multi-hop forwarding safely.
+ * Disabled by default (returns 404 unless ENABLE_DEBUG_CLIENT_IP=true).
  */
 export async function GET(req: NextRequest) {
+  if (process.env.ENABLE_DEBUG_CLIENT_IP !== "true") {
+    return NextResponse.json({ error: "Not Found" }, { status: 404 });
+  }
+
   const auth = assertAuthorizedRole(req, ["reviewer"]);
   if ("errorResponse" in auth) {
     return auth.errorResponse;

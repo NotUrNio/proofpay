@@ -50,15 +50,12 @@ export function isPlaceholderOrDemoPayee(email: string): boolean {
 export function resolveConfiguredSandboxPayeeEmail(
   env: NodeJS.ProcessEnv = process.env
 ): string {
-  const raw =
-    env.PAYPAL_SANDBOX_PAYEE_EMAIL?.trim() ||
-    env.PAYPAL_SANDBOX_PERSONAL_EMAIL?.trim() ||
-    "";
+  const raw = env.PAYPAL_SANDBOX_PAYEE_EMAIL?.trim() || "";
 
   if (!raw || isPlaceholderOrDemoPayee(raw)) {
     throw new RealPayoutGuardError(
       "MISSING_PAYEE_ENV",
-      "Missing required environment variable PAYPAL_SANDBOX_PAYEE_EMAIL (or PAYPAL_SANDBOX_PERSONAL_EMAIL). Real PayPal Sandbox payouts require a registered sandbox personal account email from env vars."
+      "Missing required environment variable PAYPAL_SANDBOX_PAYEE_EMAIL. Real PayPal Sandbox payouts require a registered sandbox personal account email configured in PAYPAL_SANDBOX_PAYEE_EMAIL."
     );
   }
 

@@ -45,9 +45,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const configuredPayee =
-      process.env.PAYPAL_SANDBOX_PAYEE_EMAIL?.trim() ||
-      process.env.PAYPAL_SANDBOX_PERSONAL_EMAIL?.trim();
+    const configuredPayee = process.env.PAYPAL_SANDBOX_PAYEE_EMAIL?.trim();
     const {
       title = "Social Media Banner Design",
       description = "Summer sale campaign banner 1080x1080 PNG featuring SUMMER SALE text and brand warm colors.",

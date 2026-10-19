@@ -34,10 +34,6 @@ services:
         sync: false
       - key: PAYPAL_SANDBOX_PAYEE_EMAIL
         sync: false
-      - key: PAYPAL_SANDBOX_PERSONAL_EMAIL
-        sync: false
-      - key: PAYPAL_SANDBOX_BUSINESS_EMAIL
-        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: MAX_DAILY_REAL_PAYOUT_USD
@@ -45,6 +41,8 @@ services:
       - key: MAX_DAILY_REAL_PAYOUT_COUNT
         value: "5"
       - key: CLIENT_IP_TRUSTED_PROXY_HOPS
+        sync: false
+      - key: ENABLE_DEBUG_CLIENT_IP
         sync: false
 
 

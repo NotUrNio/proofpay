@@ -20,6 +20,7 @@ describe("Client IP Extraction & Spoofing Resistance (tests/rate-limit.test.ts)"
     resetRateLimits();
     delete process.env.TRUST_CLOUDFLARE_PROXY;
     delete process.env.CLIENT_IP_TRUSTED_PROXY_HOPS;
+    delete process.env.ENABLE_DEBUG_CLIENT_IP;
   });
 
   it("1. resists spoofed X-Forwarded-For prefix by selecting rightmost public hop appended by edge", () => {
@@ -175,7 +176,26 @@ describe("Client IP Extraction & Spoofing Resistance (tests/rate-limit.test.ts)"
     });
   });
 
-  it("7. /api/debug/client-ip enforces reviewer-only access and returns derivedIp, rule, cloudflareVerified, and hopList", async () => {
+  it("7. /api/debug/client-ip returns 404 by default (ENABLE_DEBUG_CLIENT_IP unset or false) even for reviewer", async () => {
+    const reviewerReq = new NextRequest("http://localhost:3000/api/debug/client-ip", {
+      headers: {
+        "x-proofpay-role": "reviewer",
+        "x-forwarded-for": "198.51.100.12, 216.24.57.4",
+      },
+    });
+
+    // Unset -> 404
+    const unsetRes = await getDebugClientIp(reviewerReq);
+    expect(unsetRes.status).toBe(404);
+
+    // Explicit "false" -> 404
+    process.env.ENABLE_DEBUG_CLIENT_IP = "false";
+    const falseRes = await getDebugClientIp(reviewerReq);
+    expect(falseRes.status).toBe(404);
+  });
+
+  it("8. /api/debug/client-ip when ENABLE_DEBUG_CLIENT_IP=true enforces reviewer-only access and returns derivedIp, rule, cloudflareVerified, and hopList", async () => {
+    process.env.ENABLE_DEBUG_CLIENT_IP = "true";
     process.env.CLIENT_IP_TRUSTED_PROXY_HOPS = "1";
 
     // Freelancer role is denied with HTTP 403
@@ -209,7 +229,7 @@ describe("Client IP Extraction & Spoofing Resistance (tests/rate-limit.test.ts)"
     });
   });
 
-  it("8. enforces isolated per-IP rate limits across distinct public clients", () => {
+  it("9. enforces isolated per-IP rate limits across distinct public clients", () => {
     expect(isPrivateIp("10.0.0.1")).toBe(true);
     expect(isPrivateIp("172.24.0.1")).toBe(true);
     expect(isPrivateIp("198.51.100.1")).toBe(false);

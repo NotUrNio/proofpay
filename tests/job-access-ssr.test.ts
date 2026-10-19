@@ -1,20 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { AsyncLocalStorage } from "async_hooks";
 import { canUserAccessJob, DEMO_USERS } from "../src/lib/auth/roles";
 
 // Mirror next.config.ts experimental.authInterrupts = true in Vitest environment
 process.env.__NEXT_EXPERIMENTAL_AUTH_INTERRUPTS = "true";
 
-// Mock next/headers cookies() so we can test JobPage and generateMetadata directly in Vitest
-
+// Mock next/headers cookies() with AsyncLocalStorage support so we can test both
+// single-request and concurrent multi-user SSR requests in Vitest
 let mockedRoleCookie = "freelancer";
+const requestRoleStorage = new AsyncLocalStorage<string>();
+
 vi.mock("next/headers", () => ({
-  cookies: async () => ({
-    get: (name: string) =>
-      name === "proofpay_role" ? { value: mockedRoleCookie } : undefined,
-  }),
+  cookies: async () => {
+    const activeRole = requestRoleStorage.getStore() ?? mockedRoleCookie;
+    return {
+      get: (name: string) =>
+        name === "proofpay_role" ? { value: activeRole } : undefined,
+    };
+  },
 }));
 
-import JobPage, { generateMetadata, clearJobSsrCache } from "../src/app/jobs/[id]/page";
+import JobPage, { generateMetadata } from "../src/app/jobs/[id]/page";
 import { db, jobs, mandates } from "../src/db";
 import { ensureDatabaseSchema } from "../src/db/init";
 import { signMandate } from "../src/lib/guard";
@@ -29,7 +35,7 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
   const secretPayee = "private-freelancer@vault.example.test";
 
   beforeEach(async () => {
-    clearJobSsrCache();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await ensureDatabaseSchema();
     await db.delete(mandates).where(eq(mandates.jobId, privateJobId));
     await db.delete(jobs).where(eq(jobs.id, privateJobId));
@@ -114,9 +120,21 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
     expect(serializedErr).not.toContain(secretPayee);
   });
 
-  it("4. generateMetadata and JobPage share a single cached jobs DB query on the same SSR render pass", async () => {
+  it("4. generateMetadata + JobPage execute exactly 1 jobs table query per request", async () => {
     mockedRoleCookie = "reviewer";
-    const selectSpy = vi.spyOn(db, "select");
+    let jobsQueryCount = 0;
+    const origSelect = db.select.bind(db);
+    const selectSpy = vi.spyOn(db, "select").mockImplementation((...args: any[]) => {
+      const builder: any = origSelect(...args);
+      const origFrom = builder.from.bind(builder);
+      builder.from = (table: any) => {
+        if (table === jobs) {
+          jobsQueryCount++;
+        }
+        return origFrom(table);
+      };
+      return builder;
+    });
 
     try {
       const [meta, pageElement] = await Promise.all([
@@ -126,8 +144,72 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
 
       expect(meta.title).toContain(secretTitle);
       expect(pageElement).toBeTruthy();
-      // 1 cached jobs query + 4 parallel detail queries (criteria, mandates, submissions, payments) = 5 total selects (instead of 6 when jobs was queried twice)
-      expect(selectSpy).toHaveBeenCalledTimes(5);
+      expect(jobsQueryCount).toBe(1);
+    } finally {
+      selectSpy.mockRestore();
+    }
+  });
+
+  it("5. concurrent requests for different users sharing the same-turn job cache never share user-specific authorization or leak data", async () => {
+    let jobsQueryCount = 0;
+    const origSelect = db.select.bind(db);
+    const selectSpy = vi.spyOn(db, "select").mockImplementation((...args: any[]) => {
+      const builder: any = origSelect(...args);
+      const origFrom = builder.from.bind(builder);
+      builder.from = (table: any) => {
+        if (table === jobs) {
+          jobsQueryCount++;
+        }
+        return origFrom(table);
+      };
+      return builder;
+    });
+
+    try {
+      // Run two concurrent SSR requests in the same turn for the same private job:
+      // - Request A: authorized "reviewer" (should succeed and receive metadata + page)
+      // - Request B: unauthorized "freelancer" (must throw 403 forbidden() in both generateMetadata and JobPage)
+      const [reviewerResult, freelancerMetaErr, freelancerPageErr] = await Promise.all([
+        requestRoleStorage.run("reviewer", async () => {
+          const [meta, page] = await Promise.all([
+            generateMetadata({ params: Promise.resolve({ id: privateJobId }) }),
+            JobPage({ params: Promise.resolve({ id: privateJobId }) }),
+          ]);
+          return { meta, page };
+        }),
+        requestRoleStorage.run("freelancer", async () => {
+          try {
+            await generateMetadata({ params: Promise.resolve({ id: privateJobId }) });
+            return null;
+          } catch (err: any) {
+            return err;
+          }
+        }),
+        requestRoleStorage.run("freelancer", async () => {
+          try {
+            await JobPage({ params: Promise.resolve({ id: privateJobId }) });
+            return null;
+          } catch (err: any) {
+            return err;
+          }
+        }),
+      ]);
+
+      // Reviewer succeeded
+      expect(reviewerResult.meta.title).toContain(secretTitle);
+      expect(reviewerResult.page).toBeTruthy();
+
+      // Concurrent freelancer request was strictly denied with 403 and zero data leakage
+      expect(freelancerMetaErr).toBeTruthy();
+      expect(String(freelancerMetaErr.digest || freelancerMetaErr.message)).toContain("403");
+      expect(JSON.stringify(freelancerMetaErr)).not.toContain(secretTitle);
+
+      expect(freelancerPageErr).toBeTruthy();
+      expect(String(freelancerPageErr.digest || freelancerPageErr.message)).toContain("403");
+      expect(JSON.stringify(freelancerPageErr)).not.toContain(secretTitle);
+
+      // Even across all 4 concurrent calls in the same turn, jobs table was queried only once
+      expect(jobsQueryCount).toBe(1);
     } finally {
       selectSpy.mockRestore();
     }

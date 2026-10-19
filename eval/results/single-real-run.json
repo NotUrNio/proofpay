@@ -1,0 +1,21 @@
+{
+  "jobId": "ef7a9683-8e2e-44b9-80fb-e12b5a2f6568",
+  "orderId": "4LF11783H4649862W",
+  "captureId": "4GP221272V958470N",
+  "payoutBatchId": "CPMFG3U4LAXS2",
+  "payoutItemId": "A7PB6RVHLGY2U",
+  "ledgerEvents": [
+    "3675f0d2-d70b-4e55-9ae1-b7411336dcce",
+    "41cb32ff-341e-46f3-8e52-5227fed91bfe",
+    "50cf60fa-1dc4-462c-8f01-a8e0baa6fda4",
+    "6346027e-edab-4e08-86b0-46532b63092b",
+    "faa66c66-58b2-4de9-be2f-4bf19105536e",
+    "2e6c11f9-a4fa-4cda-b5a0-7a334ede0308"
+  ],
+  "amount": "5.00",
+  "currency": "USD",
+  "clientEmail": "alice@proofpay.io",
+  "freelancerEmail": "priya@proofpay.io",
+  "ledgerChainValid": true,
+  "timestamp": "2026-10-18T16:07:40.312Z"
+}
