@@ -6,6 +6,7 @@ import { ColDef, GridApi, GridReadyEvent, RowClickedEvent } from "ag-grid-commun
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { ShieldCheck, Download, Search, CheckCircle2, History, X, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import { maskPayloadEmails } from "@/lib/ledger-display";
 
 export interface LedgerRowData {
   id: string;
@@ -175,7 +176,7 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
         width: 250,
         valueGetter: (params: { data?: LedgerRowData }) => {
           if (!params.data?.payload) return "";
-          return JSON.stringify(params.data.payload);
+          return JSON.stringify(maskPayloadEmails(params.data.payload));
         },
         cellRenderer: (params: { value: string }) => (
           <span className="font-mono text-[11px] text-slate-500 truncate block" title={params.value}>
@@ -387,7 +388,7 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
                 Full Event Payload (Canonical JSON)
               </label>
               <pre className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-mono text-slate-800 overflow-x-auto max-h-60">
-                {JSON.stringify(selectedRow.payload, null, 2)}
+                {JSON.stringify(maskPayloadEmails(selectedRow.payload), null, 2)}
               </pre>
             </div>
           </div>

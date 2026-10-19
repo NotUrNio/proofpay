@@ -197,10 +197,68 @@ const getVerdicts = (m: ReturnType<typeof summarize>) => ({
   lcp: m.lcp < 2.5 ? "PASS" : "FAIL",
 });
 
+async function ensureBundledJobStates(): Promise<string[]> {
+  const { db } = await import("../src/db");
+  const { jobs, payments, approvals } = await import("../src/db/schema");
+  const { eq, and } = await import("drizzle-orm");
+
+  const changedRows: string[] = [];
+
+  // 1. Job FUNDED: 20f829e2-8aff-4bab-8e4b-710c004ffc6d
+  const [fundedJob] = await db.select().from(jobs).where(eq(jobs.id, "20f829e2-8aff-4bab-8e4b-710c004ffc6d"));
+  if (fundedJob && fundedJob.status !== "FUNDED") {
+    await db.update(jobs).set({ status: "FUNDED" }).where(eq(jobs.id, fundedJob.id));
+    changedRows.push(`jobs[20f829e2]: status '${fundedJob.status}' -> 'FUNDED'`);
+  }
+
+  // 2. Job PAID: bf3884d6-3fdf-496d-87db-5dbbe4461443
+  const [paidJob] = await db.select().from(jobs).where(eq(jobs.id, "bf3884d6-3fdf-496d-87db-5dbbe4461443"));
+  if (paidJob && paidJob.status !== "PAID") {
+    await db.update(jobs).set({ status: "PAID" }).where(eq(jobs.id, paidJob.id));
+    changedRows.push(`jobs[bf3884d6]: status '${paidJob.status}' -> 'PAID'`);
+  }
+
+  // 3. Job NEEDS_HUMAN: 10c2bab9-02a6-45ab-b652-9552b584769b
+  const [needsHumanJob] = await db.select().from(jobs).where(eq(jobs.id, "10c2bab9-02a6-45ab-b652-9552b584769b"));
+  if (needsHumanJob && needsHumanJob.status !== "VERIFIED") {
+    await db.update(jobs).set({ status: "VERIFIED" }).where(eq(jobs.id, needsHumanJob.id));
+    await db.delete(payments).where(and(eq(payments.jobId, needsHumanJob.id), eq(payments.type, "PAYOUT")));
+    await db.update(approvals).set({ status: "PENDING", reviewerEmail: null }).where(eq(approvals.jobId, needsHumanJob.id));
+    changedRows.push(`jobs[10c2bab9]: status '${needsHumanJob.status}' -> 'VERIFIED', removed extraneous PAYOUT row, approvals -> PENDING`);
+  }
+
+  return changedRows;
+}
+
 async function main() {
   const fundedJobId = "20f829e2-8aff-4bab-8e4b-710c004ffc6d";
   const paidJobId = "bf3884d6-3fdf-496d-87db-5dbbe4461443";
   const needsHumanJobId = "10c2bab9-02a6-45ab-b652-9552b584769b";
+
+  // Reset bundled job states before measuring and invalidate cached runs only if state was wrong
+  const changedRows = await ensureBundledJobStates();
+  if (changedRows.length > 0) {
+    console.log("\n[Audit Reliability] Reset bundled jobs to canonical demo states:");
+    for (const row of changedRows) {
+      console.log(`  - ${row}`);
+    }
+    for (const changed of changedRows) {
+      if (changed.includes("20f829e2")) {
+        fs.rmSync("/tmp/lh-verified-runs/job_funded_390", { recursive: true, force: true });
+        fs.rmSync("/tmp/lh-verified-runs/job_funded_360", { recursive: true, force: true });
+      }
+      if (changed.includes("bf3884d6")) {
+        fs.rmSync("/tmp/lh-verified-runs/job_paid_390", { recursive: true, force: true });
+        fs.rmSync("/tmp/lh-verified-runs/job_paid_360", { recursive: true, force: true });
+      }
+      if (changed.includes("10c2bab9")) {
+        fs.rmSync("/tmp/lh-verified-runs/job_needs_human_390", { recursive: true, force: true });
+        fs.rmSync("/tmp/lh-verified-runs/job_needs_human_360", { recursive: true, force: true });
+      }
+    }
+  } else {
+    console.log("\n[Audit Reliability] All 3 bundled jobs already in canonical states (0 rows changed).");
+  }
 
   const assertions: Record<string, RouteAuditAssertion> = {
     home: {

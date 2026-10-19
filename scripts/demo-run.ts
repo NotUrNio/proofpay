@@ -22,7 +22,9 @@ import {
   resolveConfiguredSandboxPayeeEmail,
   resolveConfiguredSandboxBuyerEmail,
 } from "../src/lib/paypal";
-import { eq } from "drizzle-orm";
+import { assertLocalDatabaseOnly } from "../src/lib/seed-guard";
+import { checkDailyRealPayoutCap } from "../src/lib/paypal/payout-policy";
+import { eq, and, gte } from "drizzle-orm";
 
 async function promptUser(questionText: string): Promise<string> {
   const rl = readline.createInterface({
@@ -41,6 +43,60 @@ async function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
 }
 
+async function runPreflightChecks(candidateAmountUsd: string): Promise<{ freelancerEmail: string; clientEmail: string }> {
+  // 1. Required environment variable names
+  const requiredEnvVars = [
+    "PAYPAL_CLIENT_ID",
+    "PAYPAL_CLIENT_SECRET",
+    "PAYPAL_SANDBOX_PAYEE_EMAIL",
+  ];
+  const missing = requiredEnvVars.filter((v) => !process.env[v] || process.env[v]!.trim() === "");
+  if (missing.length > 0) {
+    throw new Error(
+      `[Preflight Check Failed] Missing required environment variables: ${missing.join(", ")}. Please configure them before running demo:run.`
+    );
+  }
+
+  // 2. Payee not a placeholder
+  const freelancerEmail = resolveConfiguredSandboxPayeeEmail();
+  const placeholderPatterns = [/example\.com/i, /placeholder/i, /your-/i, /mock/i];
+  if (placeholderPatterns.some((p) => p.test(freelancerEmail))) {
+    throw new Error(
+      `[Preflight Check Failed] PAYPAL_SANDBOX_PAYEE_EMAIL contains a placeholder pattern. A valid non-placeholder PayPal Sandbox payee email is required.`
+    );
+  }
+
+  const clientEmail = resolveConfiguredSandboxBuyerEmail();
+
+  // 3. DB is strictly local (PGlite or localhost Postgres)
+  assertLocalDatabaseOnly(process.env.DATABASE_URL, process.env.USE_PGLITE);
+
+  // 4. Daily-cap headroom
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const todayPayoutRows = await db
+    .select({ amount: payments.amount })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.type, "PAYOUT"),
+        eq(payments.isMock, false),
+        gte(payments.createdAt, startOfDay)
+      )
+    );
+
+  const capCheck = checkDailyRealPayoutCap(todayPayoutRows, candidateAmountUsd);
+  if (!capCheck.allowed) {
+    throw new Error(`[Preflight Check Failed] ${capCheck.reason}`);
+  }
+
+  console.log(
+    `[Preflight] Environment, local DB guard, non-placeholder payee, and daily-cap headroom (${capCheck.currentCount}/${capCheck.maxCount} payouts, $${capCheck.currentUsd.toFixed(2)}/$${capCheck.maxUsd.toFixed(2)} USD today) verified.`
+  );
+
+  return { freelancerEmail, clientEmail };
+}
+
 async function main() {
   console.log("================================================================================");
   console.log("             ProofPay: Live Real-World Single End-to-End Run                   ");
@@ -48,18 +104,18 @@ async function main() {
   console.log("Environment: PayPal Sandbox (PAYPAL_MOCK=false)");
   console.log("Production Service Stack: Orders v2 -> Hard Checks -> AI Ensemble -> Policy Guard -> Payouts v1 -> Hash Ledger\n");
 
+  const amount = "5.00";
+  const currency = "USD";
+
+  // Preflight checks: required env vars, local DB guard, non-placeholder payee, daily cap headroom
+  const { freelancerEmail, clientEmail } = await runPreflightChecks(amount);
+
   // 1. Initialize Clean DB Schema
   await ensureDatabaseSchema();
   console.log("[1/7] Database schema verified and Postgres triggers active.");
 
-  // 2. Create Job in DB (requires configured sandbox payee & buyer env vars; fails loudly if missing)
+  // 2. Create Job in DB
   const jobId = crypto.randomUUID();
-  const amount = "5.00";
-  const currency = "USD";
-  const freelancerEmail = resolveConfiguredSandboxPayeeEmail();
-  const clientEmail = resolveConfiguredSandboxBuyerEmail();
-
-
   const [job] = await db
     .insert(jobs)
     .values({
@@ -129,9 +185,10 @@ async function main() {
   console.log(`\n--------------------------------------------------------------------------------`);
   console.log(`ACTION REQUIRED: Approve the $5.00 Escrow Funding in PayPal Sandbox`);
   console.log(`Approval URL:\n${approveLink}\n`);
-  console.log(`Login Credentials:`);
-  console.log(`  Email:    <your-sandbox-personal-email>`);
-  console.log(`  Password: <your-sandbox-personal-password>`);
+  console.log(`Instructions:`);
+  console.log(`  1. Open the approval URL above in your browser.`);
+  console.log(`  2. Log into your PayPal Sandbox Personal Buyer account.`);
+  console.log(`  3. Click 'Complete Purchase' / 'Continue' to approve.`);
   console.log(`--------------------------------------------------------------------------------`);
 
   console.log("\nWaiting for sandbox buyer approval (auto-polling Order status)...");
@@ -376,12 +433,17 @@ async function main() {
   const payoutBatchId = payoutBatch.batch_header.payout_batch_id;
   console.log(`      Payout Batch Created: ${payoutBatchId}`);
 
-  // Poll for Payout Batch Status, Payout Item ID, and Payout Item Status
+  // Poll for Payout Batch Status, Payout Item ID, and Payout Item Status until terminal, up to 60s
   let payoutItemId = senderItemId;
   let payoutBatchStatus: string = payoutBatch.batch_header.batch_status;
   let payoutItemStatus = "PENDING";
-  for (let attempt = 1; attempt <= 10; attempt++) {
-    await sleep(2000);
+  const terminalStatuses = new Set(["SUCCESS", "DENIED", "FAILED", "RETURNED", "BLOCKED", "CANCELED"]);
+
+  const pollStart = Date.now();
+  const maxPollMs = 60000;
+  console.log("      Polling PayPal Payouts API for terminal status (up to 60s)...");
+  while (Date.now() - pollStart < maxPollMs) {
+    await sleep(2500);
     try {
       const details = await getPayoutBatch(payoutBatchId);
       payoutBatchStatus = details.batch_header?.batch_status || payoutBatchStatus;
@@ -397,12 +459,17 @@ async function main() {
             // Keep batch-reported item status if item endpoint is not yet ready
           }
         }
-        break;
       }
     } catch {
       // Continue polling
     }
+
+    if (terminalStatuses.has(payoutItemStatus.toUpperCase()) || terminalStatuses.has(payoutBatchStatus.toUpperCase())) {
+      console.log(`      Terminal payout status reached: batch=${payoutBatchStatus}, item=${payoutItemStatus}`);
+      break;
+    }
   }
+  const statusFetchedAt = new Date().toISOString();
 
   await db.update(jobs).set({ status: "PAID", updatedAt: new Date() }).where(eq(jobs.id, job.id));
 
@@ -469,6 +536,7 @@ async function main() {
     payoutBatchStatus,
     payoutItemId,
     payoutItemStatus,
+    statusFetchedAt,
     ledgerEvents: [event1.id, event2.id, event3.id, event4.id, event5.id, event6.id],
     amount: "5.00",
     currency: "USD",

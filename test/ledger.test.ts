@@ -301,5 +301,194 @@ describe("Database-Enforced Append-Only Ledger & Hash Chain Verification", () =>
     expect(dbAudit.valid).toBe(true);
     expect(dbAudit.totalEventsVerified).toBe(6);
   });
+
+  it("Item 2 test: verifies historical events created under legacy 6ac5a18 and b36cfbf serializations without schema or row rewrite", async () => {
+    // 1. Build an event chain where events were serialized with 6ac5a18 (v1.0.0-submission)
+    const legacy6acJobId = crypto.randomUUID();
+    let prevHash6ac = "0000000000000000000000000000000000000000000000000000000000000000";
+    const events6ac = [
+      {
+        id: crypto.randomUUID(),
+        jobId: legacy6acJobId,
+        eventType: "JOB_CREATED",
+        newState: "CREATED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { title: "Legacy 6ac Job", amount: "10.00", currency: "USD" },
+        signatureOrHash: "",
+      },
+      {
+        id: crypto.randomUUID(),
+        jobId: legacy6acJobId,
+        eventType: "JOB_FUNDED",
+        newState: "FUNDED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { orderId: "ORDER-6AC-123", amount: "10.00", currency: "USD" },
+        signatureOrHash: "",
+      },
+    ];
+
+    // Recompute with 6ac5a18 serialization (Object.keys().sort())
+    for (const evt of events6ac) {
+      const keys = Object.keys(evt.payload).sort();
+      const pairs = keys.map((k) => `${JSON.stringify(k)}:${JSON.stringify((evt.payload as any)[k])}`);
+      const payloadStr = `{${pairs.join(",")}}`;
+      const hash = crypto
+        .createHash("sha256")
+        .update(`${prevHash6ac}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|false|${payloadStr}`)
+        .digest("hex");
+      evt.signatureOrHash = hash;
+      prevHash6ac = hash;
+    }
+
+    // Verify under new dual-compatibility code without custom serializer override
+    const verify6ac = verifyLedgerEventsOffline(events6ac);
+    expect(verify6ac.valid).toBe(true);
+    expect(verify6ac.totalEventsVerified).toBe(2);
+
+    // 2. Build an event chain where events were serialized with b36cfbf (raw JSON.stringify)
+    const legacyB36JobId = crypto.randomUUID();
+    let prevHashB36 = "0000000000000000000000000000000000000000000000000000000000000000";
+    const eventsB36 = [
+      {
+        id: crypto.randomUUID(),
+        jobId: legacyB36JobId,
+        eventType: "JOB_CREATED",
+        newState: "CREATED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { z_last: "first_in_memory", a_first: "second_in_memory" },
+        signatureOrHash: "",
+      },
+      {
+        id: crypto.randomUUID(),
+        jobId: legacyB36JobId,
+        eventType: "JOB_FUNDED",
+        newState: "FUNDED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { orderId: "ORDER-B36-999", amount: "15.00" },
+        signatureOrHash: "",
+      },
+    ];
+
+    for (const evt of eventsB36) {
+      const payloadStr = JSON.stringify(evt.payload);
+      const hash = crypto
+        .createHash("sha256")
+        .update(`${prevHashB36}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|false|${payloadStr}`)
+        .digest("hex");
+      evt.signatureOrHash = hash;
+      prevHashB36 = hash;
+    }
+
+    const verifyB36 = verifyLedgerEventsOffline(eventsB36);
+    expect(verifyB36.valid).toBe(true);
+    expect(verifyB36.totalEventsVerified).toBe(2);
+  });
+
+  it("Item 3 test: appends every event type through real code paths with undefined properties, reads back from PGlite, and verifies chain", async () => {
+    const allEventsJobId = crypto.randomUUID();
+    await db.insert(jobs).values({
+      id: allEventsJobId,
+      title: "All Events Type Test",
+      description: "Testing stripUndefinedDeep append guard across every event type",
+      clientEmail: "client@test.com",
+      freelancerEmail: "freelancer@test.com",
+      amount: "25.00",
+      currency: "USD",
+      status: "CREATED",
+    });
+
+    const eventTypesToTest = [
+      {
+        eventType: "JOB_CREATED",
+        previousState: null,
+        newState: "CREATED",
+        actor: "CLIENT" as const,
+        payload: { title: "All Events Job", amount: "25.00", currency: "USD", optionalNotes: undefined },
+      },
+      {
+        eventType: "JOB_FUNDED",
+        previousState: "CREATED",
+        newState: "FUNDED",
+        actor: "CLIENT" as const,
+        payload: { orderId: "ORDER-ALL-1", captureId: "CAP-ALL-1", amount: "25.00", buyerEmail: undefined },
+      },
+      {
+        eventType: "WORK_SUBMITTED",
+        previousState: "FUNDED",
+        newState: "SUBMITTED",
+        actor: "FREELANCER" as const,
+        payload: { submissionId: "sub-123", fileName: "deliverable.png", extraMetadata: undefined },
+      },
+      {
+        eventType: "VERIFICATION_COMPLETED",
+        previousState: "SUBMITTED",
+        newState: "VERIFIED",
+        actor: "VERIFIER" as const,
+        payload: { overallPassed: true, confidence: 0.95, debugLog: undefined },
+      },
+      {
+        eventType: "GUARD_EVALUATED",
+        previousState: "VERIFIED",
+        newState: "VERIFIED",
+        actor: "GUARD" as const,
+        payload: { decision: "NEEDS_HUMAN", allowed: undefined, firedRules: ["RULE_BORDERLINE"] },
+      },
+      {
+        eventType: "HUMAN_REVIEW_TRIGGERED",
+        previousState: "VERIFIED",
+        newState: "MANUAL_REVIEW",
+        actor: "SYSTEM" as const,
+        payload: { reviewerNote: "Triage required", escalationReason: undefined },
+      },
+      {
+        eventType: "PAYOUT_APPROVED",
+        previousState: "MANUAL_REVIEW",
+        newState: "VERIFIED",
+        actor: "ADMIN" as const,
+        payload: { approverEmail: "alex@proofpay.io", reason: "Approved manually", overrideKey: undefined },
+      },
+      {
+        eventType: "PAYOUT_INITIATED",
+        previousState: "VERIFIED",
+        newState: "PAYOUT_PENDING",
+        actor: "SYSTEM" as const,
+        payload: { payoutBatchId: "BATCH-ALL-1", amount: "25.00", itemStatus: undefined },
+      },
+      {
+        eventType: "PAYOUT_CONFIRMED",
+        previousState: "PAYOUT_PENDING",
+        newState: "PAID",
+        actor: "PAYPAL_WEBHOOK" as const,
+        payload: { transactionId: "TX-ALL-1", batchStatus: "SUCCESS", failureReason: undefined },
+      },
+      {
+        eventType: "PAYOUT_RELEASED [SIMULATED]",
+        previousState: "PAID",
+        newState: "SETTLED",
+        actor: "SYSTEM" as const,
+        payload: { simulated: true, settlementId: "sim-123", debugTrace: undefined },
+      },
+    ];
+
+    for (const spec of eventTypesToTest) {
+      await appendLedgerEvent({
+        jobId: allEventsJobId,
+        eventType: spec.eventType,
+        previousState: spec.previousState,
+        newState: spec.newState,
+        actor: spec.actor,
+        payload: spec.payload,
+      });
+    }
+
+    // Read back from PGlite and verify complete chain
+    const verification = await verifyLedgerChain(allEventsJobId);
+    expect(verification.valid).toBe(true);
+    expect(verification.totalEventsVerified).toBe(eventTypesToTest.length);
+  });
 });
 

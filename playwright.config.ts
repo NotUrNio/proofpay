@@ -32,5 +32,11 @@ export default defineConfig({
       use: { ...devices["Desktop Safari"] },
     },
   ],
+  webServer: {
+    command: "pnpm start",
+    url: "http://localhost:3000",
+    reuseExistingServer: true,
+    timeout: 30000,
+  },
 });
 
