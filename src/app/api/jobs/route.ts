@@ -4,6 +4,7 @@ import { appendLedgerEvent } from "@/db/ledger";
 import { signMandate } from "@/lib/guard";
 import { ensureDatabaseSchema } from "@/db/init";
 import { assertAuthorizedRole } from "@/lib/auth/roles";
+import { checkDemoRateLimits, getClientIp } from "@/lib/rate-limit";
 import { desc } from "drizzle-orm";
 
 export async function GET() {
@@ -18,6 +19,30 @@ export async function POST(req: NextRequest) {
   if ("errorResponse" in auth) {
     return auth.errorResponse;
   }
+
+  // Rate limiting to protect database & demo resource quota
+  const clientIp = getClientIp(req);
+  const rateLimit = checkDemoRateLimits(clientIp);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: rateLimit.reason || "Rate limit reached. Please wait before creating more jobs.",
+        limits: {
+          ipRemaining: rateLimit.ipLimit.remaining,
+          globalDailyRemaining: rateLimit.globalDailyLimit.remaining,
+        },
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "60",
+          "X-RateLimit-IP-Remaining": rateLimit.ipLimit.remaining.toString(),
+          "X-RateLimit-Global-Remaining": rateLimit.globalDailyLimit.remaining.toString(),
+        },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
     const {
