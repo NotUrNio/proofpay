@@ -23,6 +23,7 @@ import {
 import { GlossaryTooltip } from "@/components/ui/GlossaryTooltip";
 
 interface PolicyVersion {
+  id?: string;
   version: string;
   timestamp: string;
   author: string;
@@ -78,6 +79,7 @@ export default function PolicyEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   // Policy Form State
   const [maxDaily, setMaxDaily] = useState(1000);
@@ -87,49 +89,36 @@ export default function PolicyEditorPage() {
   const [benchmarkCases, setBenchmarkCases] = useState<EvalCase[]>([]);
 
   // Policy Version History Timeline
-  const [versions, setVersions] = useState<PolicyVersion[]>([
-    {
-      version: "v1.2.0",
-      timestamp: "Today, 01:45 UTC",
-      author: "Alex (Lead Reviewer)",
-      threshold: 0.85,
-      maxJob: 500,
-      maxDaily: 1000,
-      active: true,
-      notes: "Balanced operating preset for standard milestone flow",
-    },
-    {
-      version: "v1.1.0",
-      timestamp: "Yesterday, 18:20 UTC",
-      author: "Alice (Client Admin)",
-      threshold: 0.90,
-      maxJob: 250,
-      maxDaily: 750,
-      active: false,
-      notes: "Strict threshold during initial test cohort",
-    },
-    {
-      version: "v1.0.0",
-      timestamp: "3 days ago",
-      author: "System (Genesis)",
-      threshold: 0.95,
-      maxJob: 100,
-      maxDaily: 500,
-      active: false,
-      notes: "Initial security baseline with maximum fail-closed stance",
-    },
-  ]);
+  const [versions, setVersions] = useState<PolicyVersion[]>([]);
 
-  const handleRestoreVersion = (ver: PolicyVersion) => {
-    setThreshold(ver.threshold);
-    setMaxJob(ver.maxJob);
-    setMaxDaily(ver.maxDaily);
-    setVersions(
-      versions.map((v) => ({
-        ...v,
-        active: v.version === ver.version,
-      }))
-    );
+  const handleRestoreVersion = async (ver: PolicyVersion) => {
+    if (!ver.id) return;
+    setSaving(true);
+    setRestoreError(null);
+    try {
+      const res = await fetch("/api/policy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore", versionId: ver.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRestoreError(data.error || "Failed to restore policy version");
+        setTimeout(() => setRestoreError(null), 6000);
+        return;
+      }
+      setThreshold(ver.threshold);
+      setMaxJob(ver.maxJob);
+      setMaxDaily(ver.maxDaily);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      await loadData();
+    } catch (err) {
+      console.error("Failed to restore policy:", err);
+      setRestoreError("Network error while restoring policy");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Replay State
@@ -138,38 +127,58 @@ export default function PolicyEditorPage() {
   const [replaying, setReplaying] = useState(false);
   const [replayResult, setReplayResult] = useState<ReplayResult | null>(null);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [policyRes, jobsRes] = await Promise.all([
-          fetch("/api/policy"),
-          fetch("/api/jobs"),
-        ]);
-        const policyData = await policyRes.json();
-        const jobsData = await jobsRes.json();
+  async function loadData() {
+    try {
+      const [policyRes, jobsRes] = await Promise.all([
+        fetch("/api/policy"),
+        fetch("/api/jobs"),
+      ]);
+      const policyData = await policyRes.json();
+      const jobsData = await jobsRes.json();
 
-        if (policyData.policy) {
-          setMaxDaily(parseFloat(policyData.policy.maxDailyPayoutAmount) || 1000);
-          setMaxJob(parseFloat(policyData.policy.maxJobPayoutAmount) || 500);
-          setThreshold(parseFloat(policyData.policy.minConfidenceThreshold) || 0.85);
-        }
-        if (policyData.benchmarkCases) {
-          setBenchmarkCases(policyData.benchmarkCases);
-        }
-        if (jobsData.jobs && jobsData.jobs.length > 0) {
-          const eligibleJobs = jobsData.jobs.filter(
-            (j: any) => j.status === "PAID" || j.status === "VERIFIED" || j.status === "SETTLED"
-          );
-          const list = eligibleJobs.length > 0 ? eligibleJobs : jobsData.jobs;
-          setHistoricalJobs(list);
-          setSelectedJobId(list[0].id);
-        }
-      } catch (err) {
-        console.error("Failed to load policy data:", err);
-      } finally {
-        setLoading(false);
+      if (policyData.policy) {
+        setMaxDaily(parseFloat(policyData.policy.maxDailyPayoutAmount) || 1000);
+        setMaxJob(parseFloat(policyData.policy.maxJobPayoutAmount) || 500);
+        setThreshold(parseFloat(policyData.policy.minConfidenceThreshold) || 0.85);
       }
+      if (policyData.versions && policyData.versions.length > 0) {
+        const dbVersions: PolicyVersion[] = policyData.versions.map((p: any, idx: number) => ({
+          id: p.id,
+          version: `v1.${policyData.versions.length - 1 - idx}.0`,
+          timestamp: new Date(p.createdAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          author: p.name.includes("Genesis") ? "System (Genesis)" : "Alex (Lead Reviewer)",
+          threshold: parseFloat(p.minConfidenceThreshold),
+          maxJob: parseFloat(p.maxJobPayoutAmount),
+          maxDaily: parseFloat(p.maxDailyPayoutAmount),
+          active: Boolean(p.isActive),
+          notes: p.name,
+        }));
+        setVersions(dbVersions);
+      }
+      if (policyData.benchmarkCases) {
+        setBenchmarkCases(policyData.benchmarkCases);
+      }
+      if (jobsData.jobs && jobsData.jobs.length > 0) {
+        const eligibleJobs = jobsData.jobs.filter(
+          (j: any) => j.status === "PAID" || j.status === "VERIFIED" || j.status === "SETTLED"
+        );
+        const list = eligibleJobs.length > 0 ? eligibleJobs : jobsData.jobs;
+        setHistoricalJobs(list);
+        setSelectedJobId(list[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to load policy data", err);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -419,6 +428,13 @@ export default function PolicyEditorPage() {
                 {versions.length} versions
               </span>
             </div>
+
+            {restoreError && (
+              <div className="bg-rose-950/80 border border-rose-800 text-rose-300 p-2.5 rounded-xl text-[11px] flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                <span>{restoreError}</span>
+              </div>
+            )}
 
             <div className="space-y-3 relative before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-[2px] before:bg-[#21262D]">
               {versions.map((ver) => (

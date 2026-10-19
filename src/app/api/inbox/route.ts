@@ -172,14 +172,51 @@ export async function POST(req: NextRequest) {
       const senderBatchId = `batch_rev_${job.id.slice(0, 8)}_${Date.now()}`;
       const senderItemId = `item_rev_${job.id.slice(0, 8)}`;
 
-      const payoutRes = await createPayout({
-        recipientEmail: job.freelancerEmail,
-        amount: job.amount,
-        currency: job.currency,
-        note: `ProofPay Milestone Settled (Approved via Human Review): ${job.title}`,
-        senderBatchId,
-        senderItemId,
-      });
+      let payoutRes;
+      try {
+        payoutRes = await createPayout({
+          recipientEmail: job.freelancerEmail,
+          amount: job.amount,
+          currency: job.currency,
+          note: `ProofPay Milestone Settled (Approved via Human Review): ${job.title}`,
+          senderBatchId,
+          senderItemId,
+        });
+      } catch (payoutErr: any) {
+        console.error("[Inbox Approval Payout] Error:", payoutErr);
+        const errDetails = payoutErr.details || payoutErr.message || "";
+        const isInsufficientFunds =
+          typeof errDetails === "string"
+            ? errDetails.includes("INSUFFICIENT_FUNDS") || errDetails.includes("ERRPYO004")
+            : JSON.stringify(errDetails).includes("INSUFFICIENT_FUNDS");
+
+        if (isInsufficientFunds) {
+          await appendLedgerEvent({
+            jobId: job.id,
+            eventType: "PAYOUT_FAILED_INSUFFICIENT_FUNDS",
+            previousState: job.status,
+            newState: "FUNDS_DEPLETED",
+            actor: "ADMIN",
+            isMock,
+            payload: {
+              error: "INSUFFICIENT_FUNDS",
+              reviewerEmail,
+              reason: "Platform Sandbox balance depleted over unbacked demo runs",
+              details: errDetails,
+            },
+          });
+
+          return NextResponse.json(
+            {
+              error: "Platform Sandbox Escrow Balance Depleted",
+              message:
+                "PayPal rejected payout with INSUFFICIENT_FUNDS. The platform sandbox balance is empty after multiple unbacked demo runs. Please top up your sandbox account or enable PAYPAL_MOCK=true.",
+            },
+            { status: 402 }
+          );
+        }
+        throw payoutErr;
+      }
 
       const payoutBatchId = payoutRes.batch_header.payout_batch_id;
       const payoutItemId = senderItemId;
@@ -206,7 +243,7 @@ export async function POST(req: NextRequest) {
       // Append immutable ledger event
       await appendLedgerEvent({
         jobId: job.id,
-        eventType: "PAYOUT_RELEASED",
+        eventType: isMock ? "PAYOUT_RELEASED [SIMULATED]" : "PAYOUT_RELEASED",
         previousState: job.status,
         newState: "PAID",
         actor: "ADMIN",
@@ -218,6 +255,7 @@ export async function POST(req: NextRequest) {
           currency: job.currency,
           reviewerEmail,
           note: "Approved via human review queue",
+          mode: isMock ? "SIMULATED_TEST_MODE" : "REAL_PAYPAL_SANDBOX",
         },
       });
 

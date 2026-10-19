@@ -3,8 +3,11 @@ import { db, jobs, payments } from "@/db";
 import { appendLedgerEvent } from "@/db/ledger";
 import { createOrder, captureOrder, isPayPalMock } from "@/lib/paypal";
 import { assertAuthorizedRole } from "@/lib/auth/roles";
+import { checkDemoRateLimits, getClientIp } from "@/lib/rate-limit";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+
+import { isBundledDemoJob } from "@/lib/demo-templates";
 
 export async function POST(
   req: NextRequest,
@@ -14,6 +17,30 @@ export async function POST(
   if ("errorResponse" in auth) {
     return auth.errorResponse;
   }
+
+  // Rate limiting to protect PayPal and system quota
+  const clientIp = getClientIp(req);
+  const rateLimit = checkDemoRateLimits(clientIp);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: rateLimit.reason || "Rate limit exceeded. Please wait.",
+        limits: {
+          ipRemaining: rateLimit.ipLimit.remaining,
+          globalDailyRemaining: rateLimit.globalDailyLimit.remaining,
+        },
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "60",
+          "X-RateLimit-IP-Remaining": rateLimit.ipLimit.remaining.toString(),
+          "X-RateLimit-Global-Remaining": rateLimit.globalDailyLimit.remaining.toString(),
+        },
+      }
+    );
+  }
+
   try {
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
@@ -69,8 +96,19 @@ export async function POST(
       });
     }
 
-    // 2. Simulated funding is ONLY allowed when PAYPAL_MOCK=true is explicitly configured
+    // 2. Simulated funding: STRICTLY restricted to bundled demo templates only
     if (action === "mock_fund") {
+      // Enforce: simulated funding can NEVER be applied to custom user-supplied amounts or payees
+      if (!isBundledDemoJob(job.title, job.freelancerEmail)) {
+        return NextResponse.json(
+          {
+            error:
+              "Simulated funding can only be created from bundled demo templates, never with a user-supplied amount or payee. Custom milestones require authentic PayPal Orders approval.",
+          },
+          { status: 400 }
+        );
+      }
+
       if (!isMock) {
         return NextResponse.json(
           {
@@ -99,7 +137,7 @@ export async function POST(
 
       await appendLedgerEvent({
         jobId: id,
-        eventType: "JOB_FUNDED",
+        eventType: "JOB_FUNDED [SIMULATED]",
         previousState: job.status,
         newState: "FUNDED",
         actor: "CLIENT",
@@ -109,7 +147,8 @@ export async function POST(
           mockCaptureId,
           amount: job.amount,
           currency: job.currency,
-          mode: "MOCK_MODE",
+          mode: "SIMULATED_DEMO_ESCROW",
+          isSimulated: true,
         },
       });
 
@@ -118,6 +157,7 @@ export async function POST(
         status: "FUNDED",
         orderId: mockOrderId,
         captureId: mockCaptureId,
+        isSimulated: true,
       });
     }
 

@@ -1,7 +1,11 @@
 import { sql } from "drizzle-orm";
 import { db } from "./index";
 
+let schemaInitialized = false;
+
 export async function ensureDatabaseSchema() {
+  if (schemaInitialized) return;
+
   // Create all 10 tables if they do not exist
   const ddlStatements = [
     `CREATE TABLE IF NOT EXISTS jobs (
@@ -141,6 +145,11 @@ export async function ensureDatabaseSchema() {
   ];
 
   for (const statement of ddlStatements) {
-    await db.execute(sql.raw(statement));
+    try {
+      await db.execute(sql.raw(statement));
+    } catch (e) {
+      // Ignore if trigger or table already exists
+    }
   }
+  schemaInitialized = true;
 }

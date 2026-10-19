@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle2, ShieldAlert, AlertTriangle, ArrowRight, Play, Loader2, Sparkles, ShieldCheck } from "lucide-react";
 
@@ -131,6 +131,8 @@ const SCENARIOS: Scenario[] = [
 export function GuidedDemoScenarios() {
   const [runningId, setRunningId] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<string>("");
+  const [useLiveGemini, setUseLiveGemini] = useState<boolean>(false);
+  const [isReviewer, setIsReviewer] = useState<boolean>(false);
   const [result, setResult] = useState<{
     scenarioId: string;
     jobId: string;
@@ -138,7 +140,14 @@ export function GuidedDemoScenarios() {
     outcomeReason: string;
     jobStatus: string;
     elapsedMs: number;
+    modeLabel?: string;
   } | null>(null);
+
+  useEffect(() => {
+    // Check if current user is reviewer
+    const hasReviewerCookie = document.cookie.includes("proofpay_role=reviewer");
+    setIsReviewer(hasReviewerCookie);
+  }, []);
 
   const runScenario = async (scenario: Scenario) => {
     setRunningId(scenario.id);
@@ -173,7 +182,8 @@ export function GuidedDemoScenarios() {
         new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
       );
 
-      setActiveStep("3. Running pipeline (Hard checks -> Model sensor -> TS Guard)...");
+      const modeText = useLiveGemini ? "Live Gemini Model" : "Recorded Model Responses";
+      setActiveStep(`3. Running pipeline via ${modeText} (Hard checks -> Sensor -> TS Guard)...`);
       const submitRes = await fetch(`/api/jobs/${jobId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,6 +194,7 @@ export function GuidedDemoScenarios() {
           fileSizeBytes: imgBlob.size,
           width: scenario.id === "wrong_size" ? 1080 : 1080,
           height: scenario.id === "wrong_size" ? 1079 : 1080,
+          useRecordedReplay: !useLiveGemini,
         }),
       });
       const submitData = await submitRes.json();
@@ -219,6 +230,33 @@ export function GuidedDemoScenarios() {
 
   return (
     <div className="space-y-6">
+      {/* Reviewer Diagnostic Toggle */}
+      {isReviewer && (
+        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-400" />
+            <span className="text-slate-300 font-semibold">Reviewer Model Mode:</span>
+            <span className="text-slate-400">
+              {useLiveGemini
+                ? "Live Gemini 3.8 Flash model invocation active (spends API quota)"
+                : "Default: Recorded model responses active (zero API quota spent)"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setUseLiveGemini((prev) => !prev)}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              useLiveGemini
+                ? "bg-purple-950 text-purple-200 border-purple-700 shadow-sm"
+                : "bg-[#21262D] text-slate-300 border-[#30363D] hover:border-slate-500"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${useLiveGemini ? "bg-purple-400" : "bg-slate-500"}`} />
+            <span>{useLiveGemini ? "Disable Live Gemini" : "Enable Live Gemini"}</span>
+          </button>
+        </div>
+      )}
+
       {/* Scenario Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {SCENARIOS.map((scenario) => {
@@ -240,7 +278,12 @@ export function GuidedDemoScenarios() {
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${scenario.tagColor}`}>
                     {scenario.tag}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">1080x1080</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-mono text-slate-400 bg-[#0D1117] border border-[#21262D] px-1.5 py-0.5 rounded">
+                      {useLiveGemini ? "Live" : "Recorded"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">1080x1080</span>
+                  </div>
                 </div>
 
                 {/* Thumbnail Preview */}
@@ -271,10 +314,11 @@ export function GuidedDemoScenarios() {
                 </div>
 
                 <button
+                  id={`scenario-run-${scenario.id}`}
                   type="button"
                   onClick={() => runScenario(scenario)}
                   disabled={!!runningId}
-                  className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                  className={`w-full py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
                     isRunning
                       ? "bg-blue-900/60 text-blue-200 cursor-wait border border-blue-700"
                       : "bg-[#0070BA] hover:bg-[#005ea6] text-white shadow-sm"
@@ -311,7 +355,7 @@ export function GuidedDemoScenarios() {
 
       {/* Live Result Outcome Card */}
       {result && (
-        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-5 shadow-lg">
+        <div id="scenario-outcome-card" className="bg-[#161B22] border border-[#30363D] rounded-xl p-5 shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#30363D] pb-3 mb-3">
             <div className="flex items-center gap-2">
               {result.decision === "AUTO_PAY" || result.decision === "APPROVE" ? (

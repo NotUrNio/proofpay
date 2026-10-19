@@ -42,8 +42,8 @@ export async function GET() {
       activeJobsCount: allJobs.length,
       pendingReviewsCount: pendingReviews,
       currency: "USD",
-      businessAccount: "sb-dmohp53303471@business.example.com",
-      freelancerAccount: "sb-ft17i53364262@personal.example.com",
+      businessAccount: "client@example.test",
+      freelancerAccount: "freelancer@example.test",
     });
   } catch (error) {
     console.error("[Stats] Failed to compute money flow:", error);

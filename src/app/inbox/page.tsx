@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -59,6 +59,25 @@ export default function InboxPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<"approve" | "reject" | null>(null);
 
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const cancelBtnRef = useRef<HTMLButtonElement | null>(null);
+  const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  const openConfirmModal = (action: "approve" | "reject") => {
+    if (typeof document !== "undefined") {
+      lastFocusedRef.current = document.activeElement as HTMLElement;
+    }
+    setShowConfirmModal(action);
+  };
+
+  const closeConfirmModal = () => {
+    setShowConfirmModal(null);
+    setTimeout(() => {
+      lastFocusedRef.current?.focus();
+    }, 0);
+  };
+
   const fetchInbox = async () => {
     try {
       const res = await fetch("/api/inbox");
@@ -76,6 +95,47 @@ export default function InboxPage() {
   useEffect(() => {
     fetchInbox();
   }, []);
+
+  // Modal focus trap & Escape key listener
+  useEffect(() => {
+    if (!showConfirmModal) return;
+
+    // Focus cancel button on open
+    cancelBtnRef.current?.focus();
+
+    const handleModalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeConfirmModal();
+        return;
+      }
+
+      if (e.key === "Tab") {
+        const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleModalKeyDown);
+    return () => window.removeEventListener("keydown", handleModalKeyDown);
+  }, [showConfirmModal]);
 
   const handleDecision = async (jobId: string, action: "approve" | "reject") => {
     setProcessingId(jobId);
@@ -105,12 +165,16 @@ export default function InboxPage() {
       console.error("Action error:", err);
     } finally {
       setProcessingId(null);
+      setTimeout(() => {
+        lastFocusedRef.current?.focus();
+      }, 0);
     }
   };
 
   // Keyboard navigation shortcuts: J (next), K (prev), A (approve), R (reject)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (showConfirmModal) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if (e.key === "j" || e.key === "J" || e.key === "ArrowDown") {
@@ -121,13 +185,13 @@ export default function InboxPage() {
         setSelectedIndex((prev) => Math.max(0, prev - 1));
       } else if ((e.key === "a" || e.key === "A") && items[selectedIndex]) {
         e.preventDefault();
-        setShowConfirmModal("approve");
+        openConfirmModal("approve");
       } else if ((e.key === "r" || e.key === "R") && items[selectedIndex]) {
         e.preventDefault();
-        setShowConfirmModal("reject");
+        openConfirmModal("reject");
       }
     },
-    [items, selectedIndex]
+    [items, selectedIndex, showConfirmModal]
   );
 
   useEffect(() => {
@@ -339,19 +403,21 @@ export default function InboxPage() {
 
                 <div className="flex items-center gap-2.5">
                   <button
+                    id="inbox-reject-btn"
                     type="button"
-                    onClick={() => setShowConfirmModal("reject")}
+                    onClick={() => openConfirmModal("reject")}
                     disabled={!!processingId}
-                    className="bg-[#21262D] hover:bg-[#30363D] text-rose-400 border border-rose-900/60 text-xs font-semibold px-4 py-2 rounded-xl transition-colors"
+                    className="bg-[#21262D] hover:bg-[#30363D] text-rose-400 border border-rose-900/60 text-xs font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                   >
                     Reject &amp; Refund Escrow
                   </button>
 
                   <button
+                    id="inbox-approve-btn"
                     type="button"
-                    onClick={() => setShowConfirmModal("approve")}
+                    onClick={() => openConfirmModal("approve")}
                     disabled={!!processingId}
-                    className="bg-[#2EA043] hover:bg-[#238636] text-white text-xs font-bold px-5 py-2 rounded-xl transition-colors shadow-md flex items-center gap-1.5"
+                    className="bg-[#2EA043] hover:bg-[#238636] text-white text-xs font-bold px-5 py-2 rounded-xl transition-colors shadow-md flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                   >
                     <Check className="w-4 h-4" />
                     <span>Approve &amp; Dispatch ${parseFloat(activeItem.job.amount).toFixed(2)} USD</span>
@@ -365,9 +431,17 @@ export default function InboxPage() {
 
       {/* Confirmation Modal for Irreversible Payouts */}
       {showConfirmModal && activeItem && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#161B22] border border-[#30363D] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        >
+          <div
+            ref={modalRef}
+            className="bg-[#161B22] border border-[#30363D] rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+          >
+            <h3 id="modal-title" className="text-base font-bold text-white">
               {showConfirmModal === "approve" ? "Confirm PayPal Payout Release" : "Confirm Deliverable Rejection"}
             </h3>
 
@@ -379,18 +453,20 @@ export default function InboxPage() {
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
+                ref={cancelBtnRef}
                 type="button"
-                onClick={() => setShowConfirmModal(null)}
-                className="px-3.5 py-2 rounded-xl bg-[#21262D] text-slate-300 hover:text-white text-xs font-medium"
+                onClick={closeConfirmModal}
+                className="px-3.5 py-2 rounded-xl bg-[#21262D] text-slate-300 hover:text-white text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               >
                 Cancel
               </button>
 
               <button
+                ref={confirmBtnRef}
                 type="button"
                 onClick={() => handleDecision(activeItem.job.id, showConfirmModal)}
                 disabled={!!processingId}
-                className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   showConfirmModal === "approve"
                     ? "bg-[#2EA043] hover:bg-[#238636]"
                     : "bg-[#DA3633] hover:bg-rose-700"
