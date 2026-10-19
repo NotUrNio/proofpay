@@ -14,7 +14,7 @@ vi.mock("next/headers", () => ({
   }),
 }));
 
-import JobPage, { generateMetadata } from "../src/app/jobs/[id]/page";
+import JobPage, { generateMetadata, clearJobSsrCache } from "../src/app/jobs/[id]/page";
 import { db, jobs, mandates } from "../src/db";
 import { ensureDatabaseSchema } from "../src/db/init";
 import { signMandate } from "../src/lib/guard";
@@ -29,6 +29,7 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
   const secretPayee = "private-freelancer@vault.example.test";
 
   beforeEach(async () => {
+    clearJobSsrCache();
     await ensureDatabaseSchema();
     await db.delete(mandates).where(eq(mandates.jobId, privateJobId));
     await db.delete(jobs).where(eq(jobs.id, privateJobId));
@@ -95,7 +96,6 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
     expect(serializedMeta).not.toContain(privateJobId);
   });
 
-
   it("3. JobPage SSR throws Next.js 15.1 forbidden() (NEXT_HTTP_ERROR_FALLBACK;403) for wrong-role user before querying or serializing props", async () => {
     mockedRoleCookie = "freelancer";
     let caughtError: any = null;
@@ -112,5 +112,24 @@ describe("SSR & API Job Ownership Access Control (tests/job-access-ssr.test.ts)"
     expect(serializedErr).not.toContain(secretTitle);
     expect(serializedErr).not.toContain(secretAmount);
     expect(serializedErr).not.toContain(secretPayee);
+  });
+
+  it("4. generateMetadata and JobPage share a single cached jobs DB query on the same SSR render pass", async () => {
+    mockedRoleCookie = "reviewer";
+    const selectSpy = vi.spyOn(db, "select");
+
+    try {
+      const [meta, pageElement] = await Promise.all([
+        generateMetadata({ params: Promise.resolve({ id: privateJobId }) }),
+        JobPage({ params: Promise.resolve({ id: privateJobId }) }),
+      ]);
+
+      expect(meta.title).toContain(secretTitle);
+      expect(pageElement).toBeTruthy();
+      // 1 cached jobs query + 4 parallel detail queries (criteria, mandates, submissions, payments) = 5 total selects (instead of 6 when jobs was queried twice)
+      expect(selectSpy).toHaveBeenCalledTimes(5);
+    } finally {
+      selectSpy.mockRestore();
+    }
   });
 });

@@ -1,3 +1,4 @@
+import React, { cache } from "react";
 import { db, jobs, criteria, mandates, submissions, verdicts, payments } from "@/db";
 import { eq, desc } from "drizzle-orm";
 import { JobDetailClient } from "./JobDetailClient";
@@ -5,6 +6,39 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { forbidden, unstable_rethrow } from "next/navigation";
 import { ROLE_COOKIE_NAME, DEMO_USERS, UserRole, canUserAccessJob } from "@/lib/auth/roles";
+
+type JobRow = typeof jobs.$inferSelect;
+
+// Per-render-turn promise map to ensure deduplication even outside React Flight's
+// AsyncLocalStorage dispatcher (e.g. direct Vitest unit test invocations), while
+// automatically clearing on the next macrotask so separate requests never share state.
+const sameTurnJobCache = new Map<string, Promise<JobRow | null>>();
+let clearScheduled = false;
+
+export function clearJobSsrCache(): void {
+  sameTurnJobCache.clear();
+  clearScheduled = false;
+}
+
+export const getJobById = cache(async (id: string): Promise<JobRow | null> => {
+  const existing = sameTurnJobCache.get(id);
+  if (existing) {
+    return existing;
+  }
+  const promise = (async () => {
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+    return job ?? null;
+  })();
+  sameTurnJobCache.set(id, promise);
+  if (!clearScheduled) {
+    clearScheduled = true;
+    setTimeout(() => {
+      sameTurnJobCache.clear();
+      clearScheduled = false;
+    }, 0);
+  }
+  return promise;
+});
 
 export async function generateMetadata({
   params,
@@ -17,7 +51,7 @@ export async function generateMetadata({
     const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "reviewer") as UserRole;
     const user = DEMO_USERS[roleValue] || DEMO_USERS.reviewer;
 
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+    const job = await getJobById(id);
     if (!job) {
       return {
         title: "Milestone Details — ProofPay",
@@ -43,7 +77,6 @@ export async function generateMetadata({
   }
 }
 
-
 export default async function JobPage({
   params,
 }: {
@@ -56,7 +89,7 @@ export default async function JobPage({
     const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "reviewer") as UserRole;
     const user = DEMO_USERS[roleValue] || DEMO_USERS.reviewer;
 
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+    const job = await getJobById(id);
     if (!job) {
       return <JobDetailClient initialData={null} jobId={id} />;
     }
@@ -66,13 +99,21 @@ export default async function JobPage({
       forbidden();
     }
 
-    const jobCriteria = await db.select().from(criteria).where(eq(criteria.jobId, id));
-    const [mandate] = await db.select().from(mandates).where(eq(mandates.jobId, id)).limit(1);
-    const jobSubmissions = await db
-      .select()
-      .from(submissions)
-      .where(eq(submissions.jobId, id))
-      .orderBy(desc(submissions.createdAt));
+    const [jobCriteria, mandateRows, jobSubmissions, jobPayments] = await Promise.all([
+      db.select().from(criteria).where(eq(criteria.jobId, id)),
+      db.select().from(mandates).where(eq(mandates.jobId, id)).limit(1),
+      db
+        .select()
+        .from(submissions)
+        .where(eq(submissions.jobId, id))
+        .orderBy(desc(submissions.createdAt)),
+      db
+        .select()
+        .from(payments)
+        .where(eq(payments.jobId, id))
+        .orderBy(desc(payments.createdAt)),
+    ]);
+    const mandate = mandateRows[0] || null;
     const latestSubmission = jobSubmissions[0] || null;
 
     let latestVerdict = null;
@@ -84,12 +125,6 @@ export default async function JobPage({
         .limit(1);
       latestVerdict = v || null;
     }
-
-    const jobPayments = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.jobId, id))
-      .orderBy(desc(payments.createdAt));
 
     const initialData = {
       job: {
