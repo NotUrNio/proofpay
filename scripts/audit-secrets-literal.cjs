@@ -1,7 +1,7 @@
 const fs = require("fs");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
-const envContent = fs.readFileSync(".env", "utf8");
+const envContent = fs.existsSync(".env") ? fs.readFileSync(".env", "utf8") : "";
 const candidateKeys = [
   "DATABASE_URL",
   "PAYPAL_WEBHOOK_ID",
@@ -15,6 +15,17 @@ const candidateKeys = [
   "PAYPAL_SANDBOX_PERSONAL_EMAIL",
 ];
 
+const UNSET_REASONS = {
+  DATABASE_URL:
+    "Unset in local .env because local development and tests use embedded PGlite (.data/pglite); hosted Postgres connection string only exists in Render's managed environment.",
+  PAYPAL_WEBHOOK_ID:
+    "Not defined in local .env; webhook verification ID is only provisioned during live tunnel/hosted webhook registration.",
+  GOOGLE_GENERATIVE_AI_API_KEY:
+    "Not defined in local .env; this repo uses GEMINI_API_KEY instead.",
+  AG_STUDIO_LICENSE_KEY:
+    "Empty in local .env (length 0); AG Studio was replaced with MIT-licensed Recharts.",
+};
+
 const envMap = {};
 for (const line of envContent.split("\n")) {
   const trimmed = line.trim();
@@ -23,110 +34,94 @@ for (const line of envContent.split("\n")) {
   if (eqIdx === -1) continue;
   const key = trimmed.slice(0, eqIdx).trim();
   let val = trimmed.slice(eqIdx + 1).trim();
-  if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+  if (
+    (val.startsWith('"') && val.endsWith('"')) ||
+    (val.startsWith("'") && val.endsWith("'"))
+  ) {
     val = val.slice(1, -1);
   }
   envMap[key] = val;
 }
 
-const secrets = [];
-for (const key of candidateKeys) {
-  const val = envMap[key] || process.env[key] || "";
-  if (val && val.length >= 4) {
-    secrets.push({ key, val });
-  } else {
-    // Variable is empty/unset in env
-    secrets.push({ key, val: "", isUnset: true });
+function countFixedStringInDir(val, dirPath) {
+  if (!fs.existsSync(dirPath)) return 0;
+  try {
+    const out = execFileSync("grep", ["-rF", val, dirPath], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return out.trim().split("\n").filter(Boolean).length;
+  } catch {
+    return 0;
   }
 }
 
-console.log(`Loaded ${secrets.length} secret/config variables to check\n`);
+const checkedVariables = [];
+const uncheckedVariables = [];
 
-const results = [];
-
-for (const { key, val, isUnset } of secrets) {
-  if (isUnset || !val) {
-    results.push({
+for (const key of candidateKeys) {
+  const val = envMap[key] || process.env[key] || "";
+  if (!val || val.length < 4) {
+    const entry = {
       variable: key,
-      length: 0,
-      status: "UNSET / EMPTY",
-      gitHistoryCommits: 0,
-      nextMatches: 0,
-      docsMatches: 0,
-      srcMatches: 0,
-    });
-    console.log(`Variable: ${key.padEnd(32)} | [UNSET / EMPTY in .env]`);
+      length: val ? val.length : 0,
+      status: "UNCHECKED_UNSET_IN_ENV",
+      reason:
+        UNSET_REASONS[key] ||
+        "Variable is unset or empty in local .env, so no literal value exists in memory to grep for.",
+      gitHistoryCommits: null,
+      nextMatches: null,
+      docsMatches: null,
+      srcMatches: null,
+      scriptsMatches: null,
+    };
+    uncheckedVariables.push(entry);
+    console.log(
+      `Variable: ${key.padEnd(32)} | STATUS: UNCHECKED (unset/empty in .env)`
+    );
     continue;
   }
 
-  // 1. Search in git history across all branches using git log -p --all -S
   let gitHistoryCommits = 0;
   try {
-    const gitLogOut = execSync(`git log -p --all -S "${val.replace(/"/g, '\\"')}" --oneline`, {
+    const out = execFileSync("git", ["log", "--all", "-S", val, "--format=%H"], {
       encoding: "utf8",
-      stdio: ["pipe", "pipe", "ignore"],
+      stdio: ["ignore", "pipe", "ignore"],
     });
-    const commits = gitLogOut.trim().split("\n").filter(Boolean);
-    gitHistoryCommits = commits.length;
-  } catch (e) {
+    gitHistoryCommits = out.trim().split("\n").filter(Boolean).length;
+  } catch {
     gitHistoryCommits = 0;
   }
 
-  // 2. Search in .next directory using grep -rF
-  let nextMatches = 0;
-  if (fs.existsSync(".next")) {
-    try {
-      const grepNext = execSync(`grep -rF "${val.replace(/"/g, '\\"')}" .next/ | wc -l`, {
-        encoding: "utf8",
-        stdio: ["pipe", "pipe", "ignore"],
-      });
-      nextMatches = parseInt(grepNext.trim(), 10) || 0;
-    } catch (e) {
-      nextMatches = 0;
-    }
-  }
+  const nextMatches = countFixedStringInDir(val, ".next");
+  const docsMatches = countFixedStringInDir(val, "docs");
+  const srcMatches = countFixedStringInDir(val, "src");
+  const scriptsMatches = countFixedStringInDir(val, "scripts");
 
-  // 3. Search in docs directory using grep -rF
-  let docsMatches = 0;
-  if (fs.existsSync("docs")) {
-    try {
-      const grepDocs = execSync(`grep -rF "${val.replace(/"/g, '\\"')}" docs/ | wc -l`, {
-        encoding: "utf8",
-        stdio: ["pipe", "pipe", "ignore"],
-      });
-      docsMatches = parseInt(grepDocs.trim(), 10) || 0;
-    } catch (e) {
-      docsMatches = 0;
-    }
-  }
-
-  // 4. Search in sources (src) directory using grep -rF
-  let srcMatches = 0;
-  if (fs.existsSync("src")) {
-    try {
-      const grepSrc = execSync(`grep -rF "${val.replace(/"/g, '\\"')}" src/ | wc -l`, {
-        encoding: "utf8",
-        stdio: ["pipe", "pipe", "ignore"],
-      });
-      srcMatches = parseInt(grepSrc.trim(), 10) || 0;
-    } catch (e) {
-      srcMatches = 0;
-    }
-  }
-
-  results.push({
+  const entry = {
     variable: key,
     length: val.length,
+    status: "CHECKED",
     gitHistoryCommits,
     nextMatches,
     docsMatches,
     srcMatches,
-  });
+    scriptsMatches,
+  };
+  checkedVariables.push(entry);
 
   console.log(
-    `Variable: ${key.padEnd(32)} | Git History Commits: ${gitHistoryCommits} | .next matches: ${nextMatches} | docs matches: ${docsMatches} | src matches: ${srcMatches}`
+    `Variable: ${key.padEnd(32)} | len=${String(val.length).padEnd(3)} | Git History Commits (-S): ${gitHistoryCommits} | .next: ${nextMatches} | docs: ${docsMatches} | src: ${srcMatches} | scripts: ${scriptsMatches}`
   );
 }
 
-fs.writeFileSync("docs/secrets_audit_report.json", JSON.stringify(results, null, 2));
+const report = {
+  generatedAt: new Date().toISOString(),
+  checkedCount: checkedVariables.length,
+  uncheckedCount: uncheckedVariables.length,
+  checkedVariables,
+  uncheckedVariables,
+};
+
+fs.writeFileSync("docs/secrets_audit_report.json", JSON.stringify(report, null, 2));
 console.log("\nSaved secrets audit report to docs/secrets_audit_report.json");
