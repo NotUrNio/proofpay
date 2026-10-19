@@ -104,7 +104,7 @@ ProofPay was built as a full-stack, enterprise-grade Next.js application designe
 Every metric reported below is backed by committed code, reproducible test suites, or live PayPal Sandbox execution logs:
 
 - **100% Deterministic Test Suite Passing**:
-  - **110 passing unit/integration tests across 15 Vitest test suites** (`pnpm test`) plus **12 Playwright end-to-end tests across 3 browsers (36 browser runs)**: end-to-end slice, guard rules, HMAC mandates, database triggers, boundary checks, chaos drills, payout mode accuracy, SSR role/ownership isolation, least-privilege role cookie enforcement, rate-limit/proxy-hop extraction, and PayPal token caching.
+  - **151 passing unit/integration tests across 24 Vitest test suites** (`pnpm test`) plus **12 Playwright end-to-end tests across 3 browsers (36 browser runs)**: end-to-end slice, guard rules, HMAC mandates, database triggers, boundary checks, chaos drills, payout mode accuracy, SSR role/ownership isolation, least-privilege role cookie enforcement, rate-limit/proxy-hop extraction, and PayPal token caching.
 - **Zero False-Approvals on 28-Fixture Benchmark**:
   - Evaluated on 28 synthetic fixtures (13 Dev / 15 Held-Out):
   - **Serving Models Breakdown**: Primary model `gemini-3.8-flash` served 14 cases, automatic fallback `gemini-3.5-flash-lite` served 8 cases; 6 cases were rejected by deterministic checks before any model call. Replay mode re-runs recorded model responses offline.

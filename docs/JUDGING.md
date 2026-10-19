@@ -148,7 +148,7 @@ Run the entire vitest test suite:
 ```bash
 pnpm test
 ```
-**Test Results**: 16 test suites, 116 vitest tests + 39 playwright cross-browser tests, **100% passing**:
+**Test Results**: 24 test suites, 151 vitest tests + 39 playwright cross-browser tests, **100% passing**:
 1. `test/e2e-slice.test.ts`: End-to-end autonomous escrow happy path from clean DB to payout and ledger verification.
 2. `test/guard.test.ts`: Zero-LLM Policy Guard deterministic safety rules and transaction invariants.
 3. `test/mandate.test.ts`: HMAC-SHA256 signed mandate validation, parameter caps, and expiration checks.
@@ -165,6 +165,14 @@ pnpm test
 14. `tests/analytics.test.ts`: Real-time analytics computation and spend metrics.
 15. `tests/demo-safety-policy.test.ts`: Guided demo safety boundaries and simulated execution.
 16. `tests/ledger-display.test.ts`: Display-layer email masking across public audit views.
+17. `tests/bootstrap.test.ts`: Hosted database bootstrapper with pre-populated DB handling.
+18. `tests/demo-replay-default.test.ts`: Replay policy defaults for bundled demo scenarios.
+19. `tests/demo-reset.test.ts`: State restoration with audit append guard and rate limiting.
+20. `tests/eval-page-integrity.test.ts`: Benchmark UI dynamic rendering from latest.json with 0 false FAILs.
+21. `tests/gitleaks-canary.test.ts`: Ephemeral canary failure assertion and secret pattern compliance.
+22. `tests/payout-status-polling.test.ts`: Payout batch status polling and timeout handling.
+23. `tests/preflight-negatives.test.ts`: Preflight negative failure injection and recursion guard.
+24. `tests/receipt-verify.test.ts`: Offline receipt verifier on recorded hashes and tampering.
 
 ---
 
