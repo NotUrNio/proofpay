@@ -1,90 +1,122 @@
 {
-  "timestamp": "2026-10-18T22:25:54.060Z",
   "url": "http://localhost:3000/studio",
-  "throttling": "Mobile 4G simulated (4x CPU slowdown, 1.6Mbps, 150ms RTT)",
-  "viewport": "390x844 (Mobile Emulation)",
-  "runsCount": 5,
-  "targets": {
-    "performance": ">= 85",
-    "accessibility": ">= 95",
-    "cls": "< 0.10"
-  },
-  "median": {
+  "median390": {
     "performance": 100,
     "accessibility": 100,
     "bestPractices": 100,
-    "seo": 90,
-    "cls": 0.0319,
+    "seo": 100,
+    "cls": 0.0011,
     "fcp": 0.75,
     "lcp": 1.85
   },
-  "verdicts": {
-    "performance": {
-      "target": ">= 85",
-      "actual": 100,
-      "pass": true
-    },
-    "accessibility": {
-      "target": ">= 95",
-      "actual": 100,
-      "pass": true
-    },
-    "cls": {
-      "target": "< 0.10",
-      "actual": 0.0319,
-      "pass": true
-    }
+  "median360": {
+    "performance": 99,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "cls": 0.0039,
+    "fcp": 0.75,
+    "lcp": 2.16
   },
-  "individualRuns": [
+  "verdicts": {
+    "performance": "PASS",
+    "accessibility": "PASS",
+    "bestPractices": "PASS",
+    "seo": "PASS",
+    "cls": "PASS",
+    "fcp": "PASS",
+    "lcp": "PASS"
+  },
+  "individualRuns390": [
     {
       "run": 1,
-      "performance": 99,
-      "accessibility": 100,
-      "bestPractices": 100,
-      "seo": 90,
-      "cls": 0.0319,
-      "fcp": 0.76,
-      "lcp": 2.16
-    },
-    {
-      "run": 2,
+      "width": 390,
       "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
-      "seo": 90,
-      "cls": 0.0319,
+      "seo": 100,
+      "cls": 0.0011,
+      "fcp": 0.76,
+      "lcp": 1.85
+    },
+    {
+      "run": 2,
+      "width": 390,
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0.0011,
       "fcp": 0.75,
       "lcp": 1.85
     },
     {
       "run": 3,
-      "performance": 100,
-      "accessibility": 100,
-      "bestPractices": 100,
-      "seo": 90,
-      "cls": 0.0319,
-      "fcp": 0.75,
-      "lcp": 1.85
-    },
-    {
-      "run": 4,
+      "width": 390,
       "performance": 99,
       "accessibility": 100,
       "bestPractices": 100,
-      "seo": 90,
-      "cls": 0.0319,
+      "seo": 100,
+      "cls": 0.0011,
       "fcp": 0.75,
       "lcp": 2.16
     },
     {
-      "run": 5,
+      "run": 4,
+      "width": 390,
       "performance": 100,
       "accessibility": 100,
       "bestPractices": 100,
-      "seo": 90,
-      "cls": 0.0319,
+      "seo": 100,
+      "cls": 0.0011,
       "fcp": 0.75,
       "lcp": 1.85
+    },
+    {
+      "run": 5,
+      "width": 390,
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0.0011,
+      "fcp": 0.75,
+      "lcp": 1.85
+    }
+  ],
+  "individualRuns360": [
+    {
+      "run": 1,
+      "width": 360,
+      "performance": 99,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0.0039,
+      "fcp": 0.75,
+      "lcp": 2.16
+    },
+    {
+      "run": 2,
+      "width": 360,
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0.0039,
+      "fcp": 0.75,
+      "lcp": 1.85
+    },
+    {
+      "run": 3,
+      "width": 360,
+      "performance": 99,
+      "accessibility": 100,
+      "bestPractices": 100,
+      "seo": 100,
+      "cls": 0.0039,
+      "fcp": 0.75,
+      "lcp": 2.16
     }
   ]
 }

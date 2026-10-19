@@ -39,8 +39,9 @@ const SCENARIOS: Scenario[] = [
     fileName: "summer_sale_banner.png",
     mimeType: "image/png",
     description: "1080x1080 PNG with brand blue (#0070BA), 'Summer Sale' text, and clean layout.",
-    expectedOutcome: "Autonomous payment. PayPal Payout dispatched to Priya in under 3 seconds.",
-    expectedBadge: "AUTO_PAY -> Settled",
+    expectedOutcome: "Autonomous demo settlement. Payout is simulated ([SIMULATED]) in under 3 seconds.",
+    expectedBadge: "AUTO_PAY -> Settled [SIMULATED]",
+
     policy: {
       allowedAspectRatios: ["1:1"],
       minResolution: { width: 1080, height: 1080 },
@@ -211,6 +212,10 @@ export function GuidedDemoScenarios() {
           "Pipeline processed successfully.",
         jobStatus: submitData.job?.status || submitData.jobStatus || "VERIFIED",
         elapsedMs,
+        modeLabel:
+          submitData.modeLabel ||
+          submitData.payout?.uiModeLabel ||
+          "Bundled demo scenario: funding & payout simulated ([SIMULATED])",
       });
     } catch (err: any) {
       console.error("Demo run error:", err);
@@ -289,7 +294,7 @@ export function GuidedDemoScenarios() {
                 {/* Thumbnail Preview */}
                 <div className="relative aspect-video rounded-lg overflow-hidden bg-black/40 border border-[#30363D] mb-3 flex items-center justify-center">
                   <img
-                    src={scenario.imageSrc}
+                    src={scenario.imageSrc.replace("/demo/", "/demo/thumb-").replace(".png", ".webp")}
                     alt={scenario.title}
                     width={320}
                     height={180}
@@ -298,6 +303,7 @@ export function GuidedDemoScenarios() {
                     className="max-h-full max-w-full object-contain"
                   />
                 </div>
+
 
                 <h3 className="font-semibold text-sm text-white mb-1.5 leading-snug">
                   {scenario.title}
@@ -357,7 +363,7 @@ export function GuidedDemoScenarios() {
       {result && (
         <div id="scenario-outcome-card" className="bg-[#161B22] border border-[#30363D] rounded-xl p-5 shadow-lg">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#30363D] pb-3 mb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {result.decision === "AUTO_PAY" || result.decision === "APPROVE" ? (
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
               ) : result.decision === "NEEDS_HUMAN" ? (
@@ -366,9 +372,14 @@ export function GuidedDemoScenarios() {
                 <ShieldAlert className="w-5 h-5 text-rose-400" />
               )}
               <h4 className="font-bold text-sm text-white">
-                Live Pipeline Outcome: {result.decision}
+                Live Pipeline Outcome: {result.decision} [SIMULATED]
               </h4>
               <span className="text-xs font-mono text-slate-400">({result.elapsedMs}ms)</span>
+              {result.modeLabel && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/70 text-amber-300 border border-amber-800/80">
+                  {result.modeLabel}
+                </span>
+              )}
             </div>
 
             {result.jobId !== "demo-error" && (
@@ -399,5 +410,6 @@ export function GuidedDemoScenarios() {
       )}
     </div>
   );
+
 }
 
