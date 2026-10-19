@@ -141,8 +141,17 @@ export function isCloudflareIp(ip: string): boolean {
   return false;
 }
 
+export type ClientIpRule =
+  | "cloudflare-verified-header"
+  | "xff-trusted-proxy-hops"
+  | "xff-rightmost-public"
+  | "xff-rightmost-private"
+  | "x-real-ip"
+  | "loopback-fallback";
+
 export interface ClientIpDetails {
   ip: string;
+  rule: ClientIpRule;
   sourceHeader:
     | "cf-connecting-ip"
     | "true-client-ip"
@@ -152,43 +161,83 @@ export interface ClientIpDetails {
   rawHeaderValue?: string;
   isPrivate: boolean;
   cloudflareVerified: boolean;
+  hopList: string[];
+  trustedProxyHops: number;
+}
+
+export const DEFAULT_TRUSTED_PROXY_HOPS = 0;
+export const MAX_TRUSTED_PROXY_HOPS = 10;
+
+/**
+ * Parses and validates CLIENT_IP_TRUSTED_PROXY_HOPS (number of rightmost public
+ * X-Forwarded-For entries to skip as trusted proxies, e.g., Render's edge proxy).
+ * Documented default: 0. Must be an integer in [0, 10].
+ */
+export function parseTrustedProxyHops(
+  raw: string | undefined = process.env.CLIENT_IP_TRUSTED_PROXY_HOPS
+): number {
+  if (raw === undefined || raw.trim() === "") {
+    return DEFAULT_TRUSTED_PROXY_HOPS;
+  }
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new RangeError(
+      `Invalid CLIENT_IP_TRUSTED_PROXY_HOPS="${raw}": must be an integer between 0 and ${MAX_TRUSTED_PROXY_HOPS} (default: ${DEFAULT_TRUSTED_PROXY_HOPS}).`
+    );
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < 0 ||
+    parsed > MAX_TRUSTED_PROXY_HOPS
+  ) {
+    throw new RangeError(
+      `Invalid CLIENT_IP_TRUSTED_PROXY_HOPS="${raw}": must be between 0 and ${MAX_TRUSTED_PROXY_HOPS} (default: ${DEFAULT_TRUSTED_PROXY_HOPS}).`
+    );
+  }
+  return parsed;
 }
 
 /**
  * Decides whether a request genuinely traversed Cloudflare before trusting
- * `cf-connecting-ip` or `true-client-ip`:
- * 1. A valid `cf-ray` header (`<16-hex>-<3-letter-IATA>`) must be present.
- * 2. If `x-forwarded-for` is present, its rightmost non-private hop must either:
- *    - belong to a published Cloudflare edge CIDR (`isCloudflareIp`), OR
- *    - match the `cf-connecting-ip` / `true-client-ip` value (Render's Cloudflare edge
- *      sets both `cf-connecting-ip` and appends the client IP to `x-forwarded-for`).
- *    If the rightmost public hop in `x-forwarded-for` is a non-Cloudflare IP that differs
- *    from `cf-connecting-ip`, then `cf-connecting-ip` was spoofed by the client and is ignored.
- * 3. If `x-forwarded-for` is absent, `cf-connecting-ip` / `true-client-ip` is only trusted
- *    when `TRUST_CLOUDFLARE_PROXY=true` and `cf-ray` is valid.
+ * `cf-connecting-ip` or `true-client-ip`, andotherwise extracts the client IP
+ * from `x-forwarded-for` while skipping internal RFC 1918 mesh hops and
+ * `CLIENT_IP_TRUSTED_PROXY_HOPS` rightmost public proxy hops.
  */
 export function getClientIpDetails(req: Request | NextRequest): ClientIpDetails {
+  const trustedProxyHops = parseTrustedProxyHops();
   const cfRay = (req.headers.get("cf-ray") || "").trim();
   const hasValidCfRay = /^[0-9a-f]{16}-[a-z]{3}$/i.test(cfRay);
   const cfConnectingIp = (req.headers.get("cf-connecting-ip") || "").trim();
   const trueClientIp = (req.headers.get("true-client-ip") || "").trim();
   const forwardedFor = req.headers.get("x-forwarded-for");
 
-  const xffParts = forwardedFor
+  const hopList = forwardedFor
     ? forwardedFor
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean)
     : [];
 
-  // Find the rightmost non-private hop in X-Forwarded-For (skipping internal RFC 1918 proxy hops)
-  let rightmostPublicXff: string | null = null;
-  for (let i = xffParts.length - 1; i >= 0; i--) {
-    if (!isPrivateIp(xffParts[i])) {
-      rightmostPublicXff = xffParts[i];
-      break;
-    }
+  // Strip trailing internal RFC 1918 proxy hops appended by internal service meshes
+  let lastPublicIdx = hopList.length - 1;
+  while (lastPublicIdx >= 0 && isPrivateIp(hopList[lastPublicIdx])) {
+    lastPublicIdx--;
   }
+
+  // Rightmost public hop before skipping trustedProxyHops (used to check direct Cloudflare edge hop)
+  const rightmostPublicXff = lastPublicIdx >= 0 ? hopList[lastPublicIdx] : null;
+
+  // Apply CLIENT_IP_TRUSTED_PROXY_HOPS: skip N rightmost public proxy entries (clamped to index 0)
+  let targetPublicIdx =
+    lastPublicIdx >= 0 ? Math.max(0, lastPublicIdx - trustedProxyHops) : -1;
+  while (targetPublicIdx > 0 && isPrivateIp(hopList[targetPublicIdx])) {
+    targetPublicIdx--;
+  }
+  const effectivePublicXff =
+    targetPublicIdx >= 0 && !isPrivateIp(hopList[targetPublicIdx])
+      ? hopList[targetPublicIdx]
+      : null;
 
   const candidateCfHeader: "cf-connecting-ip" | "true-client-ip" | null = cfConnectingIp
     ? "cf-connecting-ip"
@@ -199,44 +248,56 @@ export function getClientIpDetails(req: Request | NextRequest): ClientIpDetails 
 
   if (candidateCfHeader && candidateCfIp && hasValidCfRay) {
     const verifiedViaXff =
-      rightmostPublicXff !== null &&
-      (isCloudflareIp(rightmostPublicXff) || rightmostPublicXff === candidateCfIp);
+      (rightmostPublicXff !== null &&
+        (isCloudflareIp(rightmostPublicXff) || rightmostPublicXff === candidateCfIp)) ||
+      (effectivePublicXff !== null &&
+        (isCloudflareIp(effectivePublicXff) || effectivePublicXff === candidateCfIp));
     const verifiedWithoutXff =
-      xffParts.length === 0 && process.env.TRUST_CLOUDFLARE_PROXY === "true";
+      hopList.length === 0 && process.env.TRUST_CLOUDFLARE_PROXY === "true";
 
     if (verifiedViaXff || verifiedWithoutXff) {
       return {
         ip: candidateCfIp,
+        rule: "cloudflare-verified-header",
         sourceHeader: candidateCfHeader,
         rawHeaderValue: candidateCfIp,
         isPrivate: isPrivateIp(candidateCfIp),
         cloudflareVerified: true,
+        hopList,
+        trustedProxyHops,
       };
     }
   }
 
-  if (xffParts.length > 0) {
-    // Walk right-to-left: skip internal RFC 1918 proxy IPs appended by Render's internal mesh.
-    // Note: if the last public entry is a public proxy (non-private), we stop at that last public entry
-    // and never trust hops to its left because an untrusted public proxy can forge prior XFF entries.
-    if (rightmostPublicXff) {
+  if (hopList.length > 0) {
+    if (effectivePublicXff) {
+      const skippedTrustedHops =
+        trustedProxyHops > 0 && targetPublicIdx < lastPublicIdx;
       return {
-        ip: rightmostPublicXff,
+        ip: effectivePublicXff,
+        rule: skippedTrustedHops
+          ? "xff-trusted-proxy-hops"
+          : "xff-rightmost-public",
         sourceHeader: "x-forwarded-for",
         rawHeaderValue: forwardedFor || undefined,
         isPrivate: false,
         cloudflareVerified: false,
+        hopList,
+        trustedProxyHops,
       };
     }
 
     // If all hops are internal/private (local dev or internal VPC), return rightmost hop
-    const rightmost = xffParts[xffParts.length - 1];
+    const rightmost = hopList[hopList.length - 1];
     return {
       ip: rightmost,
+      rule: "xff-rightmost-private",
       sourceHeader: "x-forwarded-for",
       rawHeaderValue: forwardedFor || undefined,
       isPrivate: isPrivateIp(rightmost),
       cloudflareVerified: false,
+      hopList,
+      trustedProxyHops,
     };
   }
 
@@ -245,18 +306,24 @@ export function getClientIpDetails(req: Request | NextRequest): ClientIpDetails 
     const trimmed = realIp.trim();
     return {
       ip: trimmed,
+      rule: "x-real-ip",
       sourceHeader: "x-real-ip",
       rawHeaderValue: realIp,
       isPrivate: isPrivateIp(trimmed),
       cloudflareVerified: false,
+      hopList,
+      trustedProxyHops,
     };
   }
 
   return {
     ip: "127.0.0.1",
+    rule: "loopback-fallback",
     sourceHeader: "fallback",
     isPrivate: true,
     cloudflareVerified: false,
+    hopList,
+    trustedProxyHops,
   };
 }
 

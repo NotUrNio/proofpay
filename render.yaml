@@ -44,6 +44,8 @@ services:
         value: "25.00"
       - key: MAX_DAILY_REAL_PAYOUT_COUNT
         value: "5"
+      - key: CLIENT_IP_TRUSTED_PROXY_HOPS
+        sync: false
 
 
 databases:

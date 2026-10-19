@@ -18,9 +18,13 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
+    derivedIp: details.ip,
     clientIp: details.ip,
+    rule: details.rule,
     sourceHeader: details.sourceHeader,
     cloudflareVerified: details.cloudflareVerified,
+    hopList: details.hopList,
+    trustedProxyHops: details.trustedProxyHops,
     rawHeaderValue: details.rawHeaderValue || null,
     isPrivate: details.isPrivate,
     allForwardingHeaders: {
@@ -30,6 +34,6 @@ export async function GET(req: NextRequest) {
       "x-forwarded-for": req.headers.get("x-forwarded-for"),
       "x-real-ip": req.headers.get("x-real-ip"),
     },
-    message: `Connecting client IP derived as '${details.ip}' via '${details.sourceHeader}' (cloudflareVerified=${details.cloudflareVerified}).`,
+    message: `Connecting client IP derived as '${details.ip}' via rule '${details.rule}' (source='${details.sourceHeader}', cloudflareVerified=${details.cloudflareVerified}, trustedProxyHops=${details.trustedProxyHops}).`,
   });
 }
