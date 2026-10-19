@@ -191,9 +191,38 @@ async function main() {
     })
   );
 
-  // 5. Gitleaks Full History Secrets Scanner
+  // 5. Gitleaks Full History Secrets Scanner & In-Preflight Canary
   results.push(
-    runStep(5, "Gitleaks Full History Secrets Scan", "Security & Privacy", () => {
+    runStep(5, "Gitleaks Full History Secrets Scan & Canary", "Security & Privacy", () => {
+      // 5a. In-preflight canary: write temporary file in scripts/, ensure rule fires, delete file in finally
+      const canaryFile = path.join(root, "scripts/canary-preflight-test.ts");
+      try {
+        fs.writeFileSync(
+          canaryFile,
+          '// Temporary preflight canary test\nconst leaked_secret_password = "canary_test_password_secret_12345";\n',
+          "utf8"
+        );
+        let canaryFired = false;
+        let canaryOutput = "";
+        try {
+          execSync(
+            "gitleaks detect --no-git --source scripts/canary-preflight-test.ts --config .gitleaks.toml --verbose",
+            { cwd: root, stdio: "pipe", encoding: "utf8", timeout: 15000 }
+          );
+        } catch (err: any) {
+          canaryFired = true;
+          canaryOutput = (err.stdout || "") + (err.stderr || "");
+        }
+        if (!canaryFired || !canaryOutput.includes("scripts-password-or-secret-assignment")) {
+          throw new Error("Gitleaks canary failed: scripts-password-or-secret-assignment rule did not fire on canary file");
+        }
+      } finally {
+        if (fs.existsSync(canaryFile)) {
+          fs.unlinkSync(canaryFile);
+        }
+      }
+
+      // 5b. Verify accepted historical finding fingerprint in .gitleaksignore
       const gitleaksIgnorePath = path.join(root, ".gitleaksignore");
       if (!fs.existsSync(gitleaksIgnorePath)) {
         throw new Error(".gitleaksignore missing; cannot verify accepted historical fingerprint");
@@ -205,14 +234,19 @@ async function main() {
         throw new Error("Unexpected .gitleaksignore content: missing expected fingerprint");
       }
 
-      execSync("gitleaks detect --source . --config .gitleaks.toml", {
+      // 5c. Scan full history
+      const scanOutput = execSync("gitleaks detect --source . --config .gitleaks.toml -v", {
         cwd: root,
         stdio: "pipe",
+        encoding: "utf8",
         timeout: 45000,
       });
+      const commitMatch = scanOutput.match(/(\d+)\s+commits scanned/);
+      const commitCount = commitMatch ? commitMatch[1] : "all";
+
       return {
         passed: true,
-        details: "Full git history scanned (39 commits); 0 active leaks (1 historical finding accepted via commit fingerprint in .gitleaksignore)",
+        details: `Canary verified; full git history scanned (${commitCount} commits); 0 active leaks (1 historical finding accepted via fingerprint in .gitleaksignore)`,
       };
     })
   );

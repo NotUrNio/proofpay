@@ -12,9 +12,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Forbidden: Demo state reset is disabled (ENABLE_DEMO_RESET is not set to 'true')",
+          error: "Not Found: Demo state reset is disabled (ENABLE_DEMO_RESET is not set to 'true')",
         },
-        { status: 403 }
+        { status: 404 }
       );
     }
 

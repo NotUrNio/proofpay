@@ -66,14 +66,14 @@ describe("POST /api/demo/reset Security & Invariants", () => {
     expect(body.error).toContain("Access Denied");
   });
 
-  it("4. rejects reviewer when ENABLE_DEMO_RESET is false or unset", async () => {
+  it("4. rejects reviewer when ENABLE_DEMO_RESET is false or unset with HTTP 404", async () => {
     process.env.ENABLE_DEMO_RESET = "false";
     const req = new NextRequest("http://localhost:3000/api/demo/reset", {
       method: "POST",
       headers: { cookie: "proofpay_role=reviewer" },
     });
     const res = await postDemoReset(req);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toContain("Demo state reset is disabled");
   });
