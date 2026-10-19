@@ -18,7 +18,7 @@ async function main() {
   const recipientEmail =
     process.env.PAYPAL_SANDBOX_PERSONAL_EMAIL ||
     process.argv[2] ||
-    "sb-buyer@business.example.com"; // User can pass as argument or env
+    "freelancer@example.test"; // User can pass as argument or env
 
   if (!clientId || !clientSecret || clientId.includes("your_sandbox_") || clientSecret.includes("your_sandbox_")) {
     console.error("\n[FAIL] Missing real PayPal Sandbox credentials.");

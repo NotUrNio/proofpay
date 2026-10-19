@@ -47,8 +47,8 @@ async function main() {
   const jobId = crypto.randomUUID();
   const amount = "5.00";
   const currency = "USD";
-  const clientEmail = "sb-dmohp53303471@business.example.com";
-  const freelancerEmail = "sb-ft17i53364262@personal.example.com";
+  const clientEmail = "client@example.test";
+  const freelancerEmail = "freelancer@example.test";
 
   const [job] = await db
     .insert(jobs)
@@ -120,8 +120,8 @@ async function main() {
   console.log(`ACTION REQUIRED: Approve the $5.00 Escrow Funding in PayPal Sandbox`);
   console.log(`Approval URL:\n${approveLink}\n`);
   console.log(`Login Credentials:`);
-  console.log(`  Email:    sb-ft17i53364262@personal.example.com`);
-  console.log(`  Password: Jf$5|9$t (or personal sandbox account password)`);
+  console.log(`  Email:    <your-sandbox-personal-email>`);
+  console.log(`  Password: <your-sandbox-personal-password>`);
   console.log(`--------------------------------------------------------------------------------`);
 
   console.log("\nWaiting for sandbox buyer approval (auto-polling Order status)...");

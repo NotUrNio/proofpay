@@ -1,5 +1,8 @@
+[extend]
+useDefault = true
+
 [allowlist]
-description = "Ignore build artifacts and test fixtures"
+description = "Ignore build artifacts, tests, and mock HMAC secret"
 paths = [
   '''.next/.*''',
   '''node_modules/.*''',
@@ -10,3 +13,4 @@ paths = [
 regexes = [
   '''test_signing_secret_at_least_32_characters_long_12345''',
 ]
+
