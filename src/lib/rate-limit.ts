@@ -69,6 +69,7 @@ export function isPrivateIp(ip: string): boolean {
     clean.startsWith("192.168.") ||
     clean.startsWith("169.254.") ||
     clean.startsWith("fc00:") ||
+    clean.startsWith("fd00:") ||
     clean.startsWith("fe80:")
   ) {
     return true;
@@ -80,60 +81,163 @@ export function isPrivateIp(ip: string): boolean {
   return false;
 }
 
+/**
+ * Published Cloudflare IPv4 CIDR ranges (https://www.cloudflare.com/ips-v4)
+ * and IPv6 prefixes (https://www.cloudflare.com/ips-v6) used to verify whether
+ * the immediate upstream public proxy hop is an authentic Cloudflare edge node.
+ */
+const CLOUDFLARE_IPV4_CIDRS: Array<[number, number]> = [
+  [ipv4ToInt("173.245.48.0"), 20],
+  [ipv4ToInt("103.21.244.0"), 22],
+  [ipv4ToInt("103.22.200.0"), 22],
+  [ipv4ToInt("103.31.4.0"), 22],
+  [ipv4ToInt("141.101.64.0"), 18],
+  [ipv4ToInt("108.162.192.0"), 18],
+  [ipv4ToInt("190.93.240.0"), 20],
+  [ipv4ToInt("188.114.96.0"), 20],
+  [ipv4ToInt("197.234.240.0"), 22],
+  [ipv4ToInt("198.41.128.0"), 17],
+  [ipv4ToInt("162.158.0.0"), 15],
+  [ipv4ToInt("104.16.0.0"), 13],
+  [ipv4ToInt("104.24.0.0"), 14],
+  [ipv4ToInt("172.64.0.0"), 13],
+  [ipv4ToInt("131.0.72.0"), 22],
+];
+
+function ipv4ToInt(ip: string): number {
+  const parts = ip.trim().split(".");
+  if (parts.length !== 4) return -1;
+  let res = 0;
+  for (const part of parts) {
+    if (!/^\d+$/.test(part)) return -1;
+    const n = Number(part);
+    if (n < 0 || n > 255) return -1;
+    res = ((res << 8) | n) >>> 0;
+  }
+  return res;
+}
+
+export function isCloudflareIp(ip: string): boolean {
+  const clean = ip.trim().toLowerCase();
+  if (clean.includes(":")) {
+    return (
+      clean.startsWith("2400:cb00:") ||
+      clean.startsWith("2606:4700:") ||
+      clean.startsWith("2803:f800:") ||
+      clean.startsWith("2405:b500:") ||
+      clean.startsWith("2405:8100:") ||
+      clean.startsWith("2a06:98c0:") ||
+      clean.startsWith("2c0f:f248:")
+    );
+  }
+  const intVal = ipv4ToInt(clean);
+  if (intVal < 0) return false;
+  for (const [net, prefix] of CLOUDFLARE_IPV4_CIDRS) {
+    const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
+    if ((intVal & mask) >>> 0 === (net & mask) >>> 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export interface ClientIpDetails {
   ip: string;
-  sourceHeader: "cf-connecting-ip" | "x-forwarded-for" | "x-real-ip" | "fallback";
+  sourceHeader:
+    | "cf-connecting-ip"
+    | "true-client-ip"
+    | "x-forwarded-for"
+    | "x-real-ip"
+    | "fallback";
   rawHeaderValue?: string;
   isPrivate: boolean;
+  cloudflareVerified: boolean;
 }
 
 /**
- * Extracts trusted connecting client IP behind Render's reverse proxy with full audit metadata.
- * Prevents IP spoofing: walks right-to-left skipping Render's internal proxy hops,
- * returning the rightmost public client IP appended by Render's trusted edge.
+ * Decides whether a request genuinely traversed Cloudflare before trusting
+ * `cf-connecting-ip` or `true-client-ip`:
+ * 1. A valid `cf-ray` header (`<16-hex>-<3-letter-IATA>`) must be present.
+ * 2. If `x-forwarded-for` is present, its rightmost non-private hop must either:
+ *    - belong to a published Cloudflare edge CIDR (`isCloudflareIp`), OR
+ *    - match the `cf-connecting-ip` / `true-client-ip` value (Render's Cloudflare edge
+ *      sets both `cf-connecting-ip` and appends the client IP to `x-forwarded-for`).
+ *    If the rightmost public hop in `x-forwarded-for` is a non-Cloudflare IP that differs
+ *    from `cf-connecting-ip`, then `cf-connecting-ip` was spoofed by the client and is ignored.
+ * 3. If `x-forwarded-for` is absent, `cf-connecting-ip` / `true-client-ip` is only trusted
+ *    when `TRUST_CLOUDFLARE_PROXY=true` and `cf-ray` is valid.
  */
 export function getClientIpDetails(req: Request | NextRequest): ClientIpDetails {
-  const cfIp = req.headers.get("cf-connecting-ip");
-  if (cfIp) {
-    const trimmed = cfIp.trim();
-    return {
-      ip: trimmed,
-      sourceHeader: "cf-connecting-ip",
-      rawHeaderValue: cfIp,
-      isPrivate: isPrivateIp(trimmed),
-    };
+  const cfRay = (req.headers.get("cf-ray") || "").trim();
+  const hasValidCfRay = /^[0-9a-f]{16}-[a-z]{3}$/i.test(cfRay);
+  const cfConnectingIp = (req.headers.get("cf-connecting-ip") || "").trim();
+  const trueClientIp = (req.headers.get("true-client-ip") || "").trim();
+  const forwardedFor = req.headers.get("x-forwarded-for");
+
+  const xffParts = forwardedFor
+    ? forwardedFor
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+
+  // Find the rightmost non-private hop in X-Forwarded-For (skipping internal RFC 1918 proxy hops)
+  let rightmostPublicXff: string | null = null;
+  for (let i = xffParts.length - 1; i >= 0; i--) {
+    if (!isPrivateIp(xffParts[i])) {
+      rightmostPublicXff = xffParts[i];
+      break;
+    }
   }
 
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const parts = forwardedFor
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const candidateCfHeader: "cf-connecting-ip" | "true-client-ip" | null = cfConnectingIp
+    ? "cf-connecting-ip"
+    : trueClientIp
+      ? "true-client-ip"
+      : null;
+  const candidateCfIp = cfConnectingIp || trueClientIp;
 
-    if (parts.length > 0) {
-      // Walk right-to-left: skip any internal proxy IPs appended by Render's internal routing mesh
-      for (let i = parts.length - 1; i >= 0; i--) {
-        const candidate = parts[i];
-        if (!isPrivateIp(candidate)) {
-          return {
-            ip: candidate,
-            sourceHeader: "x-forwarded-for",
-            rawHeaderValue: forwardedFor,
-            isPrivate: false,
-          };
-        }
-      }
+  if (candidateCfHeader && candidateCfIp && hasValidCfRay) {
+    const verifiedViaXff =
+      rightmostPublicXff !== null &&
+      (isCloudflareIp(rightmostPublicXff) || rightmostPublicXff === candidateCfIp);
+    const verifiedWithoutXff =
+      xffParts.length === 0 && process.env.TRUST_CLOUDFLARE_PROXY === "true";
 
-      // If all are internal/private (local dev, test VPC), return rightmost hop
-      const rightmost = parts[parts.length - 1];
+    if (verifiedViaXff || verifiedWithoutXff) {
       return {
-        ip: rightmost,
-        sourceHeader: "x-forwarded-for",
-        rawHeaderValue: forwardedFor,
-        isPrivate: isPrivateIp(rightmost),
+        ip: candidateCfIp,
+        sourceHeader: candidateCfHeader,
+        rawHeaderValue: candidateCfIp,
+        isPrivate: isPrivateIp(candidateCfIp),
+        cloudflareVerified: true,
       };
     }
+  }
+
+  if (xffParts.length > 0) {
+    // Walk right-to-left: skip internal RFC 1918 proxy IPs appended by Render's internal mesh.
+    // Note: if the last public entry is a public proxy (non-private), we stop at that last public entry
+    // and never trust hops to its left because an untrusted public proxy can forge prior XFF entries.
+    if (rightmostPublicXff) {
+      return {
+        ip: rightmostPublicXff,
+        sourceHeader: "x-forwarded-for",
+        rawHeaderValue: forwardedFor || undefined,
+        isPrivate: false,
+        cloudflareVerified: false,
+      };
+    }
+
+    // If all hops are internal/private (local dev or internal VPC), return rightmost hop
+    const rightmost = xffParts[xffParts.length - 1];
+    return {
+      ip: rightmost,
+      sourceHeader: "x-forwarded-for",
+      rawHeaderValue: forwardedFor || undefined,
+      isPrivate: isPrivateIp(rightmost),
+      cloudflareVerified: false,
+    };
   }
 
   const realIp = req.headers.get("x-real-ip");
@@ -144,6 +248,7 @@ export function getClientIpDetails(req: Request | NextRequest): ClientIpDetails 
       sourceHeader: "x-real-ip",
       rawHeaderValue: realIp,
       isPrivate: isPrivateIp(trimmed),
+      cloudflareVerified: false,
     };
   }
 
@@ -151,6 +256,7 @@ export function getClientIpDetails(req: Request | NextRequest): ClientIpDetails 
     ip: "127.0.0.1",
     sourceHeader: "fallback",
     isPrivate: true,
+    cloudflareVerified: false,
   };
 }
 
