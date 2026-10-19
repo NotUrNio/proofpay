@@ -35,5 +35,6 @@ secretGroup = 1
     '''SECRET_PATTERNS''',
     '''hasSecret''',
     '''canary_test_password''',
+    '''OLD_SANDBOX_PASSWORD''',
   ]
 

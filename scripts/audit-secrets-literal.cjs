@@ -35,8 +35,6 @@ const UNSET_REASONS = {
     "Not defined in local .env; this repo uses GEMINI_API_KEY instead.",
   AG_STUDIO_LICENSE_KEY:
     "Empty in local .env (length 0); AG Studio was replaced with MIT-licensed Recharts.",
-  OLD_SANDBOX_PASSWORD:
-    "Historical password rotated and removed in 6ac5a18.",
 };
 
 const envMap = {};

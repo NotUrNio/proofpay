@@ -8,6 +8,7 @@ import { assertAuthorizedRole } from "@/lib/auth/roles";
 import { checkDemoRateLimits, getClientIp } from "@/lib/rate-limit";
 import { and, eq, gte, sum } from "drizzle-orm";
 import crypto from "crypto";
+import { computeIsRecordedReplay } from "@/lib/replay";
 
 
 export async function POST(
@@ -127,21 +128,12 @@ export async function POST(
       fileBuffer: fileBase64 ? Buffer.from(fileBase64, "base64") : undefined,
     };
 
-    const isBundledDemoJob =
-      job.title.startsWith("Demo:") ||
-      job.clientEmail === "alice@proofpay.io" ||
-      fileName.includes("case_01") ||
-      fileName.includes("summer_sale_banner") ||
-      fileName.includes("happy-path") ||
-      fileName.includes("compliant");
-
-    const isRecordedReplay =
-      body.useRecordedReplay === true ||
-      (body.useRecordedReplay !== false &&
-        (isBundledDemoJob ||
-          process.env.USE_RECORDED_REPLAY === "true" ||
-          process.env.DEMO_USE_RECORDED_REPLAY === "true" ||
-          fileName.includes("replay")));
+    const isRecordedReplay = computeIsRecordedReplay({
+      jobTitle: job.title,
+      clientEmail: job.clientEmail,
+      fileName,
+      bodyUseRecordedReplay: body.useRecordedReplay,
+    });
 
     let verdict;
     if (

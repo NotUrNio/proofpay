@@ -1,31 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { computeIsRecordedReplay } from "@/lib/replay";
 
 describe("Item 5: Hosted Default for Bundled Guided Scenarios is Recorded Replay", () => {
-  function computeIsRecordedReplay(params: {
-    jobTitle: string;
-    clientEmail: string;
-    fileName: string;
-    bodyUseRecordedReplay?: boolean;
-    envUseRecordedReplay?: string;
-    envDemoUseRecordedReplay?: string;
-  }): boolean {
-    const isBundledDemoJob =
-      params.jobTitle.startsWith("Demo:") ||
-      params.clientEmail === "alice@proofpay.io" ||
-      params.fileName.includes("case_01") ||
-      params.fileName.includes("summer_sale_banner") ||
-      params.fileName.includes("happy-path") ||
-      params.fileName.includes("compliant");
-
-    return (
-      params.bodyUseRecordedReplay === true ||
-      (params.bodyUseRecordedReplay !== false &&
-        (isBundledDemoJob ||
-          params.envUseRecordedReplay === "true" ||
-          params.envDemoUseRecordedReplay === "true" ||
-          params.fileName.includes("replay")))
-    );
-  }
 
   it("1. defaults to recorded replay for bundled demo jobs when useRecordedReplay is omitted/unset", () => {
     const result = computeIsRecordedReplay({
