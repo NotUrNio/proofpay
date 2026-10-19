@@ -16,6 +16,33 @@
   "currency": "USD",
   "clientEmail": "alice@proofpay.io",
   "freelancerEmail": "priya@proofpay.io",
-  "ledgerChainValid": true,
-  "timestamp": "2026-10-18T16:07:40.312Z"
+  "ledgerChainValid": false,
+  "timestamp": "2026-10-18T16:07:40.312Z",
+  "sanitization": {
+    "sourceFile": ".data/single-real-run.json",
+    "substitutedFields": [
+      {
+        "field": "clientEmail",
+        "replacedWith": "alice@proofpay.io",
+        "reason": "Redacted 19-char PayPal Sandbox buyer account email"
+      },
+      {
+        "field": "freelancerEmail",
+        "replacedWith": "priya@proofpay.io",
+        "reason": "Redacted 23-char PayPal Sandbox personal payee email"
+      }
+    ],
+    "unalteredFields": [
+      "jobId",
+      "orderId",
+      "captureId",
+      "payoutBatchId",
+      "payoutItemId",
+      "ledgerEvents",
+      "amount",
+      "currency",
+      "ledgerChainValid",
+      "timestamp"
+    ]
+  }
 }

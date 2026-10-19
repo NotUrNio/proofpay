@@ -9,7 +9,7 @@ ProofPay is an autonomous milestone escrow and settlement engine that liberates 
 > [!IMPORTANT]
 > **Guided Demos vs. Real PayPal Sandbox Settlement**:
 > - **Guided Web Demos (Bundled Scenarios)**: Use **simulated escrow funding (`isMock=true`) and simulated payouts (`PAYOUT_RELEASED [SIMULATED]`)** so judges can run interactive scenarios repeatedly without depleting the shared platform PayPal Sandbox balance.
-> - **Real PayPal Sandbox Funding & Payouts**: Shown in the **recorded end-to-end run (`pnpm demo:run`, committed sanitized receipt at [`eval/results/single-real-run.json`](eval/results/single-real-run.json); local raw output written to gitignored `.data/single-real-run.json`)** and in **custom buyer-captured runs** where a real PayPal Orders v2 capture (`isMock=false`), `PAYPAL_MOCK=false`, and `PAYPAL_SANDBOX_PAYEE_EMAIL` are present. Real sandbox payouts are protected by a **hard cap of 5 payouts / $25.00 USD per day** (`MAX_DAILY_REAL_PAYOUT_COUNT=5`, `MAX_DAILY_REAL_PAYOUT_USD=25.00`).
+> - **Real PayPal Sandbox Funding & Payouts**: Shown in the **recorded end-to-end run (`pnpm demo:run`, committed sanitized receipt at [`eval/results/single-real-run.json`](eval/results/single-real-run.json) with a `"sanitization"` object listing the substituted `clientEmail` and `freelancerEmail` fields while keeping PayPal IDs, `ledgerChainValid`, and `timestamp` verbatim from gitignored `.data/single-real-run.json`)** and in **custom buyer-captured runs** where a real PayPal Orders v2 capture (`isMock=false`), `PAYPAL_MOCK=false`, and `PAYPAL_SANDBOX_PAYEE_EMAIL` are present. Real sandbox payouts are protected by a **hard cap of 5 payouts / $25.00 USD per day** (`MAX_DAILY_REAL_PAYOUT_COUNT=5`, `MAX_DAILY_REAL_PAYOUT_USD=25.00`).
 
 ---
 
@@ -117,6 +117,7 @@ Populate `.env` with your PayPal Sandbox credentials and Gemini key:
 - `MAX_DAILY_REAL_PAYOUT_COUNT` / `MAX_DAILY_REAL_PAYOUT_USD`: Hard daily cap on real PayPal Sandbox payouts (default `5` payouts / `25.00` USD per day)
 - `CLIENT_IP_TRUSTED_PROXY_HOPS`: Number of rightmost public `X-Forwarded-For` proxy hops to skip as trusted proxies (integer `0..10`, default `0`)
 - `ENABLE_DEBUG_CLIENT_IP`: Enables reviewer-only `/api/debug/client-ip` when set to `"true"` (default `false`, returns HTTP 404 when unset/false)
+- `ENABLE_TEST_ROLE_HEADER`: Allows the test-only `x-proofpay-role` header when set to `"true"` (default `false` in production; set only in `playwright.config.ts`)
 
 ### 3. Start Database & Push Schema
 ```bash
@@ -143,11 +144,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 👥 Demo Personas & Role Switching (Cookie Personas, Not Production Auth)
 
-ProofPay uses **demo personas via cookie (`proofpay_role` / `x-proofpay-role`), not production authentication**, so hackathon judges can switch perspectives in one click via the top navigation bar without account registration. Server-side route handlers and `/jobs/[id]` SSR enforce role and ownership rules (`canUserAccessJob` + Next.js 15 `forbidden()`) against the active persona. Production authentication would replace cookie-selected personas with signed session tokens (e.g., Auth.js/OIDC + Log In with PayPal), cryptographic user-ID binding on job mutations, and CSRF-protected HTTP-only cookies.
+ProofPay uses **demo personas via cookie (`proofpay_role`), not production authentication**, so hackathon judges can switch perspectives in one click via the top navigation bar without account registration. When no cookie is present, `getSessionUser` defaults to the non-privileged **`client` (`alice@proofpay.io`)** read-only overview persona; **every route that mutates money, mandates, or policy (as well as reviewer-only routes) requires an explicit `proofpay_role` cookie and rejects cookie-less requests with HTTP 403**. The `x-proofpay-role` request header is ignored in production (`NODE_ENV="production"`) unless `ENABLE_TEST_ROLE_HEADER=true` (default off, set only in `playwright.config.ts`). Server-side route handlers and `/jobs/[id]` SSR enforce role and ownership rules (`canUserAccessJob` + Next.js 15 `forbidden()`) against the active persona. Production authentication would replace cookie-selected personas with signed session tokens (e.g., Auth.js/OIDC + Log In with PayPal), cryptographic user-ID binding on job mutations, and CSRF-protected HTTP-only cookies.
 
 | Demo Persona | Email Address | Cookie Value (`proofpay_role`) | Permissions & Available Routes |
 | :--- | :--- | :--- | :--- |
-| **Client** | `alice@proofpay.io` | `client` | Create milestone jobs (`/jobs/new`), sign mandates, fund escrow with PayPal Orders v2 (`/jobs/[id]`) |
+| **Client** *(Default view)* | `alice@proofpay.io` | `client` | Default read-only landing overview; with `proofpay_role=client` cookie, create milestone jobs (`/jobs/new`), sign mandates, fund escrow with PayPal Orders v2 (`/jobs/[id]`) |
 | **Freelancer** | `priya@proofpay.io` | `freelancer` | View assigned milestones, upload deliverables, trigger verification (`/jobs/[id]/submit`) |
 | **Reviewer** | `reviewer@proofpay.io` | `reviewer` | Human Review Inbox (`/inbox`), Policy Editor (`/policy`), Chaos Negative Testing (`/chaos`), Analytics Workspace (`/studio`) |
 
@@ -167,7 +168,7 @@ When accessing the hosted deployment on Render's free tier (`https://proofpay-68
 
 ## 💳 Live Single-Run Proof on PayPal Sandbox (End-to-End Traceability)
 
-While the interactive guided demos in the web UI use **simulated funding and simulated payouts (`[SIMULATED]`)** to prevent unbacked payouts from draining the shared platform sandbox balance, real PayPal Sandbox funding and payouts are executed in the recorded single-run (`pnpm demo:run`, committed sanitized receipt at [`eval/results/single-real-run.json`](eval/results/single-real-run.json) and written locally to gitignored `.data/single-real-run.json`) and in custom buyer-captured runs (subject to the hard daily cap of **5 payouts / $25.00 USD per day**).
+While the interactive guided demos in the web UI use **simulated funding and simulated payouts (`[SIMULATED]`)** to prevent unbacked payouts from draining the shared platform sandbox balance, real PayPal Sandbox funding and payouts are executed in the recorded single-run (`pnpm demo:run`, committed sanitized receipt at [`eval/results/single-real-run.json`](eval/results/single-real-run.json) with a `"sanitization"` object listing the substituted `clientEmail` and `freelancerEmail` fields while preserving PayPal IDs, `ledgerChainValid`, and `timestamp` verbatim from gitignored `.data/single-real-run.json`) and in custom buyer-captured runs (subject to the hard daily cap of **5 payouts / $25.00 USD per day**).
 
 The following real end-to-end execution was recorded through the ProofPay service stack against live **PayPal Sandbox** (`PAYPAL_MOCK=false`) using real buyer authentication:
 

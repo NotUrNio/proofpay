@@ -32,7 +32,10 @@ test.describe("ProofPay UI Redesign Smoke Tests", () => {
     await expect(page.locator("body")).toContainText("Priya");
   });
 
-  test("2. Guided demo scenario executes live pipeline end-to-end", async ({ page }) => {
+  test("2. Guided demo scenario executes live pipeline end-to-end", async ({ page, context }) => {
+    // Clear cookies to verify a first-time visitor with no cookie defaults to Alice (Client)
+    // and can run the guided demo end-to-end
+    await context.clearCookies();
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -149,8 +152,25 @@ test.describe("ProofPay UI Redesign Smoke Tests", () => {
     await expect(page.locator("text=ACTIVE").first()).toBeVisible();
   });
 
-  test("7. Wrong-role access rejection (Freelancer cannot mutate reviewer endpoints)", async ({ page, context }) => {
-    // Set role to freelancer
+  test("7. Wrong-role access rejection (Freelancer and cookie-less requests cannot mutate reviewer or mandate endpoints)", async ({ page, context }) => {
+    // 1. Clear cookies: no-cookie request cannot approve/reject/restore or create mandates
+    await context.clearCookies();
+    const noCookieInbox = await page.request.post("http://localhost:3000/api/inbox", {
+      data: { jobId: "fake-job-id", action: "approve" },
+    });
+    expect(noCookieInbox.status()).toBe(403);
+
+    const noCookiePolicy = await page.request.post("http://localhost:3000/api/policy", {
+      data: { action: "restore", versionId: "fake-id" },
+    });
+    expect(noCookiePolicy.status()).toBe(403);
+
+    const noCookieJob = await page.request.post("http://localhost:3000/api/jobs", {
+      data: { title: "Unauthorized Job", amount: "5.00" },
+    });
+    expect(noCookieJob.status()).toBe(403);
+
+    // 2. Set role to freelancer
     await context.addCookies([
       {
         name: "proofpay_role",

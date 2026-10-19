@@ -101,6 +101,13 @@ export default function NewJobPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      if (typeof document !== "undefined" && !document.cookie.includes("proofpay_role=")) {
+        await fetch("/api/auth/role", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: "client" }),
+        });
+      }
       const res = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

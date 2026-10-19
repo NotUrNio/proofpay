@@ -8,8 +8,10 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   await ensureDatabaseSchema();
 
-  // Access rule matches /studio: available to all authenticated personas (client, freelancer, reviewer)
-  const auth = assertAuthorizedRole(req, ["client", "freelancer", "reviewer"]);
+  // Access rule matches /studio: available to all personas including initial read-only client view
+  const auth = assertAuthorizedRole(req, ["client", "freelancer", "reviewer"], {
+    allowImplicitDefault: true,
+  });
   if ("errorResponse" in auth) {
     return auth.errorResponse;
   }

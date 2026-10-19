@@ -81,7 +81,10 @@ export function RoleSwitcher() {
   }, []);
 
   const handleSelectRole = async (role: UserRole) => {
-    if (role === currentRole) {
+    const hasCookie =
+      typeof document !== "undefined" &&
+      document.cookie.includes(`proofpay_role=${role}`);
+    if (role === currentRole && hasCookie) {
       setIsOpen(false);
       return;
     }

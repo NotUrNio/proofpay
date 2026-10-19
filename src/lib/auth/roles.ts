@@ -29,41 +29,114 @@ export const DEMO_USERS: Record<UserRole, SessionUser> = {
 export const ROLE_COOKIE_NAME = "proofpay_role";
 
 /**
- * Extracts the current session user from the incoming request (cookie or header).
- * Defaults to 'reviewer' if not set, ensuring judges have immediate access, but
- * role switching is fully dynamic and verified server-side.
+ * Returns true if the test-only `x-proofpay-role` header is allowed in the current environment.
+ * Ignored in production unless `ENABLE_TEST_ROLE_HEADER=true` is explicitly set.
  */
-export function getSessionUser(req: NextRequest | Request): SessionUser {
-  let role: UserRole | undefined;
+export function isTestRoleHeaderAllowed(): boolean {
+  return (
+    process.env.NODE_ENV !== "production" ||
+    process.env.ENABLE_TEST_ROLE_HEADER === "true"
+  );
+}
 
+function isValidUserRole(val: unknown): val is UserRole {
+  return val === "client" || val === "freelancer" || val === "reviewer";
+}
+
+/**
+ * Extracts a valid UserRole from the request's `proofpay_role` cookie (via NextRequest.cookies or Cookie header).
+ */
+export function extractRoleFromCookie(req: NextRequest | Request): UserRole | undefined {
   if ("cookies" in req && typeof req.cookies?.get === "function") {
     const cookie = req.cookies.get(ROLE_COOKIE_NAME);
-    if (cookie?.value && (cookie.value === "client" || cookie.value === "freelancer" || cookie.value === "reviewer")) {
-      role = cookie.value as UserRole;
+    if (cookie?.value && isValidUserRole(cookie.value)) {
+      return cookie.value;
     }
   }
 
-  if (!role && "headers" in req && typeof req.headers?.get === "function") {
+  if ("headers" in req && typeof req.headers?.get === "function") {
+    const cookieHeader = req.headers.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader
+        .split(";")
+        .map((part) => part.trim())
+        .find((part) => part.startsWith(`${ROLE_COOKIE_NAME}=`));
+      if (match) {
+        const rawValue = decodeURIComponent(match.slice(ROLE_COOKIE_NAME.length + 1).trim());
+        if (isValidUserRole(rawValue)) {
+          return rawValue;
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Extracts the explicit role credential and its source ('cookie', 'header', or 'default').
+ * The `x-proofpay-role` header is ignored unless `NODE_ENV !== "production"` or `ENABLE_TEST_ROLE_HEADER=true`.
+ */
+export function extractExplicitRole(
+  req: NextRequest | Request
+): { role?: UserRole; source: "cookie" | "header" | "default" } {
+  const cookieRole = extractRoleFromCookie(req);
+  if (cookieRole) {
+    return { role: cookieRole, source: "cookie" };
+  }
+
+  if (
+    isTestRoleHeaderAllowed() &&
+    "headers" in req &&
+    typeof req.headers?.get === "function"
+  ) {
     const headerRole = req.headers.get("x-proofpay-role");
-    if (headerRole && (headerRole === "client" || headerRole === "freelancer" || headerRole === "reviewer")) {
-      role = headerRole as UserRole;
+    if (headerRole && isValidUserRole(headerRole)) {
+      return { role: headerRole, source: "header" };
     }
   }
 
-  // Fallback to reviewer for smooth judge onboarding, or client
-  const activeRole: UserRole = role || "reviewer";
+  return { role: undefined, source: "default" };
+}
+
+/**
+ * Extracts the current session user from the incoming request (cookie or allowed test header).
+ * Defaults to the non-privileged 'client' persona (Alice) when no cookie/header is present,
+ * matching the landing page overview while keeping reviewer-only routes and mutating routes locked down.
+ */
+export function getSessionUser(req: NextRequest | Request): SessionUser {
+  const { role } = extractExplicitRole(req);
+  const activeRole: UserRole = role || "client";
   return DEMO_USERS[activeRole];
 }
 
 /**
- * Server-side guard to verify the current session has one of the allowed roles.
- * Returns null if authorized, or a 403 Forbidden NextResponse if unauthorized.
+ * Server-side guard to verify the current session has an explicit role credential (cookie or allowed test header)
+ * and belongs to one of the allowed roles.
+ * Every route that mutates money, mandates, or policy (and reviewer-only endpoints) rejects requests with no role cookie.
  */
 export function assertAuthorizedRole(
   req: NextRequest | Request,
-  allowedRoles: UserRole[]
+  allowedRoles: UserRole[],
+  options?: { allowImplicitDefault?: boolean }
 ): { user: SessionUser } | { errorResponse: NextResponse } {
+  const { source } = extractExplicitRole(req);
   const user = getSessionUser(req);
+
+  if (!options?.allowImplicitDefault && source === "default") {
+    return {
+      errorResponse: NextResponse.json(
+        {
+          error: "Forbidden: Role Cookie Required",
+          message: `An explicit '${ROLE_COOKIE_NAME}' role cookie is required to perform this action. Required: [${allowedRoles.join(", ")}]. Switch user role in the top header.`,
+          currentRole: user.role,
+          requiredRoles: allowedRoles,
+        },
+        { status: 403 }
+      ),
+    };
+  }
+
   if (!allowedRoles.includes(user.role)) {
     return {
       errorResponse: NextResponse.json(

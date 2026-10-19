@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DEMO_USERS, getSessionUser, ROLE_COOKIE_NAME, UserRole } from "@/lib/auth/roles";
+import { DEMO_USERS, extractExplicitRole, getSessionUser, ROLE_COOKIE_NAME, UserRole } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +9,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   const user = getSessionUser(req);
+  const { source } = extractExplicitRole(req);
   return NextResponse.json({
     user,
+    hasRoleCookie: source !== "default",
     availableRoles: DEMO_USERS,
   });
 }

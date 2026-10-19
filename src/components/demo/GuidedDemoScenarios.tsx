@@ -155,8 +155,28 @@ export function GuidedDemoScenarios() {
     setResult(null);
     const startTime = Date.now();
 
+    const cookieMatch =
+      typeof document !== "undefined"
+        ? document.cookie.match(/(?:^|;\s*)proofpay_role=(client|freelancer|reviewer)/)
+        : null;
+    const initialCookieRole = (cookieMatch?.[1] as "client" | "freelancer" | "reviewer" | undefined) || "client";
+    const isAlreadyReviewer = initialCookieRole === "reviewer" && Boolean(cookieMatch);
+
+    const setDemoCookieRole = async (role: "client" | "freelancer" | "reviewer") => {
+      await fetch("/api/auth/role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+    };
+
     try {
       setActiveStep("1. Initializing milestone escrow & signing mandate...");
+      // Ensure explicit role cookie for Step 1 (client or reviewer required for POST /api/jobs)
+      if (!isAlreadyReviewer) {
+        await setDemoCookieRole("client");
+      }
+
       // Step 1: Create Job
       const createRes = await fetch("/api/jobs", {
         method: "POST",
@@ -172,7 +192,7 @@ export function GuidedDemoScenarios() {
       });
       const createData = await createRes.json();
       const jobId = createData.job?.id;
-      if (!jobId) throw new Error("Failed to create demo job");
+      if (!jobId) throw new Error(createData.message || createData.error || "Failed to create demo job");
 
       setActiveStep("2. Loading sample deliverable fixture...");
       // Fetch sample deliverable image as base64
@@ -185,6 +205,11 @@ export function GuidedDemoScenarios() {
 
       const modeText = useLiveGemini ? "Live Gemini Model" : "Recorded Model Responses";
       setActiveStep(`3. Running pipeline via ${modeText} (Hard checks -> Sensor -> TS Guard)...`);
+      // Ensure explicit role cookie for Step 3 (freelancer or reviewer required for POST /api/jobs/[id]/submit)
+      if (!isAlreadyReviewer) {
+        await setDemoCookieRole("freelancer");
+      }
+
       const submitRes = await fetch(`/api/jobs/${jobId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -228,6 +253,9 @@ export function GuidedDemoScenarios() {
         elapsedMs: Date.now() - startTime,
       });
     } finally {
+      if (!isAlreadyReviewer) {
+        await setDemoCookieRole(initialCookieRole).catch(() => {});
+      }
       setRunningId(null);
       setActiveStep("");
     }
