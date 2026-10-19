@@ -280,5 +280,82 @@ test.describe("ProofPay UI Redesign Smoke Tests", () => {
     await page.locator('button:has-text("View as Chart")').first().click();
     await expect(tableToggles.first()).toBeVisible();
   });
+
+  test("12. SSR & RSC Job Ownership Access Control: denies wrong-role user with HTTP 403 and leaks zero job fields in HTML or RSC payload", async ({
+    page,
+    context,
+  }) => {
+    const uniqueSuffix = Date.now().toString().slice(-6);
+    const secretTitle = `CONFIDENTIAL_OMEGA_PROJECT_${uniqueSuffix}`;
+    const secretAmount = "391.42";
+    const secretOwner = `vault-owner-${uniqueSuffix}@acme.test`;
+    const secretPayee = `vault-contractor-${uniqueSuffix}@acme.test`;
+
+    // 1. Create a private job as client/reviewer
+    await context.addCookies([
+      {
+        name: "proofpay_role",
+        value: "client",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+    const createRes = await page.request.post("http://localhost:3000/api/jobs", {
+      data: {
+        title: secretTitle,
+        description: "Private enterprise deliverable",
+        clientEmail: secretOwner,
+        freelancerEmail: secretPayee,
+        amount: secretAmount,
+        currency: "USD",
+      },
+    });
+    expect(createRes.status()).toBe(200);
+    const created = await createRes.json();
+    const privateJobId = created.job.id as string;
+    const mandateSigPrefix = (created.mandate.signature as string).slice(0, 16);
+
+    // 2. Switch role to freelancer Priya (priya@proofpay.io !== secretPayee)
+    await context.addCookies([
+      {
+        name: "proofpay_role",
+        value: "freelancer",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+
+    // 3. Verify API route returns HTTP 403
+    const apiRes = await page.request.get(`http://localhost:3000/api/jobs/${privateJobId}`);
+    expect(apiRes.status()).toBe(403);
+
+    // 4. Verify SSR HTML document: Next.js 15.5 streams RootLayout shell as HTTP 200
+    // and emits NEXT_HTTP_ERROR_FALLBACK;403 (forbidden.tsx boundary) with zero private fields
+    const htmlRes = await page.request.get(`http://localhost:3000/jobs/${privateJobId}`);
+    expect(htmlRes.status()).toBe(200);
+    const htmlBody = await htmlRes.text();
+    expect(htmlBody).toContain("403: Access Denied");
+    expect(htmlBody).toContain("NEXT_HTTP_ERROR_FALLBACK;403");
+    expect(htmlBody).not.toContain(secretTitle);
+    expect(htmlBody).not.toContain(secretAmount);
+    expect(htmlBody).not.toContain(secretPayee);
+    expect(htmlBody).not.toContain(secretOwner);
+    expect(htmlBody).not.toContain(mandateSigPrefix);
+
+    // 5. Verify raw RSC Flight payload (RSC: 1) contains NEXT_HTTP_ERROR_FALLBACK;403 and zero private fields
+    const rscRes = await page.request.get(`http://localhost:3000/jobs/${privateJobId}`, {
+      headers: { RSC: "1" },
+    });
+    expect(rscRes.status()).toBe(200);
+    const rscBody = await rscRes.text();
+    expect(rscBody).toContain("403: Access Denied");
+    expect(rscBody).not.toContain(secretTitle);
+    expect(rscBody).not.toContain(secretAmount);
+    expect(rscBody).not.toContain(secretPayee);
+    expect(rscBody).not.toContain(secretOwner);
+    expect(rscBody).not.toContain(mandateSigPrefix);
+  });
 });
+
 

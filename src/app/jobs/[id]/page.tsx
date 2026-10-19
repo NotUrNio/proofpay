@@ -2,6 +2,9 @@ import { db, jobs, criteria, mandates, submissions, verdicts, payments } from "@
 import { eq, desc } from "drizzle-orm";
 import { JobDetailClient } from "./JobDetailClient";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { forbidden, unstable_rethrow } from "next/navigation";
+import { ROLE_COOKIE_NAME, DEMO_USERS, UserRole, canUserAccessJob } from "@/lib/auth/roles";
 
 export async function generateMetadata({
   params,
@@ -10,6 +13,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   try {
+    const cookieStore = await cookies();
+    const roleValue = (cookieStore.get(ROLE_COOKIE_NAME)?.value || "reviewer") as UserRole;
+    const user = DEMO_USERS[roleValue] || DEMO_USERS.reviewer;
+
     const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
     if (!job) {
       return {
@@ -17,11 +24,18 @@ export async function generateMetadata({
         description: "Autonomous milestone escrow and cryptographic verification details.",
       };
     }
+
+    // Enforce access check in generateMetadata via forbidden() so Next.js sets HTTP 403 before shell flush
+    if (!canUserAccessJob(user, job)) {
+      forbidden();
+    }
+
     return {
       title: `${job.title} — ProofPay Milestone`,
       description: job.description || "ProofPay autonomous escrow milestone details and checkpoint verification.",
     };
   } catch (err) {
+    unstable_rethrow(err);
     return {
       title: "Milestone Details — ProofPay",
       description: "ProofPay milestone escrow details.",
@@ -29,10 +43,6 @@ export async function generateMetadata({
   }
 }
 
-import { cookies } from "next/headers";
-import { ROLE_COOKIE_NAME, DEMO_USERS, UserRole, canUserAccessJob } from "@/lib/auth/roles";
-import { ShieldAlert, ArrowLeft } from "lucide-react";
-import Link from "next/link";
 
 export default async function JobPage({
   params,
@@ -51,32 +61,9 @@ export default async function JobPage({
       return <JobDetailClient initialData={null} jobId={id} />;
     }
 
-    // Enforce role and ownership authorization
+    // Enforce role and ownership authorization using Next.js 15.1 forbidden() interrupt (HTTP 403)
     if (!canUserAccessJob(user, job)) {
-      return (
-        <div className="min-h-[60vh] flex items-center justify-center p-4">
-          <div className="bg-[#161B22] border border-rose-900/60 rounded-2xl p-8 max-w-md w-full text-center space-y-4 shadow-xl">
-            <div className="w-12 h-12 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-400 flex items-center justify-center mx-auto">
-              <ShieldAlert className="w-6 h-6" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-xl font-bold text-white">403: Access Denied</h2>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Signed in as <strong>{user.name}</strong>. You do not own this private milestone and are not designated as its recipient or reviewer.
-              </p>
-            </div>
-            <div className="pt-2">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1.5 bg-[#21262D] hover:bg-[#30363D] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Return to Overview</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      );
+      forbidden();
     }
 
     const jobCriteria = await db.select().from(criteria).where(eq(criteria.jobId, id));
@@ -167,6 +154,7 @@ export default async function JobPage({
 
     return <JobDetailClient initialData={initialData} jobId={id} />;
   } catch (err) {
+    unstable_rethrow(err);
     console.error("Error loading job on server:", err);
     return <JobDetailClient initialData={null} jobId={id} />;
   }
