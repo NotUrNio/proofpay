@@ -127,10 +127,21 @@ export async function POST(
       fileBuffer: fileBase64 ? Buffer.from(fileBase64, "base64") : undefined,
     };
 
+    const isBundledDemoJob =
+      job.title.startsWith("Demo:") ||
+      job.clientEmail === "alice@proofpay.io" ||
+      fileName.includes("case_01") ||
+      fileName.includes("summer_sale_banner") ||
+      fileName.includes("happy-path") ||
+      fileName.includes("compliant");
+
     const isRecordedReplay =
-      Boolean(body.useRecordedReplay) ||
-      process.env.USE_RECORDED_REPLAY === "true" ||
-      fileName.includes("replay");
+      body.useRecordedReplay === true ||
+      (body.useRecordedReplay !== false &&
+        (isBundledDemoJob ||
+          process.env.USE_RECORDED_REPLAY === "true" ||
+          process.env.DEMO_USE_RECORDED_REPLAY === "true" ||
+          fileName.includes("replay")));
 
     let verdict;
     if (

@@ -134,7 +134,7 @@ export default function EvalPage() {
           </div>
           <p className="text-slate-300 leading-relaxed">
             All {totalCount} fixtures were partitioned into Dev ({devCount}) and Held-Out ({heldOutCount}).
-            Confidence threshold (0.85) was specified in Milestone 1 architecture before the benchmark, while color boundaries (&Delta;E 11.5 - 16.0) were adjusted after seeing initial results to establish an honest human-review gray zone.
+            The &Delta;E thresholds were changed in 6ac5a18, after the benchmark cases were added; the confidence threshold (0.85) predates them. 1 of 15 held-out cases were added after thresholds were last changed; the remaining held-out cases are not independent of the tuning.
             Model serving was dynamically routed: primary model {data?.modelId || "gemini-3.8-flash"} served {serving38} cases, with automatic quota-limit fallback to gemini-3.5-flash-lite serving {serving35} cases; {preModelRejections} cases were rejected by deterministic byte-level checks before any model invocation. Replay mode re-runs recorded model responses offline.
           </p>
           <p className="text-slate-400 text-[11px]">

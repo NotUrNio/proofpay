@@ -13,7 +13,18 @@ const candidateKeys = [
   "AG_STUDIO_LICENSE_KEY",
   "PAYPAL_SANDBOX_BUSINESS_EMAIL",
   "PAYPAL_SANDBOX_PERSONAL_EMAIL",
+  "OLD_SANDBOX_PASSWORD",
 ];
+
+let oldPass = "";
+try {
+  const content = execFileSync("git", ["show", "6ac5a18:scripts/demo-run.ts"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  const m = content.match(/Password:\s+([^\s]+)/);
+  if (m) oldPass = m[1];
+} catch (e) {}
 
 const UNSET_REASONS = {
   DATABASE_URL:
@@ -24,6 +35,8 @@ const UNSET_REASONS = {
     "Not defined in local .env; this repo uses GEMINI_API_KEY instead.",
   AG_STUDIO_LICENSE_KEY:
     "Empty in local .env (length 0); AG Studio was replaced with MIT-licensed Recharts.",
+  OLD_SANDBOX_PASSWORD:
+    "Historical password rotated and removed in 6ac5a18.",
 };
 
 const envMap = {};
@@ -42,6 +55,9 @@ for (const line of envContent.split("\n")) {
   }
   envMap[key] = val;
 }
+if (oldPass) {
+  envMap["OLD_SANDBOX_PASSWORD"] = oldPass;
+}
 
 function countFixedStringInDir(val, dirPath) {
   if (!fs.existsSync(dirPath)) return 0;
@@ -56,8 +72,21 @@ function countFixedStringInDir(val, dirPath) {
   }
 }
 
+// Retrieve untracked files
+let untrackedFiles = [];
+try {
+  untrackedFiles = execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  })
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+} catch {}
+
 const checkedVariables = [];
 const uncheckedVariables = [];
+let hasLeakViolation = false;
 
 for (const key of candidateKeys) {
   const val = envMap[key] || process.env[key] || "";
@@ -74,6 +103,7 @@ for (const key of candidateKeys) {
       docsMatches: null,
       srcMatches: null,
       scriptsMatches: null,
+      untrackedMatches: null,
     };
     uncheckedVariables.push(entry);
     console.log(
@@ -98,6 +128,23 @@ for (const key of candidateKeys) {
   const srcMatches = countFixedStringInDir(val, "src");
   const scriptsMatches = countFixedStringInDir(val, "scripts");
 
+  // Check untracked files
+  let untrackedMatches = 0;
+  for (const uFile of untrackedFiles) {
+    if (fs.existsSync(uFile) && fs.statSync(uFile).isFile()) {
+      try {
+        const uText = fs.readFileSync(uFile, "utf8");
+        if (uText.includes(val)) {
+          untrackedMatches++;
+        }
+      } catch {}
+    }
+  }
+
+  if (nextMatches > 0 || docsMatches > 0 || srcMatches > 0 || scriptsMatches > 0 || untrackedMatches > 0) {
+    hasLeakViolation = true;
+  }
+
   const entry = {
     variable: key,
     length: val.length,
@@ -107,11 +154,12 @@ for (const key of candidateKeys) {
     docsMatches,
     srcMatches,
     scriptsMatches,
+    untrackedMatches,
   };
   checkedVariables.push(entry);
 
   console.log(
-    `Variable: ${key.padEnd(32)} | len=${String(val.length).padEnd(3)} | Git History Commits (-S): ${gitHistoryCommits} | .next: ${nextMatches} | docs: ${docsMatches} | src: ${srcMatches} | scripts: ${scriptsMatches}`
+    `Variable: ${key.padEnd(32)} | len=${String(val.length).padEnd(3)} | Git History Commits (-S): ${gitHistoryCommits} | .next: ${nextMatches} | docs: ${docsMatches} | src: ${srcMatches} | scripts: ${scriptsMatches} | untracked: ${untrackedMatches}`
   );
 }
 
@@ -125,3 +173,8 @@ const report = {
 
 fs.writeFileSync("docs/secrets_audit_report.json", JSON.stringify(report, null, 2));
 console.log("\nSaved secrets audit report to docs/secrets_audit_report.json");
+
+if (hasLeakViolation) {
+  console.error("\nFATAL ERROR: Secret value leak detected in .next, docs, src, scripts, or untracked files!");
+  process.exit(1);
+}

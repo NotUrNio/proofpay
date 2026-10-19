@@ -251,6 +251,27 @@ export function runClaimsCheck(): { checks: ClaimCheck[]; allPassed: boolean } {
       : `Forbidden phrase found in: ${violatingFiles.join(", ")}`,
   });
 
+  // 13. Held-out Tuning Disclosure Check: Must honestly state that only 1 of 15 held-out cases was added after thresholds were last changed
+  const requiredIndependenceDisclosure =
+    "1 of 15 held-out cases were added after thresholds were last changed; the remaining held-out cases are not independent of the tuning";
+  const readmeDiscloses = readme.includes(requiredIndependenceDisclosure);
+  const devpostDiscloses = devpost.includes(requiredIndependenceDisclosure);
+  const evalDiscloses =
+    fs.existsSync(path.join(root, "src/app/eval/page.tsx")) &&
+    fs
+      .readFileSync(path.join(root, "src/app/eval/page.tsx"), "utf8")
+      .includes(requiredIndependenceDisclosure);
+
+  checks.push({
+    id: "DOC_HELDOUT_TUNING_HONESTY",
+    category: "Documentation",
+    claim: "Held-out tuning independence disclosure present in docs and eval page",
+    expected:
+      "Explicit statement that 1 of 15 held-out cases was added after thresholds were last changed",
+    status: readmeDiscloses && devpostDiscloses && evalDiscloses ? "PASS" : "FAIL",
+    evidence: `README: ${readmeDiscloses}, DEVPOST: ${devpostDiscloses}, Eval Page: ${evalDiscloses}`,
+  });
+
   const allPassed = checks.every((c) => c.status === "PASS");
 
   return { checks, allPassed };

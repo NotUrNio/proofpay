@@ -142,6 +142,18 @@ async function main() {
   process.env.PREFLIGHT_RUNNING = "1";
 
   const root = process.cwd();
+
+  // Startup hygiene: delete any stale scripts/canary-* files from any previous hard-killed runs
+  try {
+    const scriptsDir = path.join(root, "scripts");
+    if (fs.existsSync(scriptsDir)) {
+      const staleCanaries = fs.readdirSync(scriptsDir).filter((f) => f.startsWith("canary-"));
+      for (const f of staleCanaries) {
+        fs.unlinkSync(path.join(scriptsDir, f));
+      }
+    }
+  } catch {}
+
   const results: StepResult[] = [];
   const overallStart = Date.now();
 

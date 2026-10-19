@@ -262,7 +262,7 @@ pnpm eval:live
 
 ### 🎨 Near-Miss Palette Calibration Science (CIEDE2000)
 
-Thresholds $T_{\text{brand}} = 11.5$ and $T_{\text{hard}} = 16.0$ were adjusted after seeing initial Milestone 2 benchmark results (tightening preliminary boundaries in commit `6ac5a18` to establish an honest gray zone):
+The $\Delta E$ thresholds were changed in `6ac5a18`, after the benchmark cases were added; the confidence threshold (0.85) predates them. 1 of 15 held-out cases were added after thresholds were last changed; the remaining held-out cases are not independent of the tuning.
 - **Dev Compliant Maximum**: $\Delta E_{00} = 10.25$ (`case_01`: 10.25, `case_03`: 7.65, `case_25`: 7.89).
 - **Deliberate Gray Zone ($\Delta E_{00} \in [11.5, 16.0]$)**:
   - `case_21` (Crimson Red-Orange, Dev): $\Delta E_{00} = 11.69$
