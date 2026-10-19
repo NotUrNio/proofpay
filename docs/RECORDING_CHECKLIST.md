@@ -19,7 +19,7 @@
 - [ ] **Browser**: Clean Google Chrome or Chromium profile with zero extension icons showing.
 - [ ] **Bookmarks Bar**: Hidden (`Cmd + Shift + B`).
 - [ ] **Browser Zoom**: 100% (clean typography, no clipping).
-- [ ] **URL**: `http://localhost:3000` (or `https://proofpay.onrender.com`).
+- [ ] **URL**: `http://localhost:3000` (or `https://proofpay-68qi.onrender.com`).
 - [ ] **Cache / Personas**: Set cookie to `proofpay_role=client` (`alice@proofpay.io`) prior to recording.
 
 ### Database & Demo Seed:

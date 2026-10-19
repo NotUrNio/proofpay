@@ -41,6 +41,12 @@ export default function LedgerPage() {
             Append-only PostgreSQL ledger with SHA-256 forward-hash chaining. Every escrow deposit, deliverable submission, guard evaluation, and PayPal payout writes an immutable seal.
           </p>
         </div>
+        <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 px-3 py-2 rounded-lg max-w-md">
+          <ShieldCheck className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <span>
+            <strong>Append-Only Provenance:</strong> Demo state resets append a <code>DEMO_STATE_RESET</code> audit entry; historical events and SHA-256 chain continuity are never deleted.
+          </span>
+        </div>
       </div>
 
       {/* Ledger Grid */}

@@ -119,7 +119,9 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
         cellRenderer: (params: { value: string }) => {
           const type = params.value;
           let badgeClass = "bg-slate-100 text-slate-800 border-slate-200";
-          if (type.includes("CREATED") || type.includes("FUNDED")) {
+          if (type.includes("RESET")) {
+            badgeClass = "bg-amber-100 text-amber-900 border-amber-400 font-bold";
+          } else if (type.includes("CREATED") || type.includes("FUNDED")) {
             badgeClass = "bg-blue-100 text-blue-800 border-blue-300";
           } else if (type.includes("SUBMITTED")) {
             badgeClass = "bg-purple-100 text-purple-800 border-purple-300";
@@ -358,6 +360,19 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
                 </strong>
               </div>
             </div>
+
+            {selectedRow.eventType === "DEMO_STATE_RESET" && (
+              <div className="bg-amber-50 border border-amber-300 text-amber-900 text-xs p-3 rounded-xl space-y-1">
+                <span className="font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Demo State Restoration Event
+                </span>
+                <p className="text-amber-800 text-[11px] leading-relaxed">
+                  Bundled demo jobs were reset to canonical drill states (VERIFIED / FUNDED / PAID).
+                  In accordance with ProofPay&apos;s append-only ledger invariant, previous audit rows, submissions, and SHA-256 cryptographic hashes are never deleted.
+                </p>
+              </div>
+            )}
 
             {/* SHA-256 Hash Chaining Detail */}
             <div className="bg-slate-900 text-slate-100 p-4 rounded-xl space-y-2 text-xs font-mono">

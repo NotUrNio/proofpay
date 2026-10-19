@@ -246,7 +246,7 @@ export async function ensureHostedBootstrap(): Promise<void> {
  * Idempotently restores the 3 bundled demo jobs to their canonical presentation states
  * (PAID, NEEDS_HUMAN, FUNDED) WITHOUT deleting any ledger rows (preserving append-only provenance).
  */
-export async function resetBundledDemoState(): Promise<{ changedRows: string[] }> {
+export async function resetBundledDemoState(): Promise<{ changedRows: string[]; ledgerEventId: string }> {
   await ensureHostedBootstrap();
 
   const changedRows: string[] = [];
@@ -278,17 +278,20 @@ export async function resetBundledDemoState(): Promise<{ changedRows: string[] }
     changedRows.push(`jobs[${pId}]: status '${pJob.status}' -> 'PAID'`);
   }
 
-  // Record an append-only audit event marking the reset
-  if (changedRows.length > 0) {
-    await appendLedgerEvent({
-      jobId: nhId,
-      eventType: "DEMO_STATE_RESET",
-      previousState: nhJob?.status || null,
-      newState: "VERIFIED",
-      actor: "ADMIN",
-      payload: { reason: "Idempotent bundled demo state reset", changedRows },
-    });
-  }
+  // Record an append-only audit event marking the reset on every invocation
+  const [nhCurrent] = await db.select().from(jobs).where(eq(jobs.id, nhId));
+  const ledgerEvent = await appendLedgerEvent({
+    jobId: nhId,
+    eventType: "DEMO_STATE_RESET",
+    previousState: nhCurrent?.status || "VERIFIED",
+    newState: "VERIFIED",
+    actor: "ADMIN",
+    payload: {
+      reason: "Idempotent bundled demo state reset",
+      changedRows,
+      resetAt: new Date().toISOString(),
+    },
+  });
 
-  return { changedRows };
+  return { changedRows, ledgerEventId: ledgerEvent.id };
 }

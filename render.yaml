@@ -7,7 +7,7 @@ services:
     autoDeploy: false
     buildCommand: pnpm install && pnpm build
     startCommand: pnpm start
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -16,7 +16,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: APP_BASE_URL
-        value: https://proofpay.onrender.com
+        value: https://proofpay-68qi.onrender.com
       - key: PAYPAL_BASE_URL
         value: https://api-m.sandbox.paypal.com
       - key: PAYPAL_MOCK
@@ -44,6 +44,8 @@ services:
       - key: CLIENT_IP_TRUSTED_PROXY_HOPS
         sync: false
       - key: ENABLE_DEBUG_CLIENT_IP
+        sync: false
+      - key: ENABLE_DEMO_RESET
         sync: false
 
 

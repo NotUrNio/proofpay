@@ -4,7 +4,7 @@
 # Usage:
 #   ./scripts/check-client-ip.sh [BASE_URL]
 # Example:
-#   ./scripts/check-client-ip.sh https://proofpay.onrender.com
+#   ./scripts/check-client-ip.sh https://proofpay-68qi.onrender.com
 
 set -euo pipefail
 

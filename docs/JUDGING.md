@@ -2,7 +2,7 @@
 
 > **Project**: ProofPay (Autonomous AI-Verified Milestone Escrow & Instant Payouts)  
 > **Repository**: [https://github.com/NotUrNio/proofpay](https://github.com/NotUrNio/proofpay)  
-> **Hosted Deployment**: `https://proofpay.onrender.com` *(Render deployment ready via `render.yaml`)*
+> **Hosted Deployment**: `https://proofpay-68qi.onrender.com` *(Render deployment ready via `render.yaml`)*
 
 ---
 

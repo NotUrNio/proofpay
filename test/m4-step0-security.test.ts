@@ -487,7 +487,7 @@ describe("Milestone 4 & Step 0 Security & Architectural Boundaries", () => {
             currency: "USD",
             payeeEmail: "freelancer@test.com",
             scope: "test",
-            expiresAt: new Date(Date.now() + 86400 * 1000).toISOString(),
+            expiresAt: signed.expiresAt,
             signature: signed.signature,
           },
           verdict: {

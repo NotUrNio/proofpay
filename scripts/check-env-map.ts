@@ -15,7 +15,9 @@ export interface EnvVarMetadata {
   hasCodeDefault: boolean;
 }
 
-export const ENV_CATALOG: Record<string, Omit<EnvVarMetadata, "inEnvExample" | "inRenderYaml" | "hasCodeDefault">> = {
+export type EnvVarDefinition = Omit<EnvVarMetadata, "inEnvExample" | "inRenderYaml" | "hasCodeDefault">;
+
+export const ENV_CATALOG: Record<string, EnvVarDefinition> = {
   DATABASE_URL: {
     name: "DATABASE_URL",
     required: "Required",
@@ -145,7 +147,7 @@ export const ENV_CATALOG: Record<string, Omit<EnvVarMetadata, "inEnvExample" | "
   APP_BASE_URL: {
     name: "APP_BASE_URL",
     required: "Optional",
-    defaultValue: "http://localhost:3000 (production: https://proofpay.onrender.com)",
+    defaultValue: "http://localhost:3000 (production: https://proofpay-68qi.onrender.com)",
     whereUsed: "src/lib/paypal/orders.ts",
     howToObtain: "Hosted platform URL on Render",
     riskIfLeaked: "None (Public domain name)",
@@ -214,6 +216,15 @@ export const ENV_CATALOG: Record<string, Omit<EnvVarMetadata, "inEnvExample" | "
     riskIfLeaked: "Medium (If enabled in production, allows role spoofing via header)",
     isSecret: false,
   },
+  ENABLE_DEMO_RESET: {
+    name: "ENABLE_DEMO_RESET",
+    required: "Optional",
+    defaultValue: "false (reviewer-only, 403 when unset/false)",
+    whereUsed: "src/app/api/demo/reset/route.ts",
+    howToObtain: "Boolean flag ('true' / 'false') in render.yaml or .env",
+    riskIfLeaked: "Low (Allows reviewer role to reset bundled demo jobs)",
+    isSecret: false,
+  },
   USE_PGLITE: {
     name: "USE_PGLITE",
     required: "Optional",
@@ -270,7 +281,11 @@ export const ENV_CATALOG: Record<string, Omit<EnvVarMetadata, "inEnvExample" | "
   },
 };
 
-export function checkEnvMap(): {
+export function checkEnvMap(overrides?: {
+  envExampleContent?: string;
+  renderYamlContent?: string;
+  catalog?: Record<string, EnvVarDefinition>;
+}): {
   allValid: boolean;
   warnings: string[];
   errors: string[];
@@ -279,13 +294,17 @@ export function checkEnvMap(): {
   const root = process.cwd();
 
   // Read .env.example
-  const envExampleContent = fs.readFileSync(path.join(root, ".env.example"), "utf8");
+  const envExampleContent =
+    overrides?.envExampleContent ??
+    fs.readFileSync(path.join(root, ".env.example"), "utf8");
   const envExampleVars = new Set(
     Array.from(envExampleContent.matchAll(/^([A-Z0-9_]+)=/gm)).map((m) => m[1])
   );
 
   // Read render.yaml
-  const renderYamlContent = fs.readFileSync(path.join(root, "render.yaml"), "utf8");
+  const renderYamlContent =
+    overrides?.renderYamlContent ??
+    fs.readFileSync(path.join(root, "render.yaml"), "utf8");
   const renderYamlVars = new Set(
     Array.from(renderYamlContent.matchAll(/key:\s+([A-Z0-9_]+)/g)).map((m) => m[1])
   );
@@ -293,8 +312,9 @@ export function checkEnvMap(): {
   const errors: string[] = [];
   const warnings: string[] = [];
   const items: EnvVarMetadata[] = [];
+  const catalog = overrides?.catalog ?? ENV_CATALOG;
 
-  for (const [key, meta] of Object.entries(ENV_CATALOG)) {
+  for (const [key, meta] of Object.entries(catalog)) {
     const inEnvExample = envExampleVars.has(key);
     const inRenderYaml = renderYamlVars.has(key);
 

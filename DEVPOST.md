@@ -154,7 +154,7 @@ Every metric reported below is backed by committed code, reproducible test suite
 
 ## 🔗 Try It Out
 - **GitHub Repository**: [https://github.com/NotUrNio/proofpay](https://github.com/NotUrNio/proofpay)
-- **Hosted Application**: [https://proofpay.onrender.com](https://proofpay.onrender.com)
+- **Hosted Application**: [https://proofpay-68qi.onrender.com](https://proofpay-68qi.onrender.com)
 - **Demo Personas (via `proofpay_role` cookie, not production authentication)**:
   - Client *(default view when no cookie is set)*: `alice@proofpay.io` (`proofpay_role=client`)
   - Freelancer: `priya@proofpay.io` (`proofpay_role=freelancer`)

@@ -2,7 +2,7 @@
 
 > **Target Platform**: Render Cloud (Web Service + Managed PostgreSQL)  
 > **Blueprint**: [`render.yaml`](../render.yaml)  
-> **Target Production URL**: `https://proofpay.onrender.com`
+> **Target Production URL**: `https://proofpay-68qi.onrender.com`
 
 ---
 
@@ -84,7 +84,7 @@ The following variables have `sync: false` in `render.yaml` and must be populate
 Once Render reports **Deploy live**, run the automated post-deployment smoke test:
 
 ```bash
-BASE_URL=https://proofpay.onrender.com pnpm tsx scripts/hosted-smoke.ts
+BASE_URL=https://proofpay-68qi.onrender.com pnpm tsx scripts/hosted-smoke.ts
 ```
 
 ### What `hosted-smoke.ts` Verifies:
@@ -102,7 +102,7 @@ BASE_URL=https://proofpay.onrender.com pnpm tsx scripts/hosted-smoke.ts
 With `ENABLE_DEBUG_CLIENT_IP="true"` enabled in Render, verify reverse-proxy IP extraction:
 
 ```bash
-./scripts/check-client-ip.sh https://proofpay.onrender.com
+./scripts/check-client-ip.sh https://proofpay-68qi.onrender.com
 ```
 
 Expected output:
@@ -128,10 +128,10 @@ If Render's internal proxy IP appears as `derivedIp`, increment `CLIENT_IP_TRUST
 Run the automated Lighthouse audit script against the live hosted deployment:
 
 ```bash
-BASE_URL=https://proofpay.onrender.com pnpm tsx scripts/measure-lighthouse-median.ts
+BASE_URL=https://proofpay-68qi.onrender.com pnpm tsx scripts/measure-lighthouse-median.ts
 ```
 
-- Dynamically discovers job IDs from `https://proofpay.onrender.com/api/jobs`.
+- Dynamically discovers job IDs from `https://proofpay-68qi.onrender.com/api/jobs`.
 - Runs 5-run median audits across mobile viewports (390px and 360px) for `/`, `/studio`, and `/jobs/[id]` across `FUNDED`, `PAID`, and `NEEDS_HUMAN` states.
 - Saves the hosted performance report into [`docs/ui/after/hosted/lighthouse_median_report.json`](../docs/ui/after/hosted/lighthouse_median_report.json) without overwriting local benchmark files.
 
@@ -145,10 +145,10 @@ To restore the demo jobs back to their pristine judging states without deleting 
 
 ```bash
 # Via script:
-BASE_URL=https://proofpay.onrender.com pnpm tsx scripts/reset-demo-state.ts
+BASE_URL=https://proofpay-68qi.onrender.com pnpm tsx scripts/reset-demo-state.ts
 
 # Or via authenticated curl:
-curl -X POST https://proofpay.onrender.com/api/demo/reset \
+curl -X POST https://proofpay-68qi.onrender.com/api/demo/reset \
   -H "Cookie: proofpay_role=reviewer"
 ```
 

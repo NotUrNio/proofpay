@@ -273,6 +273,17 @@ export function JobDetailClient({
                 </span>
               )}
             </div>
+            {[
+              "20f829e2-8aff-4bab-8e4b-710c004ffc6d",
+              "bf3884d6-3fdf-496d-87db-5dbbe4461443",
+              "10c2bab9-02a6-45ab-b652-9552b584769b",
+            ].includes(job.id) && (
+              <div className="pt-0.5">
+                <span className="inline-block text-[10px] font-medium bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
+                  Bundled Demo Drill (State resets restore canonical step while preserving full append-only audit trail)
+                </span>
+              </div>
+            )}
             <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
               {job.description}
             </p>

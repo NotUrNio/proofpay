@@ -1,10 +1,11 @@
 import fs from "fs";
 import path from "path";
+import { getSessionUser } from "../src/lib/auth/roles";
 
-interface ClaimCheck {
+export interface ClaimCheck {
   id: string;
   claim: string;
-  category: "Documentation" | "Architecture" | "Security" | "Dependencies" | "Testing";
+  category: "Documentation" | "Architecture" | "Security" | "Dependencies" | "Testing" | "Performance";
   expected: string;
   status: "PASS" | "FAIL";
   evidence: string;
@@ -15,8 +16,6 @@ export function runClaimsCheck(): { checks: ClaimCheck[]; allPassed: boolean } {
 
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
   const devpost = fs.readFileSync(path.join(root, "DEVPOST.md"), "utf8");
-  const judging = fs.readFileSync(path.join(root, "docs/JUDGING.md"), "utf8");
-  const demoScript = fs.readFileSync(path.join(root, "docs/DEMO_SCRIPT.md"), "utf8");
   const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const guardCode = fs.readFileSync(path.join(root, "src/lib/guard/guard.ts"), "utf8");
   const rolesCode = fs.readFileSync(path.join(root, "src/lib/auth/roles.ts"), "utf8");
@@ -84,16 +83,18 @@ export function runClaimsCheck(): { checks: ClaimCheck[]; allPassed: boolean } {
     evidence: `Count cap: ${hasPayoutCap}, USD cap: ${hasPayoutUsdCap}, README cited: ${readmeMentionsCap}`,
   });
 
-  // 6. Default Fallback Persona: Client (alice@proofpay.io)
-  const hasDefaultClient = rolesCode.includes('email: "alice@proofpay.io"') && rolesCode.includes('role: "client"');
+  // 6. Default Fallback Persona: Client (alice@proofpay.io) — Dynamically generated from roles.ts
+  const defaultSessionUser = getSessionUser(new Request("http://localhost:3000"));
+  const hasDefaultClient =
+    defaultSessionUser.role === "client" && defaultSessionUser.email === "alice@proofpay.io";
   const readmePersonaHonest = readme.includes("defaults to the non-privileged **`client`");
   checks.push({
     id: "AUTH_DEFAULT_ROLE",
     category: "Security",
-    claim: "Least privilege default: non-privileged client persona (alice@proofpay.io)",
-    expected: "getSessionUser() defaults to client; README/DEVPOST document cookie personas vs real auth",
+    claim: `Least privilege default: ${defaultSessionUser.role} persona (${defaultSessionUser.email})`,
+    expected: "getSessionUser() dynamically returns client role; README/DEVPOST document cookie personas",
     status: hasDefaultClient && readmePersonaHonest ? "PASS" : "FAIL",
-    evidence: `roles.ts fallback client: ${hasDefaultClient}, README documented: ${readmePersonaHonest}`,
+    evidence: `getSessionUser() runtime role: '${defaultSessionUser.role}', email: '${defaultSessionUser.email}'`,
   });
 
   // 7. Test Role Header Ignored in Production
@@ -125,29 +126,57 @@ export function runClaimsCheck(): { checks: ClaimCheck[]; allPassed: boolean } {
     evidence: `README honest: ${readmeGuidedHonest}, DEVPOST honest: ${devpostGuidedHonest}`,
   });
 
-  // 9. Vitest Test Count (116 passing tests across 16 suites)
-  const testFilesCount = 16;
-  const testCount = 116;
+  // 9. Vitest Test Count — Dynamically enumerated from test/ and tests/ directories
+  const testDirFiles = fs.existsSync(path.join(root, "test"))
+    ? fs.readdirSync(path.join(root, "test")).filter((f) => f.endsWith(".test.ts"))
+    : [];
+  const testsDirFiles = fs.existsSync(path.join(root, "tests"))
+    ? fs.readdirSync(path.join(root, "tests")).filter((f) => f.endsWith(".test.ts"))
+    : [];
+  const totalTestSuites = testDirFiles.length + testsDirFiles.length;
   checks.push({
     id: "TEST_VITEST_SUITE",
     category: "Testing",
-    claim: `Vitest unit & integration test coverage: ${testCount} tests across ${testFilesCount} suites passing`,
-    expected: "116 passing tests across 16 test files",
-    status: "PASS",
-    evidence: `${testFilesCount} suites, ${testCount} tests passing (0 failures)`,
+    claim: `Vitest test suite discovery: ${totalTestSuites} test suites dynamically discovered across test/ and tests/`,
+    expected: "All unit and integration test files dynamically cataloged and verified",
+    status: totalTestSuites >= 18 ? "PASS" : "FAIL",
+    evidence: `Discovered ${totalTestSuites} test suites (${testDirFiles.length} in test/, ${testsDirFiles.length} in tests/)`,
   });
 
-  // 10. Playwright E2E Test Count (39 passing tests across 3 browser engines)
-  const playwrightEngines = 3;
-  const playwrightTestsPerEngine = 13;
-  const totalPlaywrightTests = playwrightEngines * playwrightTestsPerEngine;
+  // 10. Lighthouse Mobile Performance & Accessibility — Dynamically read from audit report
+  const lighthouseReportPath = path.join(root, "docs/ui/after/lighthouse_median_report.json");
+  let lighthousePassed = false;
+  let lighthouseEvidence = "Lighthouse report missing";
+  let perfScore = 0;
+  let a11yScore = 0;
+  let bpScore = 0;
+  let seoScore = 0;
+  let clsScore = 1;
+
+  if (fs.existsSync(lighthouseReportPath)) {
+    try {
+      const report = JSON.parse(fs.readFileSync(lighthouseReportPath, "utf8"));
+      perfScore = report.home?.median390?.performance ?? 0;
+      a11yScore = report.home?.median390?.accessibility ?? 0;
+      bpScore = report.home?.median390?.bestPractices ?? 0;
+      seoScore = report.home?.median390?.seo ?? 0;
+      clsScore = report.home?.median390?.cls ?? 1;
+
+      lighthousePassed =
+        perfScore >= 90 && a11yScore === 100 && bpScore === 100 && seoScore === 100 && clsScore < 0.1;
+      lighthouseEvidence = `Mobile 390px median of 5: Perf=${perfScore}, A11y=${a11yScore}, BestPractices=${bpScore}, SEO=${seoScore}, CLS=${clsScore}`;
+    } catch (e: any) {
+      lighthouseEvidence = `Failed to parse lighthouse report: ${e.message}`;
+    }
+  }
+
   checks.push({
-    id: "TEST_PLAYWRIGHT_E2E",
-    category: "Testing",
-    claim: `Playwright cross-browser coverage: ${totalPlaywrightTests} tests passing (${playwrightTestsPerEngine} each across Chromium, Firefox, WebKit)`,
-    expected: "39 cross-browser tests passing",
-    status: "PASS",
-    evidence: `${totalPlaywrightTests} tests passed across Chromium, Firefox, WebKit`,
+    id: "PERF_LIGHTHOUSE",
+    category: "Performance",
+    claim: `Mobile Lighthouse median scores: Perf=${perfScore}, A11y=${a11yScore}, BestPractices=${bpScore}, SEO=${seoScore}`,
+    expected: "Performance >= 90, Accessibility = 100, Best Practices = 100, SEO = 100, CLS < 0.10",
+    status: lighthousePassed ? "PASS" : "FAIL",
+    evidence: lighthouseEvidence,
   });
 
   const allPassed = checks.every((c) => c.status === "PASS");
