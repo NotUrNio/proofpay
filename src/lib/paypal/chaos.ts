@@ -282,7 +282,7 @@ export async function runChaosDrill(
 
         // 2. Payouts v1: Send attempt 1
         const p1 = await createPayout({
-          recipientEmail: "sb-ft17i53364262@personal.example.com",
+          recipientEmail: "freelancer@example.test",
           amount: "0.01",
           note: "ProofPay Idempotency Proof",
           senderBatchId: fixedBatchId,
@@ -293,7 +293,7 @@ export async function runChaosDrill(
         // Payouts v1: Send attempt 2 with identical sender_batch_id
         try {
           await createPayout({
-            recipientEmail: "sb-ft17i53364262@personal.example.com",
+            recipientEmail: "freelancer@example.test",
             amount: "0.01",
             note: "ProofPay Idempotency Proof Duplicate",
             senderBatchId: fixedBatchId,
@@ -445,7 +445,7 @@ export async function runChaosDrill(
 
     try {
       const payoutRes = await createPayout({
-        recipientEmail: "sb-ft17i53364262@personal.example.com",
+        recipientEmail: "freelancer@example.test",
         amount: "5000.00",
         currency: "USD",
         note: simulationCode,
@@ -514,7 +514,7 @@ export async function runChaosDrill(
 
   // Drill 6: Full End-to-End Pipeline Adversarial Injection Defense Drill
   // Ingests real adversarial fixture (case_17) through Hard Checks -> Gemini Sensor -> Policy Guard
-  const fixturePath = path.resolve(process.cwd(), "eval/fixtures/case_17_adversarial_ignore_rules_prompt.png");
+  const fixturePath = path.resolve(process.cwd(), "eval/fixtures/case_17_adversarial_visible_injection.png");
   let hardChecksPassed = true;
   let modelInjectionSuspected = true;
   let guardDecision = "REJECT";

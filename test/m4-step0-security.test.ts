@@ -1,9 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import fs from "fs";
 import path from "path";
+import { NextRequest } from "next/server";
 import { evaluatePolicyGuard } from "../src/lib/guard";
 import { signMandate } from "../src/lib/guard/mandate";
-import { assertAuthorizedRole, checkRateLimit, UserRole } from "../src/lib/auth/roles";
+import { assertAuthorizedRole, checkRateLimit, getSessionUser, UserRole } from "../src/lib/auth/roles";
+import { POST as postInbox } from "../src/app/api/inbox/route";
+import { POST as postPolicy } from "../src/app/api/policy/route";
+import { POST as postJobs } from "../src/app/api/jobs/route";
+import { POST as postFund } from "../src/app/api/jobs/[id]/fund/route";
+import { POST as postSubmit } from "../src/app/api/jobs/[id]/submit/route";
+import { GET as getDebugClientIp } from "../src/app/api/debug/client-ip/route";
+import { GET as getAuthRole, POST as postAuthRole } from "../src/app/api/auth/role/route";
 import { assertReadOnlyTool, STUDIO_AI_TOOLS } from "../src/lib/studio/assistant";
 
 const SIGNING_SECRET = "test_signing_secret_min_32_characters_for_hmac_sha256";
@@ -293,6 +301,149 @@ describe("Milestone 4 & Step 0 Security & Architectural Boundaries", () => {
       expect(sixthCheck.allowed).toBe(false);
       expect(sixthCheck.remaining).toBe(0);
     });
+
+    it("defaults getSessionUser to non-privileged 'client' persona when no cookie or header is present", () => {
+      const noCookieReq = new NextRequest("http://localhost:3000/");
+      const user = getSessionUser(noCookieReq);
+      expect(user.role).toBe("client");
+      expect(user.email).toBe("alice@proofpay.io");
+    });
+
+    it("rejects requests with no role cookie on approve, reject, policy restore, money/mandate mutations, and debug route", async () => {
+      const prevDebug = process.env.ENABLE_DEBUG_CLIENT_IP;
+      process.env.ENABLE_DEBUG_CLIENT_IP = "true";
+      try {
+        // 1. No cookie -> cannot approve in /api/inbox
+        const approveRes = await postInbox(
+          new NextRequest("http://localhost:3000/api/inbox", {
+            method: "POST",
+            body: JSON.stringify({ jobId: "20f829e2-8aff-4bab-8e4b-710c004ffc6d", action: "approve" }),
+          })
+        );
+        expect(approveRes.status).toBe(403);
+
+        // 2. No cookie -> cannot reject in /api/inbox
+        const rejectRes = await postInbox(
+          new NextRequest("http://localhost:3000/api/inbox", {
+            method: "POST",
+            body: JSON.stringify({ jobId: "20f829e2-8aff-4bab-8e4b-710c004ffc6d", action: "reject" }),
+          })
+        );
+        expect(rejectRes.status).toBe(403);
+
+        // 3. No cookie -> cannot restore or edit policy in /api/policy
+        const restoreRes = await postPolicy(
+          new NextRequest("http://localhost:3000/api/policy", {
+            method: "POST",
+            body: JSON.stringify({ action: "restore", versionId: "v1" }),
+          })
+        );
+        expect(restoreRes.status).toBe(403);
+
+        // 4. No cookie -> cannot open /api/debug/client-ip even when ENABLE_DEBUG_CLIENT_IP=true
+        const debugRes = await getDebugClientIp(
+          new NextRequest("http://localhost:3000/api/debug/client-ip")
+        );
+        expect(debugRes.status).toBe(403);
+
+        // 5. No cookie -> cannot create job/mandate, fund escrow, or submit deliverable
+        const createJobRes = await postJobs(
+          new NextRequest("http://localhost:3000/api/jobs", {
+            method: "POST",
+            body: JSON.stringify({ title: "No Cookie Job", amount: "5.00" }),
+          })
+        );
+        expect(createJobRes.status).toBe(403);
+
+        const fundRes = await postFund(
+          new NextRequest("http://localhost:3000/api/jobs/20f829e2-8aff-4bab-8e4b-710c004ffc6d/fund", {
+            method: "POST",
+            body: JSON.stringify({ action: "create_order" }),
+          }),
+          { params: Promise.resolve({ id: "20f829e2-8aff-4bab-8e4b-710c004ffc6d" }) }
+        );
+        expect(fundRes.status).toBe(403);
+
+        const submitRes = await postSubmit(
+          new NextRequest("http://localhost:3000/api/jobs/20f829e2-8aff-4bab-8e4b-710c004ffc6d/submit", {
+            method: "POST",
+            body: JSON.stringify({ fileName: "test.png" }),
+          }),
+          { params: Promise.resolve({ id: "20f829e2-8aff-4bab-8e4b-710c004ffc6d" }) }
+        );
+        expect(submitRes.status).toBe(403);
+      } finally {
+        if (prevDebug === undefined) delete process.env.ENABLE_DEBUG_CLIENT_IP;
+        else process.env.ENABLE_DEBUG_CLIENT_IP = prevDebug;
+      }
+    });
+
+    it("ignores x-proofpay-role header in production mode unless ENABLE_TEST_ROLE_HEADER=true (enabled only in playwright.config.ts)", async () => {
+      const prevNodeEnv = process.env.NODE_ENV;
+      const prevEnableHeader = process.env.ENABLE_TEST_ROLE_HEADER;
+      const prevDebug = process.env.ENABLE_DEBUG_CLIENT_IP;
+      try {
+        (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+        delete process.env.ENABLE_TEST_ROLE_HEADER;
+        process.env.ENABLE_DEBUG_CLIENT_IP = "true";
+
+        const spoofedHeaderReq = new NextRequest("http://localhost:3000/api/debug/client-ip", {
+          headers: { "x-proofpay-role": "reviewer" },
+        });
+        expect(getSessionUser(spoofedHeaderReq).role).toBe("client");
+
+        const debugRes = await getDebugClientIp(spoofedHeaderReq);
+        expect(debugRes.status).toBe(403);
+
+        const inboxRes = await postInbox(
+          new NextRequest("http://localhost:3000/api/inbox", {
+            method: "POST",
+            headers: { "x-proofpay-role": "reviewer" },
+            body: JSON.stringify({ jobId: "20f829e2-8aff-4bab-8e4b-710c004ffc6d", action: "approve" }),
+          })
+        );
+        expect(inboxRes.status).toBe(403);
+
+        // When ENABLE_TEST_ROLE_HEADER=true is explicitly set (as under playwright.config.ts), header is honored
+        process.env.ENABLE_TEST_ROLE_HEADER = "true";
+        expect(getSessionUser(spoofedHeaderReq).role).toBe("reviewer");
+        const allowedDebugRes = await getDebugClientIp(spoofedHeaderReq);
+        expect(allowedDebugRes.status).toBe(200);
+
+        // Verify config files: only playwright.config.ts enables ENABLE_TEST_ROLE_HEADER="true";
+        // render.yaml does not enable it and .env.example sets ENABLE_TEST_ROLE_HEADER=false
+        const playwrightConfig = fs.readFileSync(path.resolve(process.cwd(), "playwright.config.ts"), "utf-8");
+        const renderYaml = fs.readFileSync(path.resolve(process.cwd(), "render.yaml"), "utf-8");
+        const envExample = fs.readFileSync(path.resolve(process.cwd(), ".env.example"), "utf-8");
+        expect(playwrightConfig).toContain('process.env.ENABLE_TEST_ROLE_HEADER = "true"');
+        expect(renderYaml).not.toContain("ENABLE_TEST_ROLE_HEADER");
+        expect(envExample).toContain("ENABLE_TEST_ROLE_HEADER=false");
+        expect(envExample).not.toContain("ENABLE_TEST_ROLE_HEADER=true");
+      } finally {
+        (process.env as Record<string, string | undefined>).NODE_ENV = prevNodeEnv;
+        if (prevEnableHeader === undefined) delete process.env.ENABLE_TEST_ROLE_HEADER;
+        else process.env.ENABLE_TEST_ROLE_HEADER = prevEnableHeader;
+        if (prevDebug === undefined) delete process.env.ENABLE_DEBUG_CLIENT_IP;
+        else process.env.ENABLE_DEBUG_CLIENT_IP = prevDebug;
+      }
+    });
+
+    it("role switcher API (/api/auth/role) reports default client persona and sets proofpay_role cookie on POST", async () => {
+      const getRes = await getAuthRole(new NextRequest("http://localhost:3000/api/auth/role"));
+      const getData = await getRes.json();
+      expect(getData.user.role).toBe("client");
+      expect(getData.hasRoleCookie).toBe(false);
+
+      const postRes = await postAuthRole(
+        new NextRequest("http://localhost:3000/api/auth/role", {
+          method: "POST",
+          body: JSON.stringify({ role: "reviewer" }),
+        })
+      );
+      expect(postRes.status).toBe(200);
+      const setCookie = postRes.headers.get("set-cookie") || "";
+      expect(setCookie).toContain("proofpay_role=reviewer");
+    });
   });
 
   // Test (d): Policy validation
@@ -336,7 +487,7 @@ describe("Milestone 4 & Step 0 Security & Architectural Boundaries", () => {
             currency: "USD",
             payeeEmail: "freelancer@test.com",
             scope: "test",
-            expiresAt: new Date(Date.now() + 86400 * 1000).toISOString(),
+            expiresAt: signed.expiresAt,
             signature: signed.signature,
           },
           verdict: {

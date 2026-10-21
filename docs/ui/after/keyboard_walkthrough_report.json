@@ -1,0 +1,464 @@
+[
+  {
+    "step": 1,
+    "flow": "Landing & Happy Path",
+    "action": "Initial page load",
+    "key": "None",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/",
+    "status": "OK",
+    "notes": "Landed on home"
+  },
+  {
+    "step": 2,
+    "flow": "Landing & Happy Path",
+    "action": "Tab to Happy Path Run button",
+    "key": "Tab",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "scenario-run-happy_path",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Run Live Scenario"
+    },
+    "currentUrl": "http://localhost:3000/",
+    "status": "OK",
+    "notes": "Reached button in 18 tabs"
+  },
+  {
+    "step": 3,
+    "flow": "Landing & Happy Path",
+    "action": "Trigger Happy Path scenario",
+    "key": "Enter",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "scenario-run-happy_path",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Verifying..."
+    },
+    "currentUrl": "http://localhost:3000/",
+    "status": "OK",
+    "notes": "Execution initiated"
+  },
+  {
+    "step": 4,
+    "flow": "Landing & Happy Path",
+    "action": "Happy Path Completed",
+    "key": "None",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/",
+    "status": "OK",
+    "notes": "Outcome: Live Pipeline Outcome: AUTO_PAY\n(2698ms)\nInspect Job Pipelin"
+  },
+  {
+    "step": 5,
+    "flow": "Wrong Size Scenario",
+    "action": "Tab to Wrong Size button",
+    "key": "Tab",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "scenario-run-wrong_size",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Run Live Scenario"
+    },
+    "currentUrl": "http://localhost:3000/",
+    "status": "OK",
+    "notes": "Reached wrong_size in 1 tabs"
+  },
+  {
+    "step": 6,
+    "flow": "Wrong Size Scenario",
+    "action": "Trigger Wrong Size scenario",
+    "key": "Enter",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/",
+    "status": "OK",
+    "notes": "Execution initiated"
+  },
+  {
+    "step": 7,
+    "flow": "Wrong Size Scenario",
+    "action": "Wrong Size Outcome",
+    "key": "None",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/",
+    "status": "OK",
+    "notes": "Outcome: Live Pipeline Outcome: REJECT\n(8545ms)\nInspect Job Pipeline\n"
+  },
+  {
+    "step": 8,
+    "flow": "Jobs New Wizard",
+    "action": "Navigate to /jobs/new",
+    "key": "None",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/jobs/new",
+    "status": "OK",
+    "notes": "Step 1 active"
+  },
+  {
+    "step": 9,
+    "flow": "Jobs New Wizard",
+    "action": "Focus Step 1 Continue button",
+    "key": "Tab/Focus",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "jobs-new-step1-next",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Continue to Amount & Payee"
+    },
+    "currentUrl": "http://localhost:3000/jobs/new",
+    "status": "OK",
+    "notes": "Focused: <BUTTON id=\"jobs-new-step1-next\">"
+  },
+  {
+    "step": 10,
+    "flow": "Jobs New Wizard",
+    "action": "Advance to Step 2",
+    "key": "Enter",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/jobs/new",
+    "status": "OK",
+    "notes": "Step 2 (Amount & Payee) active"
+  },
+  {
+    "step": 11,
+    "flow": "Jobs New Wizard",
+    "action": "Focus Step 2 Continue button",
+    "key": "Tab/Focus",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "jobs-new-step2-next",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Continue to Verification Rules"
+    },
+    "currentUrl": "http://localhost:3000/jobs/new",
+    "status": "OK",
+    "notes": "Focused: <BUTTON id=\"jobs-new-step2-next\">"
+  },
+  {
+    "step": 12,
+    "flow": "Jobs New Wizard",
+    "action": "Advance to Step 3",
+    "key": "Enter",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/jobs/new",
+    "status": "OK",
+    "notes": "Step 3 (Verification Rules) active"
+  },
+  {
+    "step": 13,
+    "flow": "Jobs New Wizard",
+    "action": "Focus Submit & Fund button",
+    "key": "Tab/Focus",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "jobs-new-submit-btn",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Fund this milestone ($25.00 USD)"
+    },
+    "currentUrl": "http://localhost:3000/jobs/new",
+    "status": "OK",
+    "notes": "Focused: <BUTTON id=\"jobs-new-submit-btn\">"
+  },
+  {
+    "step": 14,
+    "flow": "Jobs New Wizard",
+    "action": "Fund milestone created",
+    "key": "Enter",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac",
+    "status": "OK",
+    "notes": "Navigated to http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac"
+  },
+  {
+    "step": 15,
+    "flow": "Deliverable Submit Flow",
+    "action": "Navigate to Submit page",
+    "key": "None",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac/submit",
+    "status": "OK",
+    "notes": "Landed on http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac/submit"
+  },
+  {
+    "step": 16,
+    "flow": "Deliverable Submit Flow",
+    "action": "Upload deliverable PNG",
+    "key": "FilePicker",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac/submit",
+    "status": "OK",
+    "notes": "1080x1080 PNG attached"
+  },
+  {
+    "step": 17,
+    "flow": "Deliverable Submit Flow",
+    "action": "Focus Submit button",
+    "key": "Tab/Focus",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "submit-deliverable-btn",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Submit Deliverable for Instant Verification"
+    },
+    "currentUrl": "http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac/submit",
+    "status": "OK"
+  },
+  {
+    "step": 18,
+    "flow": "Deliverable Submit Flow",
+    "action": "Trigger verification",
+    "key": "Enter",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "submit-deliverable-btn",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Running Verification Pipeline..."
+    },
+    "currentUrl": "http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac/submit",
+    "status": "OK",
+    "notes": "Pipeline running"
+  },
+  {
+    "step": 19,
+    "flow": "Deliverable Submit Flow",
+    "action": "Autonomous Settlement Outcome",
+    "key": "None",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/jobs/20170d99-a989-47be-b7b3-fcd222727bac/submit",
+    "status": "OK",
+    "notes": "Settlement verified via Policy Guard"
+  },
+  {
+    "step": 20,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Navigate to /inbox as Reviewer",
+    "key": "None",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Queue loaded"
+  },
+  {
+    "step": 21,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Click body to prime keyboard shortcuts",
+    "key": "Click",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK"
+  },
+  {
+    "step": 22,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Navigate queue down",
+    "key": "j",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Selection updated"
+  },
+  {
+    "step": 23,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Navigate queue up",
+    "key": "k",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Selection restored"
+  },
+  {
+    "step": 24,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Trigger Approve Modal",
+    "key": "a",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Cancel"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Confirm modal opened"
+  },
+  {
+    "step": 25,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Tab inside modal",
+    "key": "Tab",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Confirm & Pay Out"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Focused: Confirm & Pay Out"
+  },
+  {
+    "step": 26,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Focus trap loop",
+    "key": "Tab",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Cancel"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Cycled back to: Cancel"
+  },
+  {
+    "step": 27,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Dismiss modal with Escape",
+    "key": "Escape",
+    "focusedElement": {
+      "tagName": "BODY",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Sandbox demo, no real money moves. All transactions run on PayPal Sandbox with s"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Focus restored to: <BODY>"
+  },
+  {
+    "step": 28,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Trigger Reject Modal",
+    "key": "r",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Cancel"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Reject confirm modal opened"
+  },
+  {
+    "step": 29,
+    "flow": "Inbox Keyboard Triage",
+    "action": "Dismiss Reject modal",
+    "key": "Escape",
+    "focusedElement": {
+      "tagName": "BUTTON",
+      "id": "inbox-reject-btn",
+      "role": null,
+      "ariaLabel": null,
+      "text": "Reject & Refund Escrow"
+    },
+    "currentUrl": "http://localhost:3000/inbox",
+    "status": "OK",
+    "notes": "Reject modal dismissed"
+  }
+]

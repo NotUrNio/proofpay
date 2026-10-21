@@ -1,9 +1,16 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { ensureDatabaseSchema } from "../src/db/init";
 import { db, ledgerEvents, jobs } from "../src/db";
-import { appendLedgerEvent, verifyLedgerChain } from "../src/db/ledger";
+import {
+  appendLedgerEvent,
+  canonicalJsonStringify,
+  verifyLedgerChain,
+  verifyLedgerEventsOffline,
+} from "../src/db/ledger";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 describe("Database-Enforced Append-Only Ledger & Hash Chain Verification", () => {
   const testJobId = crypto.randomUUID();
@@ -128,4 +135,360 @@ describe("Database-Enforced Append-Only Ledger & Hash Chain Verification", () =>
 
     expect(failedAt).toBe(1); // Detected tampering at second event
   });
+
+  it("regression: real-run 6-event fixture reproduces pre-canonicalization JSONB breakage and verifies cleanly with canonicalJsonStringify across JSONB round-trip", async () => {
+    const receiptPath = path.resolve(process.cwd(), "eval/results/single-real-run.json");
+    const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf-8"));
+    expect(receipt.ledgerEvents).toHaveLength(6);
+
+    // Postgres JSONB sorts object keys by key length first, then ASCII order
+    const simulatePostgresJsonbReorder = (obj: Record<string, unknown>): Record<string, unknown> => {
+      const parsed = JSON.parse(JSON.stringify(obj)) as Record<string, unknown>;
+      const keys = Object.keys(parsed).sort((a, b) => a.length - b.length || a.localeCompare(b));
+      const out: Record<string, unknown> = {};
+      for (const k of keys) out[k] = parsed[k];
+      return out;
+    };
+
+    const realRunEventSpecs = [
+      {
+        id: receipt.ledgerEvents[0],
+        eventType: "JOB_CREATED",
+        previousState: null,
+        newState: "CREATED",
+        actor: "CLIENT" as const,
+        payload: {
+          title: "Social Media Banner (Summer Sale)",
+          amount: receipt.amount,
+          currency: receipt.currency,
+          clientEmail: receipt.clientEmail,
+          freelancerEmail: receipt.freelancerEmail,
+        },
+      },
+      {
+        id: receipt.ledgerEvents[1],
+        eventType: "JOB_FUNDED",
+        previousState: "CREATED",
+        newState: "FUNDED",
+        actor: "CLIENT" as const,
+        payload: {
+          orderId: receipt.orderId,
+          captureId: receipt.captureId,
+          amount: receipt.amount,
+          currency: receipt.currency,
+          buyerEmail: receipt.freelancerEmail,
+        },
+      },
+      {
+        id: receipt.ledgerEvents[2],
+        eventType: "DELIVERABLE_SUBMITTED",
+        previousState: "FUNDED",
+        newState: "SUBMITTED",
+        actor: "FREELANCER" as const,
+        payload: {
+          submissionId: "787e4767-f527-4227-af61-c042eea10ca1",
+          fileName: "case_01_compliant_warm_grid.png",
+          fileSizeBytes: 15883,
+          sha256: "e5fa44f2b31c1fb553b6021e7360d07d5d91ff5e3cc7c555",
+        },
+      },
+      {
+        id: receipt.ledgerEvents[3],
+        eventType: "VERIFICATION_COMPLETED",
+        previousState: "SUBMITTED",
+        newState: "VERIFIED",
+        actor: "SYSTEM" as const,
+        payload: {
+          verdictId: "00000000-0000-4000-8000-000000000004",
+          overallPassed: true,
+          confidence: 0.97,
+          servingModel: "gemini-3.8-flash",
+        },
+      },
+      {
+        id: receipt.ledgerEvents[4],
+        eventType: "GUARD_EVALUATED",
+        previousState: "VERIFIED",
+        newState: "VERIFIED",
+        actor: "SYSTEM" as const,
+        payload: {
+          decision: "AUTO_PAY",
+          allowed: undefined, // Exercises undefined property omission across JSONB round-trip
+          firedRules: [],
+        },
+      },
+      {
+        id: receipt.ledgerEvents[5],
+        eventType: "PAYOUT_RELEASED",
+        previousState: "VERIFIED",
+        newState: "PAID",
+        actor: "SYSTEM" as const,
+        payload: {
+          payoutBatchId: receipt.payoutBatchId,
+          payoutItemId: receipt.payoutItemId,
+          amount: receipt.amount,
+          currency: receipt.currency,
+          recipientEmail: receipt.freelancerEmail,
+          status: "SUCCESS",
+        },
+      },
+    ];
+
+    // 1. Reproduce historic pre-6ac5a18 breakage:
+    // Hashes computed at insert with raw JSON.stringify(params.payload), then read back from JSONB
+    let prevHash = "0000000000000000000000000000000000000000000000000000000000000000";
+    const legacyEventsAfterJsonb = realRunEventSpecs.map((spec) => {
+      const insertPayloadStr = JSON.stringify(spec.payload);
+      const sig = crypto
+        .createHash("sha256")
+        .update(`${prevHash}|${receipt.jobId}|${spec.eventType}|${spec.newState}|${spec.actor}|false|${insertPayloadStr}`)
+        .digest("hex");
+      prevHash = sig;
+      return {
+        id: spec.id,
+        jobId: receipt.jobId,
+        eventType: spec.eventType,
+        newState: spec.newState,
+        actor: spec.actor,
+        isMock: false,
+        payload: simulatePostgresJsonbReorder(spec.payload),
+        signatureOrHash: sig,
+      };
+    });
+
+    // Under legacy JSON.stringify verifier: Event #1 (index 0) passes because key lengths (5,6,8,11,15)
+    // match insertion order, and Event #2 (index 1, JOB_FUNDED) breaks due to JSONB key-length reordering.
+    const legacyVerify = verifyLedgerEventsOffline(legacyEventsAfterJsonb, (o) => JSON.stringify(o));
+    expect(legacyVerify.valid).toBe(false);
+    expect(legacyVerify.totalEventsVerified).toBe(1);
+    expect(legacyVerify.brokenRowIndex).toBe(1);
+    expect(legacyVerify.brokenRowId).toBe("41cb32ff-341e-46f3-8e52-5227fed91bfe");
+
+    // Under current canonicalJsonStringify verifier on legacy hashes: breaks at Event #1 (index 0)
+    const canonicalOnLegacy = verifyLedgerEventsOffline(legacyEventsAfterJsonb, canonicalJsonStringify);
+    expect(canonicalOnLegacy.valid).toBe(false);
+    expect(canonicalOnLegacy.totalEventsVerified).toBe(0);
+    expect(canonicalOnLegacy.brokenRowIndex).toBe(0);
+    expect(canonicalOnLegacy.brokenRowId).toBe("3675f0d2-d70b-4e55-9ae1-b7411336dcce");
+
+    // 2. Verify that appending all 6 real-run events through the DB with canonicalJsonStringify
+    // (including JSONB key reordering and undefined fields like allowed: undefined) verifies 6/6:
+    const fixtureJobId = crypto.randomUUID();
+    await db.insert(jobs).values({
+      id: fixtureJobId,
+      title: "Social Media Banner (Summer Sale)",
+      description: "Regression fixture for real-run 6-event ledger chain",
+      clientEmail: receipt.clientEmail,
+      freelancerEmail: receipt.freelancerEmail,
+      amount: receipt.amount,
+      currency: receipt.currency,
+      status: "CREATED",
+    });
+
+    for (const spec of realRunEventSpecs) {
+      await appendLedgerEvent({
+        jobId: fixtureJobId,
+        eventType: spec.eventType,
+        previousState: spec.previousState,
+        newState: spec.newState,
+        actor: spec.actor,
+        isMock: false,
+        payload: spec.payload,
+      });
+    }
+
+    const dbAudit = await verifyLedgerChain(fixtureJobId);
+    expect(dbAudit.valid).toBe(true);
+    expect(dbAudit.totalEventsVerified).toBe(6);
+  });
+
+  it("Item 2 test: verifies historical events created under legacy 6ac5a18 and b36cfbf serializations without schema or row rewrite", async () => {
+    // 1. Build an event chain where events were serialized with 6ac5a18 (v1.0.0-submission)
+    const legacy6acJobId = crypto.randomUUID();
+    let prevHash6ac = "0000000000000000000000000000000000000000000000000000000000000000";
+    const events6ac = [
+      {
+        id: crypto.randomUUID(),
+        jobId: legacy6acJobId,
+        eventType: "JOB_CREATED",
+        newState: "CREATED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { title: "Legacy 6ac Job", amount: "10.00", currency: "USD" },
+        signatureOrHash: "",
+      },
+      {
+        id: crypto.randomUUID(),
+        jobId: legacy6acJobId,
+        eventType: "JOB_FUNDED",
+        newState: "FUNDED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { orderId: "ORDER-6AC-123", amount: "10.00", currency: "USD" },
+        signatureOrHash: "",
+      },
+    ];
+
+    // Recompute with 6ac5a18 serialization (Object.keys().sort())
+    for (const evt of events6ac) {
+      const keys = Object.keys(evt.payload).sort();
+      const pairs = keys.map((k) => `${JSON.stringify(k)}:${JSON.stringify((evt.payload as any)[k])}`);
+      const payloadStr = `{${pairs.join(",")}}`;
+      const hash = crypto
+        .createHash("sha256")
+        .update(`${prevHash6ac}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|false|${payloadStr}`)
+        .digest("hex");
+      evt.signatureOrHash = hash;
+      prevHash6ac = hash;
+    }
+
+    // Verify under new dual-compatibility code without custom serializer override
+    const verify6ac = verifyLedgerEventsOffline(events6ac);
+    expect(verify6ac.valid).toBe(true);
+    expect(verify6ac.totalEventsVerified).toBe(2);
+
+    // 2. Build an event chain where events were serialized with b36cfbf (raw JSON.stringify)
+    const legacyB36JobId = crypto.randomUUID();
+    let prevHashB36 = "0000000000000000000000000000000000000000000000000000000000000000";
+    const eventsB36 = [
+      {
+        id: crypto.randomUUID(),
+        jobId: legacyB36JobId,
+        eventType: "JOB_CREATED",
+        newState: "CREATED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { z_last: "first_in_memory", a_first: "second_in_memory" },
+        signatureOrHash: "",
+      },
+      {
+        id: crypto.randomUUID(),
+        jobId: legacyB36JobId,
+        eventType: "JOB_FUNDED",
+        newState: "FUNDED",
+        actor: "CLIENT",
+        isMock: false,
+        payload: { orderId: "ORDER-B36-999", amount: "15.00" },
+        signatureOrHash: "",
+      },
+    ];
+
+    for (const evt of eventsB36) {
+      const payloadStr = JSON.stringify(evt.payload);
+      const hash = crypto
+        .createHash("sha256")
+        .update(`${prevHashB36}|${evt.jobId}|${evt.eventType}|${evt.newState}|${evt.actor}|false|${payloadStr}`)
+        .digest("hex");
+      evt.signatureOrHash = hash;
+      prevHashB36 = hash;
+    }
+
+    const verifyB36 = verifyLedgerEventsOffline(eventsB36);
+    expect(verifyB36.valid).toBe(true);
+    expect(verifyB36.totalEventsVerified).toBe(2);
+  });
+
+  it("Item 3 test: appends every event type through real code paths with undefined properties, reads back from PGlite, and verifies chain", async () => {
+    const allEventsJobId = crypto.randomUUID();
+    await db.insert(jobs).values({
+      id: allEventsJobId,
+      title: "All Events Type Test",
+      description: "Testing stripUndefinedDeep append guard across every event type",
+      clientEmail: "client@test.com",
+      freelancerEmail: "freelancer@test.com",
+      amount: "25.00",
+      currency: "USD",
+      status: "CREATED",
+    });
+
+    const eventTypesToTest = [
+      {
+        eventType: "JOB_CREATED",
+        previousState: null,
+        newState: "CREATED",
+        actor: "CLIENT" as const,
+        payload: { title: "All Events Job", amount: "25.00", currency: "USD", optionalNotes: undefined },
+      },
+      {
+        eventType: "JOB_FUNDED",
+        previousState: "CREATED",
+        newState: "FUNDED",
+        actor: "CLIENT" as const,
+        payload: { orderId: "ORDER-ALL-1", captureId: "CAP-ALL-1", amount: "25.00", buyerEmail: undefined },
+      },
+      {
+        eventType: "WORK_SUBMITTED",
+        previousState: "FUNDED",
+        newState: "SUBMITTED",
+        actor: "FREELANCER" as const,
+        payload: { submissionId: "sub-123", fileName: "deliverable.png", extraMetadata: undefined },
+      },
+      {
+        eventType: "VERIFICATION_COMPLETED",
+        previousState: "SUBMITTED",
+        newState: "VERIFIED",
+        actor: "VERIFIER" as const,
+        payload: { overallPassed: true, confidence: 0.95, debugLog: undefined },
+      },
+      {
+        eventType: "GUARD_EVALUATED",
+        previousState: "VERIFIED",
+        newState: "VERIFIED",
+        actor: "GUARD" as const,
+        payload: { decision: "NEEDS_HUMAN", allowed: undefined, firedRules: ["RULE_BORDERLINE"] },
+      },
+      {
+        eventType: "HUMAN_REVIEW_TRIGGERED",
+        previousState: "VERIFIED",
+        newState: "MANUAL_REVIEW",
+        actor: "SYSTEM" as const,
+        payload: { reviewerNote: "Triage required", escalationReason: undefined },
+      },
+      {
+        eventType: "PAYOUT_APPROVED",
+        previousState: "MANUAL_REVIEW",
+        newState: "VERIFIED",
+        actor: "ADMIN" as const,
+        payload: { approverEmail: "alex@proofpay.io", reason: "Approved manually", overrideKey: undefined },
+      },
+      {
+        eventType: "PAYOUT_INITIATED",
+        previousState: "VERIFIED",
+        newState: "PAYOUT_PENDING",
+        actor: "SYSTEM" as const,
+        payload: { payoutBatchId: "BATCH-ALL-1", amount: "25.00", itemStatus: undefined },
+      },
+      {
+        eventType: "PAYOUT_CONFIRMED",
+        previousState: "PAYOUT_PENDING",
+        newState: "PAID",
+        actor: "PAYPAL_WEBHOOK" as const,
+        payload: { transactionId: "TX-ALL-1", batchStatus: "SUCCESS", failureReason: undefined },
+      },
+      {
+        eventType: "PAYOUT_RELEASED [SIMULATED]",
+        previousState: "PAID",
+        newState: "SETTLED",
+        actor: "SYSTEM" as const,
+        payload: { simulated: true, settlementId: "sim-123", debugTrace: undefined },
+      },
+    ];
+
+    for (const spec of eventTypesToTest) {
+      await appendLedgerEvent({
+        jobId: allEventsJobId,
+        eventType: spec.eventType,
+        previousState: spec.previousState,
+        newState: spec.newState,
+        actor: spec.actor,
+        payload: spec.payload,
+      });
+    }
+
+    // Read back from PGlite and verify complete chain
+    const verification = await verifyLedgerChain(allEventsJobId);
+    expect(verification.valid).toBe(true);
+    expect(verification.totalEventsVerified).toBe(eventTypesToTest.length);
+  });
 });
+

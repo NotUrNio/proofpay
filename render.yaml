@@ -4,9 +4,10 @@ services:
     runtime: node
     plan: free
     region: oregon
+    autoDeploy: false
     buildCommand: pnpm install && pnpm build
-    startCommand: pnpm demo:seed && pnpm start
-    healthCheckPath: /api/jobs
+    startCommand: pnpm start
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -15,7 +16,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: APP_BASE_URL
-        value: https://proofpay.onrender.com
+        value: https://proofpay-68qi.onrender.com
       - key: PAYPAL_BASE_URL
         value: https://api-m.sandbox.paypal.com
       - key: PAYPAL_MOCK
@@ -32,8 +33,21 @@ services:
         sync: false
       - key: PAYPAL_WEBHOOK_ID
         sync: false
+      - key: PAYPAL_SANDBOX_PAYEE_EMAIL
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: MAX_DAILY_REAL_PAYOUT_USD
+        value: "25.00"
+      - key: MAX_DAILY_REAL_PAYOUT_COUNT
+        value: "5"
+      - key: CLIENT_IP_TRUSTED_PROXY_HOPS
+        sync: false
+      - key: ENABLE_DEBUG_CLIENT_IP
+        sync: false
+      - key: ENABLE_DEMO_RESET
+        sync: false
+
 
 databases:
   - name: proofpay-db

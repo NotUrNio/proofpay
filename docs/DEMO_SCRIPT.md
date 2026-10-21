@@ -15,7 +15,7 @@
 | **1:05 – 1:35** | `/jobs/[id]/submit` $\to$ `/inbox` | `priya@proofpay.io` | Upload `case_17` (Adversarial Prompt Injection) | Hard checks + Model flag injection; Policy Guard halts payout ($0.00 moved). |
 | **1:35 – 1:55** | `/inbox` $\to$ Reviewer modal | `reviewer@proofpay.io` | Open gray-zone submission $\to$ Click "Reject & Refund Escrow" | Gray-zone ($\Delta E \in [11.5, 16.0]$) human routing; PayPal Payments v2 refund. |
 | **1:55 – 2:25** | `/chaos` $\to$ `/policy` | `reviewer@proofpay.io` | Run Drill 3 (Idempotency) & Drill 1 (Duplicate Order) | PayPal negative testing protocol; real idempotency proof; policy replay. |
-| **2:25 – 2:40** | Terminal (`pnpm ledger:verify`) $\to$ `/studio` | Any | Run ledger verification command $\to$ View AG Studio | Postgres trigger append-only audit chain; AG Studio visual introspection. |
+| **2:25 – 2:40** | Terminal (`pnpm ledger:verify`) $\to$ `/studio` | Any | Run ledger verification command $\to$ View Analytics Workspace | Postgres trigger append-only audit chain; Recharts analytics dashboard. |
 | **2:40 – 2:45** | Summary slide / GitHub repo | Any | Display repo link & hackathon stack | Autonomous trust layer powered by PayPal & Google Gemini. |
 
 ---
@@ -30,22 +30,24 @@
 
 ---
 
-### [0:25 – 1:05] The Happy Path: Real PayPal Orders Capture to Instant Payout
-- **Visual**: Switch role to **Client** (`alice@proofpay.io`).
-  1. Click **"New Milestone Job"** (`/jobs/new`).
-  2. Select pre-filled template: *"Summer Sale Banner"* ($5.00 USD, payee `priya@proofpay.io`).
-  3. Click **"Create Job & Sign Mandate"**. Show the signed HMAC-SHA256 mandate parameters.
-  4. Click **"Fund Escrow via PayPal"**. Show PayPal Orders v2 approval & capture.
-  5. Switch role to **Freelancer** (`priya@proofpay.io`).
+### [0:25 – 1:05] The Happy Path: Autonomous Verification to Instant Payout
+- **Visual**: Use the top-bar role switcher to select **Client** (`Alice (Client)`).
+  1. Click **"New Milestone Job"** (`/jobs/new`) or view the **"Guided 60-Second Sandbox Demo"** on `/`.
+  2. In the 3-step creation wizard: select *"Social Media Banner (Square 1:1)"* ($5.00 USD, payee `priya@proofpay.io`).
+  3. Show Step 3: Intent Mandate parameters and progressive disclosure of CIEDE2000 $\Delta E$ rules.
+  4. Note the honest execution modes:
+     - **Guided Demo Mode**: Uses simulated escrow funding (`[SIMULATED]`) so reviewers can test without credentials.
+     - **Real Sandbox Mode**: In the recorded run (`pnpm demo:run`), Alice funds platform escrow using PayPal Orders v2 (`intent=CAPTURE`), and the Order/Capture IDs are cryptographically locked into the mandate.
+  5. Switch role to **Freelancer** (`Priya (Freelancer)`).
   6. Click **"Submit Deliverable"** (`/jobs/[id]/submit`).
   7. Upload `eval/fixtures/case_01_compliant_warm_grid.png`.
   8. Click **"Verify & Release Payout"**.
-  9. Show the live verification pipeline: Deterministic Hard Checks pass in 6ms $\to$ Gemini visual ensemble confirms brand palette and typography $\to$ Pure TypeScript Policy Guard approves $\to$ **PayPal Payouts REST API releases $5.00 instantly**.
+  9. Show the live verification pipeline: Deterministic Hard Checks pass in 6ms $\to$ Gemini visual ensemble confirms brand palette and typography $\to$ Pure TypeScript Policy Guard approves $\to$ **PayPal Payouts REST API releases $5.00 instantly** (governed by the 5 payouts / $25.00/day real cap).
   10. Highlight real IDs on screen: Order `4LF11783H4649862W`, Capture `4GP221272V958470N`, Payout Batch `CPMFG3U4LAXS2`, Payout Item `A7PB6RVHLGY2U`.
 - **Voiceover**:
-  > *"Watch the happy path. Alice creates a 50-dollar mandate and funds platform escrow upfront using PayPal Orders v2 with capture intent. The transaction ID and cryptographic cap are locked into a signed mandate.*
+  > *"Watch the happy path. Alice sets up a milestone mandate with verifiable brand rules and funds platform escrow upfront. The transaction ID and cryptographic cap are locked into a signed HMAC mandate.*
   > *Priya uploads her banner deliverable. ProofPay executes deterministic hard checks on raw bytes in six milliseconds, runs a multimodal Gemini ensemble on sanitized pixels, and feeds the verdict into our Zero-LLM Policy Guard.*
-  > *All invariants pass. ProofPay immediately invokes PayPal's Payouts REST API with a unique sender batch ID—settling real funds to Priya in under three seconds."*
+  > *All invariants pass. ProofPay immediately invokes PayPal's Payouts REST API with a unique sender batch ID—settling funds to Priya in under three seconds."*
 
 ---
 
@@ -91,15 +93,15 @@
 
 ---
 
-### [2:25 – 2:40] Cryptographic Hash Chain & AG Studio Introspection
+### [2:25 – 2:40] Cryptographic Hash Chain & Analytics Workspace
 - **Visual**:
   1. Show terminal executing: `pnpm ledger:verify`.
   2. Show output: **"Verified 24 ledger events across SHA-256 chain. Tamper check PASSED."**
-  3. Switch to browser tab at `/studio` (AG Studio embed).
-  4. Show the visual workflow canvas displaying the active job state, ledger event feed, and Policy Guard decision tree.
+  3. Switch to browser tab at `/studio` (Analytics Workspace).
+  4. Show the Recharts analytics dashboard displaying milestone outcomes, spend vs policy caps, and ground-truth model benchmarks (primary model gemini-3.8-flash: 14 cases, fallback gemini-3.5-flash-lite: 8 cases, 6 cases rejected by deterministic checks before any model call, and replay mode re-running recorded model responses offline).
 - **Voiceover**:
   > *"Every single state transition is locked into an immutable PostgreSQL ledger protected by database-level triggers that abort any UPDATE or DELETE. Running our ledger verification walks the SHA-256 hash chain, guaranteeing zero tampering.*
-  > *And with AG Studio integrated directly into our app, teams get visual, runtime workflow introspection over every escrow milestone."*
+  > *And with our Recharts analytics workspace, teams get real-time visual velocity, outcome breakdowns, and ground-truth model agreement benchmarks across every escrow milestone—transparently attributing runs to our primary gemini-3.8-flash model, automatic gemini-3.5-flash-lite fallback, and deterministic pre-model filters."*
 
 ---
 

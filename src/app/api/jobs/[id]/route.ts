@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, jobs, criteria, mandates, submissions, verdicts, payments } from "@/db";
 import { getJobLedger } from "@/db/ledger";
 import { eq, desc } from "drizzle-orm";
+import { getSessionUser, canUserAccessJob } from "@/lib/auth/roles";
 
 export async function GET(
   req: NextRequest,
@@ -13,6 +14,17 @@ export async function GET(
     const [job] = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+
+    const user = getSessionUser(req);
+    if (!canUserAccessJob(user, job)) {
+      return NextResponse.json(
+        {
+          error: "Forbidden: Access Denied",
+          message: `Role '${user.role}' (${user.email}) does not have permission to access milestone ${id}.`,
+        },
+        { status: 403 }
+      );
     }
 
     const jobCriteria = await db.select().from(criteria).where(eq(criteria.jobId, id));

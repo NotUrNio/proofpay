@@ -2,7 +2,7 @@
 
 > **Project**: ProofPay (Autonomous AI-Verified Milestone Escrow & Instant Payouts)  
 > **Repository**: [https://github.com/NotUrNio/proofpay](https://github.com/NotUrNio/proofpay)  
-> **Hosted Deployment**: `https://proofpay.onrender.com` *(Render deployment ready via `render.yaml`)*
+> **Hosted Deployment**: `https://proofpay-68qi.onrender.com` *(Render deployment ready via `render.yaml`)*
 
 ---
 
@@ -14,7 +14,7 @@ Follow this step-by-step path to experience the complete ProofPay workflow in un
 ProofPay uses role-based access control with pre-seeded demo accounts. In the top-right navigation bar, click the **Role Switcher** badge to instantly swap perspectives:
 - **Client**: `alice@proofpay.io` (Can fund escrow jobs, create mandates)
 - **Freelancer**: `priya@proofpay.io` (Can submit deliverable files for AI verification)
-- **Reviewer**: `reviewer@proofpay.io` (Can access Human Review `/inbox`, Policy Editor `/policy`, Chaos Testing `/chaos`, and AG Studio `/studio`)
+- **Reviewer**: `reviewer@proofpay.io` (Can access Human Review `/inbox`, Policy Editor `/policy`, Chaos Testing `/chaos`, and Analytics Workspace `/studio`)
 
 ### Step 2: The Autonomous Happy Path (Instant Payout)
 1. Switch to **Client** (`alice@proofpay.io`).
@@ -52,13 +52,13 @@ ProofPay uses role-based access control with pre-seeded demo accounts. In the to
 3. Run **Drill 1: Duplicate Invoice ID** (Orders v2 duplicate rejection).
 4. Run **Drill 4: Webhook Replay** (Network duplicate delivery deduplication).
 
-### Step 6: Immutable Hash Chain & AG Studio
+### Step 6: Immutable Hash Chain & Analytics Workspace
 1. Open terminal and run:
    ```bash
    pnpm ledger:verify
    ```
    Output: walks the SHA-256 hash chain and confirms 0 broken rows.
-2. Visit `/studio` to view **AG Studio** embedded directly in the app, introspecting the visual workflow canvas and runtime ledger feed.
+2. Visit `/studio` to view the **Analytics Workspace** (powered by Recharts), introspecting real-time milestone velocity, settlement outcomes, and model agreement benchmarks.
 
 ---
 
@@ -148,15 +148,31 @@ Run the entire vitest test suite:
 ```bash
 pnpm test
 ```
-**Test Results**: 8 test suites, 54 tests, **100% passing**:
+**Test Results**: 24 test suites, 151 vitest tests + 39 playwright cross-browser tests, **100% passing**:
 1. `test/e2e-slice.test.ts`: End-to-end autonomous escrow happy path from clean DB to payout and ledger verification.
 2. `test/guard.test.ts`: Zero-LLM Policy Guard deterministic safety rules and transaction invariants.
 3. `test/mandate.test.ts`: HMAC-SHA256 signed mandate validation, parameter caps, and expiration checks.
-4. `test/ledger.test.ts`: Immutable database trigger enforcement (UPDATE/DELETE/TRUNCATE blocked) + SHA-256 hash chaining.
+4. `test/ledger.test.ts`: Immutable database trigger enforcement (UPDATE/DELETE/TRUNCATE blocked) + multi-version SHA-256 hash chaining.
 5. `test/m2-verification.test.ts`: Boundary tests (2MB size limits, 1080x1080 dimensions, polyglot containers, acTL chunk rejection).
 6. `test/m4-chaos-replay.test.ts`: PayPal negative testing headers, simulation codes, idempotency drills, and counterfactual replay engine.
 7. `test/m4-step0-security.test.ts`: Access control, role enforcement, bundle secret leak prevention, client-side isolation.
 8. `test/paypal.test.ts`: Real PayPal sandbox OAuth token caching and API request formatting.
+9. `tests/seed-lock.test.ts`: Single-instance seed lock and local-only database guard.
+10. `tests/job-access-ssr.test.ts`: SSR least privilege, role cookie enforcement, and zero secret payee leaks.
+11. `tests/rate-limit.test.ts`: Multi-hop client IP extraction, proxy trust, and rate limiting.
+12. `tests/payout-modes.test.ts`: Payout mode labeling, daily velocity caps, and simulation separation.
+13. `tests/ag-studio-guard.test.ts`: Protected routes and role switcher guards.
+14. `tests/analytics.test.ts`: Real-time analytics computation and spend metrics.
+15. `tests/demo-safety-policy.test.ts`: Guided demo safety boundaries and simulated execution.
+16. `tests/ledger-display.test.ts`: Display-layer email masking across public audit views.
+17. `tests/bootstrap.test.ts`: Hosted database bootstrapper with pre-populated DB handling.
+18. `tests/demo-replay-default.test.ts`: Replay policy defaults for bundled demo scenarios.
+19. `tests/demo-reset.test.ts`: State restoration with audit append guard and rate limiting.
+20. `tests/eval-page-integrity.test.ts`: Benchmark UI dynamic rendering from latest.json with 0 false FAILs.
+21. `tests/gitleaks-canary.test.ts`: Ephemeral canary failure assertion and secret pattern compliance.
+22. `tests/payout-status-polling.test.ts`: Payout batch status polling and timeout handling.
+23. `tests/preflight-negatives.test.ts`: Preflight negative failure injection and recursion guard.
+24. `tests/receipt-verify.test.ts`: Offline receipt verifier on recorded hashes and tampering.
 
 ---
 
@@ -164,12 +180,12 @@ pnpm test
 
 | Component | File Path | Why It Matters |
 | :--- | :--- | :--- |
-| **Pure TypeScript Policy Guard** | [`src/lib/guard/guard.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/guard/guard.ts) | **ZERO AI imports**. Pure deterministic code that protects money even if LLM is compromised. |
-| **Signed Escrow Mandate** | [`src/lib/guard/mandate.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/guard/mandate.ts) | Cryptographic HMAC-SHA256 contract locking max payout cap and payee address upfront. |
-| **Deterministic Hard Checks** | [`src/lib/verify/hard-checks.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/verify/hard-checks.ts) | Raw byte inspection: container format validation, metadata sanitization, dimensions, size limits. |
-| **Color Science (CIEDE2000)** | [`src/lib/verify/color-palette.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/verify/color-palette.ts) | Algorithmic CIEDE2000 $\Delta E_{00}$ color distance with calibrated gray-zone routing. |
-| **PayPal Orders v2 (Escrow Capture)** | [`src/lib/paypal/orders.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/paypal/orders.ts) | Idempotent order creation and capture into platform escrow with `custom_id` traceability. |
-| **PayPal Payouts REST (Settlement)** | [`src/lib/paypal/payouts.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/paypal/payouts.ts) | Idempotent payout release to freelancer sandbox accounts via `sender_batch_id`. |
-| **PayPal Chaos & Idempotency Proof** | [`src/lib/paypal/chaos.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/paypal/chaos.ts) | Real double-transmission proof and negative testing simulation protocol. |
-| **Immutable Database Ledger** | [`src/lib/ledger/ledger.ts`](file:///Users/nityam/Documents/Visual%20Studio/Paypal%20Ai%20Hackathon/src/lib/ledger/ledger.ts) | Database triggers + SHA-256 hash chaining walking every historical transition. |
+| **Pure TypeScript Policy Guard** | [`src/lib/guard/guard.ts`](../src/lib/guard/guard.ts) | **ZERO AI imports**. Pure deterministic code that protects money even if LLM is compromised. |
+| **Signed Escrow Mandate** | [`src/lib/guard/mandate.ts`](../src/lib/guard/mandate.ts) | Cryptographic HMAC-SHA256 contract locking max payout cap and payee address upfront. |
+| **Deterministic Hard Checks** | [`src/lib/verify/hard-checks.ts`](../src/lib/verify/hard-checks.ts) | Raw byte inspection: container format validation, metadata sanitization, dimensions, size limits. |
+| **Color Science (CIEDE2000)** | [`src/lib/verify/color-palette.ts`](../src/lib/verify/color-palette.ts) | Algorithmic CIEDE2000 $\Delta E_{00}$ color distance with calibrated gray-zone routing. |
+| **PayPal Orders v2 (Escrow Capture)** | [`src/lib/paypal/orders.ts`](../src/lib/paypal/orders.ts) | Idempotent order creation and capture into platform escrow with `custom_id` traceability. |
+| **PayPal Payouts REST (Settlement)** | [`src/lib/paypal/payouts.ts`](../src/lib/paypal/payouts.ts) | Idempotent payout release to freelancer sandbox accounts via `sender_batch_id`. |
+| **PayPal Chaos & Idempotency Proof** | [`src/lib/paypal/chaos.ts`](../src/lib/paypal/chaos.ts) | Real double-transmission proof and negative testing simulation protocol. |
+| **Immutable Database Ledger** | [`src/db/ledger.ts`](../src/db/ledger.ts) | Database triggers + SHA-256 hash chaining walking every historical transition. |
 

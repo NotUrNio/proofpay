@@ -4,7 +4,12 @@
 > *Track: Autonomous Agentic Commerce / AI & Fintech Integration*  
 > *Tag: `v1.0.0-submission`*
 
-ProofPay is an autonomous milestone escrow and settlement engine that liberates freelancers from waiting weeks for client payment approvals. By fusing PayPal Orders v2, PayPal Payouts REST, and Google Gemini with a Zero-LLM Pure TypeScript Policy Guard, ProofPay objectively evaluates deliverable rubrics and releases real funds in seconds. Every milestone transition is permanently committed to an immutable, trigger-enforced PostgreSQL audit ledger with cryptographic SHA-256 hash chaining.
+ProofPay is an autonomous milestone escrow and settlement engine that liberates freelancers from waiting weeks for client payment approvals. By fusing PayPal Orders v2, PayPal Payouts REST, and Google Gemini with a Zero-LLM Pure TypeScript Policy Guard, ProofPay objectively evaluates deliverable rubrics and releases milestone settlements in seconds. Every milestone transition is permanently committed to an immutable, trigger-enforced PostgreSQL audit ledger with cryptographic SHA-256 hash chaining.
+
+> [!IMPORTANT]
+> **Guided Demos vs. Real PayPal Sandbox Settlement**:
+> - **Guided Web Demos (Bundled Scenarios)**: Use **simulated escrow funding (`isMock=true`) and simulated payouts (`PAYOUT_RELEASED [SIMULATED]`)** so judges can run interactive scenarios repeatedly without depleting the shared platform PayPal Sandbox balance.
+> - **Real PayPal Sandbox Funding & Payouts**: Shown in the **recorded end-to-end run (`pnpm demo:run`, committed sanitized receipt at [`eval/results/single-real-run.json`](eval/results/single-real-run.json) with a `"sanitization"` object listing the substituted `clientEmail` and `freelancerEmail` fields while keeping PayPal IDs, `ledgerChainValid`, and `timestamp` verbatim from gitignored `.data/single-real-run.json`)** and in **custom buyer-captured runs** where a real PayPal Orders v2 capture (`isMock=false`), `PAYPAL_MOCK=false`, and `PAYPAL_SANDBOX_PAYEE_EMAIL` are present. Real sandbox payouts are protected by a **hard cap of 5 payouts / $25.00 USD per day** (`MAX_DAILY_REAL_PAYOUT_COUNT=5`, `MAX_DAILY_REAL_PAYOUT_USD=25.00`).
 
 ---
 
@@ -16,7 +21,7 @@ flowchart TD
         Client["Client (alice@proofpay.io)"]
         CreateJob["Create Milestone Job & Rubrics"]
         SignMandate["HMAC-SHA256 Signed Mandate<br/>(Locks maxAmount, payee, expiry)"]
-        PayPalOrder["PayPal Orders v2 (intent=CAPTURE)"]
+        PayPalOrder["PayPal Orders v2 (intent=CAPTURE)<br/>or Guided Demo Simulated Escrow"]
         EscrowCapture["Escrow Captured: $5.00 USD<br/>(custom_id = Job ID)"]
         Client --> CreateJob --> SignMandate --> PayPalOrder --> EscrowCapture
     end
@@ -53,8 +58,8 @@ flowchart TD
         Guard --> NeedsHuman
         Guard --> Reject
         
-        PayPalPayout["PayPal Payouts REST API<br/>(Instant Payout via sender_batch_id)"]
-        SettledFunds["Priya Receives $5.00 USD<br/>(< 3 seconds settlement)"]
+        PayPalPayout["PayPal Payouts REST API<br/>(Real Sandbox on Buyer-Captured Runs;<br/>Simulated on Guided Demos)"]
+        SettledFunds["Settlement Recorded on Ledger<br/>(Hard Cap: 5 Real Payouts / $25/day)"]
         AutoPay --> PayPalPayout --> SettledFunds
         
         ReviewInbox["Human Review Queue (/inbox)"]
@@ -69,15 +74,42 @@ flowchart TD
     subgraph AuditLedger ["6. Immutable Append-Only Audit Ledger"]
         PostgresTriggers["PostgreSQL Database Triggers<br/>(RAISE EXCEPTION on UPDATE/DELETE/TRUNCATE)"]
         HashChain["SHA-256 Cryptographic Hash Chain<br/>(prev_hash linkage verified via pnpm ledger:verify)"]
-        AgStudio["AG Studio Embedded Workspace (/studio)<br/>(Visual workflow introspection & grid canvas)"]
+        AnalyticsWorkspace["Analytics Workspace (/studio)<br/>(Real-time metrics & Recharts visualization)"]
         
         EscrowCapture -.-> PostgresTriggers
         Guard -.-> PostgresTriggers
         PayPalPayout -.-> PostgresTriggers
         RefundEscrow -.-> PostgresTriggers
-        PostgresTriggers --> HashChain --> AgStudio
+        PostgresTriggers --> HashChain --> AnalyticsWorkspace
     end
 ```
+
+---
+
+## 📸 Application Screenshots
+
+| Landing Page (Autonomous Escrow) | Guided Demo Outcome (Instant Payout) |
+| :---: | :---: |
+| ![Landing Page](docs/screenshots/01_landing_1440px.png) | ![Guided Demo Outcome](docs/screenshots/02_guided_demo_outcome_1440px.png) |
+| *Landing overview with live jobs and role switcher* | *Autonomous payout released upon rubric verification* |
+
+| Milestone Creation & Intent Mandate | Gray Zone Review Pending Verdict |
+| :---: | :---: |
+| ![Milestone Creation](docs/screenshots/03_new_job_step3_1440px.png) | ![Gray Zone Verdict](docs/screenshots/04_verdict_needs_human_1440px.png) |
+| *Step 3: Contractual rules & progressive parameters* | *Inspection panel showing CIEDE2000 ΔE near-miss* |
+
+| Review Inbox (Human-in-the-Loop) | Policy Editor & Replay Console |
+| :---: | :---: |
+| ![Review Inbox](docs/screenshots/05_inbox_1440px.png) | ![Policy Editor](docs/screenshots/06_policy_1440px.png) |
+| *Reviewer console for gray-zone approvals & refunds* | *Live simulator for safety invariants & replaying history* |
+
+| Settlement Analytics Studio | Cryptographic Audit Ledger |
+| :---: | :---: |
+| ![Analytics Studio](docs/screenshots/07_studio_1440px.png) | ![Audit Ledger](docs/screenshots/08_ledger_1440px.png) |
+| *Recharts spend velocity & model agreement rates* | *AG Grid immutable ledger with SHA-256 hash chains* |
+
+> [!NOTE]
+> All views are responsive and verified across desktop (1440px) and mobile (390px / 360px) viewports (see [`docs/screenshots/`](docs/screenshots/) for full mobile capture suite).
 
 ---
 
@@ -86,7 +118,7 @@ flowchart TD
 ### 1. Prerequisites
 - **Node.js** 20+ (Node v26 supported)
 - **pnpm** (or `npm`)
-- **Docker** (for local PostgreSQL)
+- **Docker** (for local PostgreSQL; falls back automatically to embedded PGlite if `DATABASE_URL` is unset)
 
 ### 2. Setup & Configuration
 ```bash
@@ -104,9 +136,15 @@ Populate `.env` with your PayPal Sandbox credentials and Gemini key:
 - `PAYPAL_CLIENT_ID`: Sandbox REST app Client ID
 - `PAYPAL_CLIENT_SECRET`: Sandbox REST app Secret
 - `PAYPAL_BASE_URL`: `https://api-m.sandbox.paypal.com`
+- `PAYPAL_SANDBOX_PAYEE_EMAIL`: Read by the hosted web app at payout time for real sandbox payouts (fails clearly at payout time if unset, never at server boot)
+- `PAYPAL_SANDBOX_PERSONAL_EMAIL` / `PAYPAL_SANDBOX_BUSINESS_EMAIL`: Read only by local CLI scripts (`pnpm demo:run`)
 - `MANDATE_SIGNING_SECRET`: Random 32+ character secret string
 - `GEMINI_API_KEY`: Google Gemini API Key
-- `PAYPAL_MOCK`: `false` for live PayPal Sandbox calls; `true` for offline simulation.
+- `PAYPAL_MOCK`: `false` for live PayPal Sandbox calls on buyer-captured runs; `true` for offline simulation
+- `MAX_DAILY_REAL_PAYOUT_COUNT` / `MAX_DAILY_REAL_PAYOUT_USD`: Hard daily cap on real PayPal Sandbox payouts (default `5` payouts / `25.00` USD per day)
+- `CLIENT_IP_TRUSTED_PROXY_HOPS`: Number of rightmost public `X-Forwarded-For` proxy hops to skip as trusted proxies (integer `0..10`, default `0`)
+- `ENABLE_DEBUG_CLIENT_IP`: Enables reviewer-only `/api/debug/client-ip` when set to `"true"` (default `false`, returns HTTP 404 when unset/false)
+- `ENABLE_TEST_ROLE_HEADER`: Allows the test-only `x-proofpay-role` header when set to `"true"` (default `false` in production; set only in `playwright.config.ts`)
 
 ### 3. Start Database & Push Schema
 ```bash
@@ -121,7 +159,7 @@ pnpm db:push
 ```bash
 pnpm demo:seed
 ```
-Seeds demo accounts, funded jobs, signed mandates, deliverable submissions, and ledger history.
+Seeds demo accounts, funded jobs, signed mandates, deliverable submissions, and ledger history (enforcing a single-instance lock and local-only database guard).
 
 ### 5. Launch Development Server
 ```bash
@@ -131,24 +169,35 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 👥 Demo Logins & Role-Based Access Control
+## 👥 Demo Personas & Role Switching (Cookie Personas, Not Production Auth)
 
-ProofPay enforces server-side role-based access control. Use the **Role Switcher** in the top navigation bar to switch personas:
+ProofPay uses **demo personas via cookie (`proofpay_role`), not production authentication**, so hackathon judges can switch perspectives in one click via the top navigation bar without account registration. When no cookie is present, `getSessionUser` defaults to the non-privileged **`client` (`alice@proofpay.io`)** read-only overview persona; **every route that mutates money, mandates, or policy (as well as reviewer-only routes) requires an explicit `proofpay_role` cookie and rejects cookie-less requests with HTTP 403**. The `x-proofpay-role` request header is ignored in production (`NODE_ENV="production"`) unless `ENABLE_TEST_ROLE_HEADER=true` (default off, set only in `playwright.config.ts`). Server-side route handlers and `/jobs/[id]` SSR enforce role and ownership rules (`canUserAccessJob` + Next.js 15 `forbidden()`) against the active persona. Production authentication would replace cookie-selected personas with signed session tokens (e.g., Auth.js/OIDC + Log In with PayPal), cryptographic user-ID binding on job mutations, and CSRF-protected HTTP-only cookies.
 
-| Demo Role | Email Address | Password | Permissions & Available Routes |
+| Demo Persona | Email Address | Cookie Value (`proofpay_role`) | Permissions & Available Routes |
 | :--- | :--- | :--- | :--- |
-| **Client** | `alice@proofpay.io` | `demo-pass-123` | Create milestone jobs (`/jobs/new`), sign mandates, fund escrow with PayPal Orders v2 (`/jobs/[id]`) |
-| **Freelancer** | `priya@proofpay.io` | `demo-pass-123` | View assigned milestones, upload deliverables, trigger verification (`/jobs/[id]/submit`) |
-| **Reviewer** | `reviewer@proofpay.io` | `demo-pass-123` | Human Review Inbox (`/inbox`), Policy Editor (`/policy`), Chaos Negative Testing (`/chaos`), AG Studio (`/studio`) |
+| **Client** *(Default view)* | `alice@proofpay.io` | `client` | Default read-only landing overview; with `proofpay_role=client` cookie, create milestone jobs (`/jobs/new`), sign mandates, fund escrow with PayPal Orders v2 (`/jobs/[id]`) |
+| **Freelancer** | `priya@proofpay.io` | `freelancer` | View assigned milestones, upload deliverables, trigger verification (`/jobs/[id]/submit`) |
+| **Reviewer** | `reviewer@proofpay.io` | `reviewer` | Human Review Inbox (`/inbox`), Policy Editor (`/policy`), Chaos Negative Testing (`/chaos`), Analytics Workspace (`/studio`) |
 
 > [!IMPORTANT]
-> **Credential Separation**: Demo app accounts (`alice@proofpay.io`, `priya@proofpay.io`, `reviewer@proofpay.io`) are decoupled from PayPal sandbox credentials. PayPal Sandbox business and personal credentials live exclusively in the backend `.env` file and are never exposed to clients or checked into source control.
+> **Credential Separation**: Demo persona emails (`alice@proofpay.io`, `priya@proofpay.io`, `reviewer@proofpay.io`) are decoupled from PayPal sandbox credentials. The hosted web app reads `PAYPAL_SANDBOX_PAYEE_EMAIL` from backend environment variables at payout time; `PAYPAL_SANDBOX_PERSONAL_EMAIL` and `PAYPAL_SANDBOX_BUSINESS_EMAIL` are read only by local CLI scripts (`pnpm demo:run`).
+
+---
+
+### ⏱️ Cloud Hosting & Cold-Start Realities (Render Free Tier)
+When accessing the hosted deployment on Render's free tier (`https://proofpay-68qi.onrender.com`):
+- **Spin-down policy**: Render automatically spins down free-tier web services after 15 minutes of zero traffic.
+- **First-visit delay**: A cold first request triggers container provisioning and Node.js process boot, taking **50–60 seconds** before the server responds with HTTP 200. During this window, the browser waits at the TCP/TLS connection layer (showing the browser's native spinner).
+- **Client skeletons ([`src/app/loading.tsx`](src/app/loading.tsx))**: Next.js App Router streaming skeletons and transitions run **client-side only after** the remote server has booted and begun streaming HTML. They cannot mask or speed up the underlying infrastructure spin-up.
+- **Warm state**: Once warmed up, all subsequent page loads, role switches, and API requests execute with normal sub-second dynamic latencies.
 
 ---
 
 ## 💳 Live Single-Run Proof on PayPal Sandbox (End-to-End Traceability)
 
-The following real end-to-end execution was run through the ProofPay service stack against live **PayPal Sandbox** (`PAYPAL_MOCK=false`) using real buyer authentication:
+While the interactive guided demos in the web UI use **simulated funding and simulated payouts (`[SIMULATED]`)** to prevent unbacked payouts from draining the shared platform sandbox balance, real PayPal Sandbox funding and payouts are executed in the recorded single-run (`pnpm demo:run`, committed sanitized receipt at [`eval/results/single-real-run.json`](eval/results/single-real-run.json) with a `"sanitization"` object listing the substituted `clientEmail` and `freelancerEmail` fields while preserving PayPal IDs, `ledgerChainValid`, and `timestamp` verbatim from gitignored `.data/single-real-run.json`) and in custom buyer-captured runs (subject to the hard daily cap of **5 payouts / $25.00 USD per day**).
+
+The following real end-to-end execution was recorded through the ProofPay service stack against live **PayPal Sandbox** (`PAYPAL_MOCK=false`) using real buyer authentication:
 
 | Execution Artifact | Identifier / Value | Description & Sandbox Verification |
 | :--- | :--- | :--- |
@@ -161,16 +210,18 @@ The following real end-to-end execution was run through the ProofPay service sta
 | **Sender Item ID** | `item_ef7a9683` | Sent on payout item for end-to-end correlation |
 
 ### Cryptographic Audit Ledger Trail (Single-Run Chain)
-All 6 state transitions from this single run were committed to the immutable database-enforced ledger:
+All 6 state transitions from this single run (`2026-10-18T16:07:40.312Z`) were committed to the database-enforced append-only ledger:
 
-| Seq | Event ID | Event Type | Actor | State Transition | Hash Chain Status |
-| :---: | :--- | :--- | :--- | :--- | :---: |
-| 1 | `3675f0d2-d70b-4e55-9ae1-b7411336dcce` | `JOB_CREATED` | `CLIENT` | `null` $\to$ `CREATED` | `GENESIS` |
-| 2 | `41cb32ff-341e-46f3-8e52-5227fed91bfe` | `JOB_FUNDED` | `CLIENT` | `CREATED` $\to$ `FUNDED` | `LINKED` |
-| 3 | `50cf60fa-1dc4-462c-8f01-a8e0baa6fda4` | `DELIVERABLE_SUBMITTED` | `FREELANCER` | `FUNDED` $\to$ `SUBMITTED` | `LINKED` |
-| 4 | `6346027e-edab-4e08-86b0-46532b63092b` | `VERIFICATION_COMPLETED` | `SYSTEM` | `SUBMITTED` $\to$ `VERIFIED` | `LINKED` |
-| 5 | `faa66c66-58b2-4de9-be2f-4bf19105536e` | `GUARD_EVALUATED` | `GUARD` | `VERIFIED` $\to$ `VERIFIED` | `LINKED` |
-| 6 | `2e6c11f9-a4fa-4cda-b5a0-7a334ede0308` | `PAYOUT_RELEASED` | `SYSTEM` | `VERIFIED` $\to$ `PAID` | `VERIFIED` |
+| Seq | Event ID | Event Type | Actor | State Transition | Recorded Hash Prefix | Receipt Verification (`ledgerChainValid: false`) |
+| :---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 (`index 0`) | `3675f0d2-d70b-4e55-9ae1-b7411336dcce` | `JOB_CREATED` | `CLIENT` | `null` $\to$ `CREATED` | `9439d7d4d33f97c3...` | `VERIFIED` (`1/6`; key lengths `5,6,8,11,15` matched `JSONB` order) |
+| 2 (`index 1`) | `41cb32ff-341e-46f3-8e52-5227fed91bfe` | `JOB_FUNDED` | `CLIENT` | `CREATED` $\to$ `FUNDED` | `0eba1fb68e70adc2...` | `MISMATCH AT INDEX 1` (pre-`6ac5a18` `JSON.stringify` vs `JSONB` key-length order) |
+| 3 (`index 2`) | `50cf60fa-1dc4-462c-8f01-a8e0baa6fda4` | `DELIVERABLE_SUBMITTED` | `FREELANCER` | `FUNDED` $\to$ `SUBMITTED` | `14b1c2c94d7da821...` | Chained to `0eba1fb68e70adc2...` |
+| 4 (`index 3`) | `6346027e-edab-4e08-86b0-46532b63092b` | `VERIFICATION_COMPLETED` | `SYSTEM` | `SUBMITTED` $\to$ `VERIFIED` | `31b4195303f70da9...` | Chained to `14b1c2c94d7da821...` |
+| 5 (`index 4`) | `faa66c66-58b2-4de9-be2f-4bf19105536e` | `GUARD_EVALUATED` | `SYSTEM` | `VERIFIED` $\to$ `VERIFIED` | `2b742421c23df820...` | Chained to `31b4195303f70da9...` |
+| 6 (`index 5`) | `2e6c11f9-a4fa-4cda-b5a0-7a334ede0308` | `PAYOUT_RELEASED` | `SYSTEM` | `VERIFIED` $\to$ `PAID` | `9373e914aaa38a5e...` | Chained to `2b742421c23df820...` |
+
+> **Receipt Honesty Note (`ledgerChainValid: false`)**: When this run executed at `2026-10-18T16:07:40.312Z` (prior to commit `6ac5a18`), `appendLedgerEvent` and `verifyLedgerChain` hashed payloads with raw `JSON.stringify(payload)`. Event #1 (`index 0`, `JOB_CREATED`) verified because its keys (`title`, `amount`, `currency`, `clientEmail`, `freelancerEmail`, lengths `5,6,8,11,15`) were already in PostgreSQL `JSONB`'s internal key-length sort order. Event #2 (`index 1`, `JOB_FUNDED`) hashed insertion order `["orderId","captureId","amount","currency","buyerEmail"]` (`0eba1fb68e70adc2...`), whereas `JSONB` returned length-ordered keys `["amount","orderId","currency","captureId","buyerEmail"]` (`2ced456186f2e926...`), causing `verifyLedgerChain` to report `ledgerChainValid: false` (`totalEventsVerified: 1`, `brokenRowIndex: 1`). Canonical key sorting and `undefined`-field normalization (`canonicalJsonStringify` in [`src/db/ledger.ts`](src/db/ledger.ts)) fix this for all subsequent runs (verified by the 6-event fixture regression test in [`test/ledger.test.ts`](test/ledger.test.ts)), while the historical receipt value in `eval/results/single-real-run.json` is preserved unaltered.
 
 Reproduce this flow at any time:
 ```bash
@@ -205,13 +256,13 @@ pnpm eval:live
 | **Median Latency** | **16 ms** | — | Instant replay cache; ~1.8s live |
 | **Token Consumption** | **40,292 total** | — | 31,824 prompt tokens / 8,468 completion tokens |
 | **Verification Cost** | **$0.00035 / run** | — | Total API cost: $0.00985 across entire benchmark |
-| **Serving Models** | `gemini-3.8-flash` (primary)<br>`gemini-3.5-flash-lite` (fallback) | — | Automatic quota-limit fallback verified live |
+| **Serving Models** | `gemini-3.8-flash` (primary: 14 cases)<br>`gemini-3.5-flash-lite` (fallback: 8 cases)<br>6 cases rejected by deterministic checks before any model call | — | Dynamic routing from `servingModels` (22 model-served); replay mode re-runs recorded model responses offline |
 
 ---
 
 ### 🎨 Near-Miss Palette Calibration Science (CIEDE2000)
 
-Thresholds $T_{\text{brand}} = 11.5$ and $T_{\text{hard}} = 16.0$ were calibrated **strictly on the Dev split**:
+The $\Delta E$ thresholds were changed in `6ac5a18`, after the benchmark cases were added; the confidence threshold (0.85) predates them. 1 of 15 held-out cases were added after thresholds were last changed; the remaining held-out cases are not independent of the tuning.
 - **Dev Compliant Maximum**: $\Delta E_{00} = 10.25$ (`case_01`: 10.25, `case_03`: 7.65, `case_25`: 7.89).
 - **Deliberate Gray Zone ($\Delta E_{00} \in [11.5, 16.0]$)**:
   - `case_21` (Crimson Red-Orange, Dev): $\Delta E_{00} = 11.69$
@@ -271,8 +322,10 @@ ProofPay implements defense-in-depth across 5 distinct security boundaries:
 ## 🤖 AI & Sponsor Tools Used
 
 ### Runtime AI Models:
-- **Google Gemini 3.8 Flash** (`gemini-3.8-flash`): Primary multimodal vision model for structured JSON rubric analysis.
-- **Google Gemini 3.5 Flash Lite** (`gemini-3.5-flash-lite`): Fast, cost-efficient fallback model invoked automatically if primary model quota limits are reached.
+- **Google Gemini 3.8 Flash** (`gemini-3.8-flash`): Primary multimodal vision model for structured JSON rubric analysis (served 14 benchmark cases).
+- **Google Gemini 3.5 Flash Lite** (`gemini-3.5-flash-lite`): Fast, cost-efficient fallback model invoked automatically if primary model quota limits are reached (served 8 benchmark cases).
+- **Deterministic Pre-Model Checks**: 6 benchmark cases rejected by deterministic byte-level checks before any model call.
+- **Offline Replay Mode**: Re-runs recorded model responses offline for deterministic, zero-API-cost benchmark evaluation.
 - **Vercel AI SDK** (`@ai-sdk/google` v1.1.10): Standardized provider interface for structured object generation (`generateObject`).
 
 ### Development Tools:
@@ -284,7 +337,7 @@ ProofPay implements defense-in-depth across 5 distinct security boundaries:
 - **PayPal Payments v2 REST API**: Captured payment refunds (`POST /v2/payments/captures/{id}/refund`).
 - **PayPal Payouts v1 REST API**: Single payout settlements with idempotent `sender_batch_id`.
 - **AG Grid Community**: Interactive audit ledger grid with column sorting, filtering, and event payload viewer.
-- **AG Studio**: Embedded visual workflow designer canvas (`/studio`) for runtime state introspection.
+- **Recharts (MIT)**: Responsive, accessible analytics workspace (`/studio`) visualizing escrow spend velocity, decision outcomes, and model agreement benchmarks.
 - **Render Cloud**: Managed web service and PostgreSQL database deployment (`render.yaml`).
 
 ---

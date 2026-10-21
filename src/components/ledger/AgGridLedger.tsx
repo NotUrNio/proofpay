@@ -6,6 +6,7 @@ import { ColDef, GridApi, GridReadyEvent, RowClickedEvent } from "ag-grid-commun
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { ShieldCheck, Download, Search, CheckCircle2, History, X, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import { maskPayloadEmails } from "@/lib/ledger-display";
 
 export interface LedgerRowData {
   id: string;
@@ -118,7 +119,9 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
         cellRenderer: (params: { value: string }) => {
           const type = params.value;
           let badgeClass = "bg-slate-100 text-slate-800 border-slate-200";
-          if (type.includes("CREATED") || type.includes("FUNDED")) {
+          if (type.includes("RESET")) {
+            badgeClass = "bg-amber-100 text-amber-900 border-amber-400 font-bold";
+          } else if (type.includes("CREATED") || type.includes("FUNDED")) {
             badgeClass = "bg-blue-100 text-blue-800 border-blue-300";
           } else if (type.includes("SUBMITTED")) {
             badgeClass = "bg-purple-100 text-purple-800 border-purple-300";
@@ -175,7 +178,7 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
         width: 250,
         valueGetter: (params: { data?: LedgerRowData }) => {
           if (!params.data?.payload) return "";
-          return JSON.stringify(params.data.payload);
+          return JSON.stringify(maskPayloadEmails(params.data.payload));
         },
         cellRenderer: (params: { value: string }) => (
           <span className="font-mono text-[11px] text-slate-500 truncate block" title={params.value}>
@@ -358,6 +361,19 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
               </div>
             </div>
 
+            {selectedRow.eventType === "DEMO_STATE_RESET" && (
+              <div className="bg-amber-50 border border-amber-300 text-amber-900 text-xs p-3 rounded-xl space-y-1">
+                <span className="font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Demo State Restoration Event
+                </span>
+                <p className="text-amber-800 text-[11px] leading-relaxed">
+                  Bundled demo jobs were reset to canonical drill states (VERIFIED / FUNDED / PAID).
+                  In accordance with ProofPay&apos;s append-only ledger invariant, previous audit rows, submissions, and SHA-256 cryptographic hashes are never deleted.
+                </p>
+              </div>
+            )}
+
             {/* SHA-256 Hash Chaining Detail */}
             <div className="bg-slate-900 text-slate-100 p-4 rounded-xl space-y-2 text-xs font-mono">
               <div className="flex items-center justify-between text-slate-400 text-[11px]">
@@ -387,7 +403,7 @@ export function AgGridLedger({ events, jobId, onRefresh }: AgGridLedgerProps) {
                 Full Event Payload (Canonical JSON)
               </label>
               <pre className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-mono text-slate-800 overflow-x-auto max-h-60">
-                {JSON.stringify(selectedRow.payload, null, 2)}
+                {JSON.stringify(maskPayloadEmails(selectedRow.payload), null, 2)}
               </pre>
             </div>
           </div>

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, ledgerEvents } from "@/db";
 import { asc, desc } from "drizzle-orm";
 
+import { maskPayloadEmails } from "@/lib/ledger-display";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
@@ -15,9 +17,15 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(ledgerEvents.sequenceNumber))
       .limit(limit);
 
+    // Mask emails in the display layer only (underlying database records and hashes remain untouched)
+    const displayEvents = events.map((e) => ({
+      ...e,
+      payload: maskPayloadEmails(e.payload),
+    }));
+
     return NextResponse.json({
       success: true,
-      events,
+      events: displayEvents,
     });
   } catch (error) {
     console.error("[API] Failed to fetch global ledger:", error);

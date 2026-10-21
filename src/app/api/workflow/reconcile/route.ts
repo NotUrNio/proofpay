@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reconcileJobPayoutWorkflow } from "@/lib/workflow/retry";
+import { assertAuthorizedRole } from "@/lib/auth/roles";
 import { db, jobs } from "@/db";
 import { eq } from "drizzle-orm";
 
@@ -11,6 +12,11 @@ export const dynamic = "force-dynamic";
  * Suitable for Render cron jobs, background workers, or polling hooks.
  */
 export async function POST(req: NextRequest) {
+  const auth = assertAuthorizedRole(req, ["client", "freelancer", "reviewer"]);
+  if ("errorResponse" in auth) {
+    return auth.errorResponse;
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const { jobId } = body;

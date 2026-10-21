@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Clock, DollarSign, Shield, Sparkles, AlertTriangle, ArrowRight, Upload, Lock, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { maskEmail } from "@/lib/ledger-display";
 
 export interface PipelineStageProps {
   status: string; // CREATED, FUNDED, SUBMITTED, VERIFYING, VERIFIED, PAID, SETTLED, MANUAL_REVIEW, REJECTED
@@ -266,7 +267,7 @@ export function LivePipelineBoard({
                 ID: {payoutId}
               </div>
             )}
-            <div className="text-[10px] text-slate-600 truncate">{freelancerEmail}</div>
+            <div className="text-[10px] text-slate-600 truncate">{maskEmail(freelancerEmail)}</div>
           </div>
         </div>
       </div>

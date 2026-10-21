@@ -4,6 +4,7 @@ import { appendLedgerEvent } from "@/db/ledger";
 import { signMandate } from "@/lib/guard";
 import { ensureDatabaseSchema } from "@/db/init";
 import { assertAuthorizedRole } from "@/lib/auth/roles";
+import { checkDemoRateLimits, getClientIp } from "@/lib/rate-limit";
 import { desc } from "drizzle-orm";
 
 export async function GET() {
@@ -18,17 +19,50 @@ export async function POST(req: NextRequest) {
   if ("errorResponse" in auth) {
     return auth.errorResponse;
   }
+
+  // Rate limiting to protect database & demo resource quota
+  const clientIp = getClientIp(req);
+  const rateLimit = checkDemoRateLimits(clientIp);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: rateLimit.reason || "Rate limit reached. Please wait before creating more jobs.",
+        limits: {
+          ipRemaining: rateLimit.ipLimit.remaining,
+          globalDailyRemaining: rateLimit.globalDailyLimit.remaining,
+        },
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "60",
+          "X-RateLimit-IP-Remaining": rateLimit.ipLimit.remaining.toString(),
+          "X-RateLimit-Global-Remaining": rateLimit.globalDailyLimit.remaining.toString(),
+        },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
+    const configuredPayee = process.env.PAYPAL_SANDBOX_PAYEE_EMAIL?.trim();
     const {
       title = "Social Media Banner Design",
       description = "Summer sale campaign banner 1080x1080 PNG featuring SUMMER SALE text and brand warm colors.",
       clientEmail = "sandbox-buyer@business.example.com",
-      freelancerEmail = "priya-designer@sandbox.paypal.com",
+      freelancerEmail: bodyFreelancerEmail,
+      payeeEmail: bodyPayeeEmail,
       amount = "50.00",
       currency = "USD",
       scope = "social_media_banner_milestone_1",
     } = body;
+    const freelancerEmail =
+      bodyFreelancerEmail ||
+      bodyPayeeEmail ||
+      (process.env.PAYPAL_MOCK === "false" && configuredPayee
+        ? configuredPayee
+        : "priya@proofpay.io");
+
 
     // 1. Create Job
     const [newJob] = await db

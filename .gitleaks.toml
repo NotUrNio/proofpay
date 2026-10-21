@@ -1,0 +1,40 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore build artifacts, tests, and mock HMAC secret"
+paths = [
+  '''.next/.*''',
+  '''node_modules/.*''',
+  '''test/.*''',
+  '''tests/.*''',
+  '''eval/fixtures/.*''',
+  '''^\.env$''',
+  '''\.data/.*'''
+]
+regexes = [
+  '''test_signing_secret_at_least_32_characters_long_12345''',
+]
+
+[[rules]]
+id = "scripts-password-or-secret-assignment"
+description = "Detects hardcoded password or secret assignments and credential literals in scripts/"
+path = '''(^|/)scripts/.*'''
+regex = '''(?i)(?:password|passwd|secret|client_secret)\s*[:=]\s*['"`]?([A-Za-z0-9$!@#%^&*|~_+-]{6,})['"`]?'''
+secretGroup = 1
+  [rules.allowlist]
+  regexTarget = "line"
+  regexes = [
+    '''process\.env''',
+    '''YOUR_''',
+    '''REPLACE_''',
+    '''<[^>]+>''',
+    '''\[REDACTED\]''',
+    '''audit-secrets-literal''',
+    '''boolean''',
+    '''SECRET_PATTERNS''',
+    '''hasSecret''',
+    '''canary_test_password''',
+    '''OLD_SANDBOX_PASSWORD''',
+  ]
+

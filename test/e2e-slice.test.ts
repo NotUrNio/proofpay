@@ -11,6 +11,8 @@ import { eq } from "drizzle-orm";
 describe("Milestone 1 End-to-End Vertical Slice Acceptance Test", () => {
   beforeAll(async () => {
     process.env.PAYPAL_MOCK = "true";
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     await ensureDatabaseSchema();
   });
 

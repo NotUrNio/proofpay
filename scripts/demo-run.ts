@@ -12,8 +12,19 @@ import { signMandate } from "../src/lib/guard/mandate";
 import { evaluatePolicyGuard } from "../src/lib/guard/guard";
 import { runHardChecks } from "../src/lib/verify/hard-checks";
 import { runLlmVerifierEnsemble } from "../src/lib/verify/llm-verifier";
-import { createOrder, getOrder, captureOrder, createPayout, getPayoutBatch } from "../src/lib/paypal";
-import { eq } from "drizzle-orm";
+import {
+  createOrder,
+  getOrder,
+  captureOrder,
+  createPayout,
+  getPayoutBatch,
+  getPayoutItem,
+  resolveConfiguredSandboxPayeeEmail,
+  resolveConfiguredSandboxBuyerEmail,
+} from "../src/lib/paypal";
+import { assertLocalDatabaseOnly } from "../src/lib/seed-guard";
+import { checkDailyRealPayoutCap } from "../src/lib/paypal/payout-policy";
+import { eq, and, gte } from "drizzle-orm";
 
 async function promptUser(questionText: string): Promise<string> {
   const rl = readline.createInterface({
@@ -32,6 +43,60 @@ async function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
 }
 
+async function runPreflightChecks(candidateAmountUsd: string): Promise<{ freelancerEmail: string; clientEmail: string }> {
+  // 1. Required environment variable names
+  const requiredEnvVars = [
+    "PAYPAL_CLIENT_ID",
+    "PAYPAL_CLIENT_SECRET",
+    "PAYPAL_SANDBOX_PAYEE_EMAIL",
+  ];
+  const missing = requiredEnvVars.filter((v) => !process.env[v] || process.env[v]!.trim() === "");
+  if (missing.length > 0) {
+    throw new Error(
+      `[Preflight Check Failed] Missing required environment variables: ${missing.join(", ")}. Please configure them before running demo:run.`
+    );
+  }
+
+  // 2. Payee not a placeholder
+  const freelancerEmail = resolveConfiguredSandboxPayeeEmail();
+  const placeholderPatterns = [/example\.com/i, /placeholder/i, /your-/i, /mock/i];
+  if (placeholderPatterns.some((p) => p.test(freelancerEmail))) {
+    throw new Error(
+      `[Preflight Check Failed] PAYPAL_SANDBOX_PAYEE_EMAIL contains a placeholder pattern. A valid non-placeholder PayPal Sandbox payee email is required.`
+    );
+  }
+
+  const clientEmail = resolveConfiguredSandboxBuyerEmail();
+
+  // 3. DB is strictly local (PGlite or localhost Postgres)
+  assertLocalDatabaseOnly(process.env.DATABASE_URL, process.env.USE_PGLITE);
+
+  // 4. Daily-cap headroom
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const todayPayoutRows = await db
+    .select({ amount: payments.amount })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.type, "PAYOUT"),
+        eq(payments.isMock, false),
+        gte(payments.createdAt, startOfDay)
+      )
+    );
+
+  const capCheck = checkDailyRealPayoutCap(todayPayoutRows, candidateAmountUsd);
+  if (!capCheck.allowed) {
+    throw new Error(`[Preflight Check Failed] ${capCheck.reason}`);
+  }
+
+  console.log(
+    `[Preflight] Environment, local DB guard, non-placeholder payee, and daily-cap headroom (${capCheck.currentCount}/${capCheck.maxCount} payouts, $${capCheck.currentUsd.toFixed(2)}/$${capCheck.maxUsd.toFixed(2)} USD today) verified.`
+  );
+
+  return { freelancerEmail, clientEmail };
+}
+
 async function main() {
   console.log("================================================================================");
   console.log("             ProofPay: Live Real-World Single End-to-End Run                   ");
@@ -39,17 +104,18 @@ async function main() {
   console.log("Environment: PayPal Sandbox (PAYPAL_MOCK=false)");
   console.log("Production Service Stack: Orders v2 -> Hard Checks -> AI Ensemble -> Policy Guard -> Payouts v1 -> Hash Ledger\n");
 
+  const amount = "5.00";
+  const currency = "USD";
+
+  // Preflight checks: required env vars, local DB guard, non-placeholder payee, daily cap headroom
+  const { freelancerEmail, clientEmail } = await runPreflightChecks(amount);
+
   // 1. Initialize Clean DB Schema
   await ensureDatabaseSchema();
   console.log("[1/7] Database schema verified and Postgres triggers active.");
 
   // 2. Create Job in DB
   const jobId = crypto.randomUUID();
-  const amount = "5.00";
-  const currency = "USD";
-  const clientEmail = "sb-dmohp53303471@business.example.com";
-  const freelancerEmail = "sb-ft17i53364262@personal.example.com";
-
   const [job] = await db
     .insert(jobs)
     .values({
@@ -119,9 +185,10 @@ async function main() {
   console.log(`\n--------------------------------------------------------------------------------`);
   console.log(`ACTION REQUIRED: Approve the $5.00 Escrow Funding in PayPal Sandbox`);
   console.log(`Approval URL:\n${approveLink}\n`);
-  console.log(`Login Credentials:`);
-  console.log(`  Email:    sb-ft17i53364262@personal.example.com`);
-  console.log(`  Password: Jf$5|9$t (or personal sandbox account password)`);
+  console.log(`Instructions:`);
+  console.log(`  1. Open the approval URL above in your browser.`);
+  console.log(`  2. Log into your PayPal Sandbox Personal Buyer account.`);
+  console.log(`  3. Click 'Complete Purchase' / 'Continue' to approve.`);
   console.log(`--------------------------------------------------------------------------------`);
 
   console.log("\nWaiting for sandbox buyer approval (auto-polling Order status)...");
@@ -327,7 +394,8 @@ async function main() {
     },
   });
 
-  console.log(`      Policy Guard Decision: ${guardResult.decision} (${guardResult.allowed ? "ALLOWED" : "BLOCKED"})`);
+  const guardAllowed = guardResult.decision === "AUTO_PAY";
+  console.log(`      Policy Guard Decision: ${guardResult.decision} (${guardAllowed ? "ALLOWED" : "BLOCKED"})`);
   console.log(`      Fired Policy Rules:    ${guardResult.firedRuleIds.join(", ")}`);
 
   if (guardResult.decision !== "AUTO_PAY") {
@@ -342,7 +410,7 @@ async function main() {
     actor: "SYSTEM",
     payload: {
       decision: guardResult.decision,
-      allowed: guardResult.allowed,
+      allowed: guardAllowed,
       firedRules: guardResult.firedRuleIds,
     },
   });
@@ -365,22 +433,43 @@ async function main() {
   const payoutBatchId = payoutBatch.batch_header.payout_batch_id;
   console.log(`      Payout Batch Created: ${payoutBatchId}`);
 
-  // Poll for Payout Item ID
+  // Poll for Payout Batch Status, Payout Item ID, and Payout Item Status until terminal, up to 60s
   let payoutItemId = senderItemId;
-  let payoutStatus = payoutBatch.batch_header.batch_status;
-  for (let attempt = 1; attempt <= 10; attempt++) {
-    await sleep(2000);
+  let payoutBatchStatus: string = payoutBatch.batch_header.batch_status;
+  let payoutItemStatus = "PENDING";
+  const terminalStatuses = new Set(["SUCCESS", "DENIED", "FAILED", "RETURNED", "BLOCKED", "CANCELED"]);
+
+  const pollStart = Date.now();
+  const maxPollMs = 60000;
+  console.log("      Polling PayPal Payouts API for terminal status (up to 60s)...");
+  while (Date.now() - pollStart < maxPollMs) {
+    await sleep(2500);
     try {
       const details = await getPayoutBatch(payoutBatchId);
-      payoutStatus = details.batch_header.batch_status;
+      payoutBatchStatus = details.batch_header?.batch_status || payoutBatchStatus;
       if (details.items && details.items.length > 0) {
-        payoutItemId = details.items[0].payout_item_id || details.items[0].payout_item?.payout_item_id || payoutItemId;
-        break;
+        const firstItem = details.items[0];
+        payoutItemId = firstItem.payout_item_id || firstItem.payout_item?.payout_item_id || payoutItemId;
+        payoutItemStatus = firstItem.transaction_status || payoutItemStatus;
+        if (payoutItemId !== senderItemId && (!firstItem.transaction_status || payoutItemStatus === "PENDING")) {
+          try {
+            const itemDetails = await getPayoutItem(payoutItemId);
+            payoutItemStatus = itemDetails.transaction_status || payoutItemStatus;
+          } catch {
+            // Keep batch-reported item status if item endpoint is not yet ready
+          }
+        }
       }
     } catch {
       // Continue polling
     }
+
+    if (terminalStatuses.has(payoutItemStatus.toUpperCase()) || terminalStatuses.has(payoutBatchStatus.toUpperCase())) {
+      console.log(`      Terminal payout status reached: batch=${payoutBatchStatus}, item=${payoutItemStatus}`);
+      break;
+    }
   }
+  const statusFetchedAt = new Date().toISOString();
 
   await db.update(jobs).set({ status: "PAID", updatedAt: new Date() }).where(eq(jobs.id, job.id));
 
@@ -390,7 +479,7 @@ async function main() {
     paypalId: payoutItemId,
     amount: job.amount,
     currency: job.currency,
-    status: "COMPLETED",
+    status: payoutItemStatus === "SUCCESS" || payoutBatchStatus === "SUCCESS" ? "COMPLETED" : payoutBatchStatus,
     isMock: false,
     rawResponse: payoutBatch,
   });
@@ -403,15 +492,17 @@ async function main() {
     actor: "SYSTEM",
     payload: {
       payoutBatchId,
+      payoutBatchStatus,
       payoutItemId,
+      payoutItemStatus,
       amount: job.amount,
       currency: job.currency,
       recipientEmail: freelancerEmail,
-      status: payoutStatus,
+      status: payoutBatchStatus,
     },
   });
-  console.log(`      Payout Batch ID:   ${payoutBatchId}`);
-  console.log(`      Payout Item ID:    ${payoutItemId}`);
+  console.log(`      Payout Batch ID:      ${payoutBatchId} (${payoutBatchStatus})`);
+  console.log(`      Payout Item ID:       ${payoutItemId} (${payoutItemStatus})`);
   console.log(`      Ledger Event 6 ID: ${event6.id} (Hash: ${event6.signatureOrHash.slice(0, 16)}...)`);
 
   // Cryptographic Ledger Verification
@@ -431,8 +522,8 @@ async function main() {
   console.log(`Job ID:               ${job.id}`);
   console.log(`PayPal Order ID:      ${order.id}`);
   console.log(`PayPal Capture ID:    ${captureId}`);
-  console.log(`PayPal Payout Batch:  ${payoutBatchId}`);
-  console.log(`PayPal Payout Item:   ${payoutItemId}`);
+  console.log(`PayPal Payout Batch:  ${payoutBatchId} (status: ${payoutBatchStatus})`);
+  console.log(`PayPal Payout Item:   ${payoutItemId} (status: ${payoutItemStatus})`);
   console.log(`Ledger Events (6):    ${[event1.id, event2.id, event3.id, event4.id, event5.id, event6.id].join(", ")}`);
   console.log(`Traceability Ref:     custom_id = ${job.id}, sender_item_id = ${senderItemId}`);
   console.log("================================================================================\n");
@@ -442,7 +533,10 @@ async function main() {
     orderId: order.id,
     captureId,
     payoutBatchId,
+    payoutBatchStatus,
     payoutItemId,
+    payoutItemStatus,
+    statusFetchedAt,
     ledgerEvents: [event1.id, event2.id, event3.id, event4.id, event5.id, event6.id],
     amount: "5.00",
     currency: "USD",
@@ -452,12 +546,16 @@ async function main() {
     timestamp: new Date().toISOString(),
   };
 
-  fs.writeFileSync(
-    path.resolve(process.cwd(), ".data/single-real-run.json"),
-    JSON.stringify(singleRunSummary, null, 2),
-    "utf-8"
-  );
+  const singleRunPath = path.resolve(process.cwd(), ".data/single-real-run.json");
+  if (!fs.existsSync(singleRunPath) || process.env.OVERWRITE_SINGLE_RUN_JSON === "true") {
+    fs.writeFileSync(
+      singleRunPath,
+      JSON.stringify(singleRunSummary, null, 2),
+      "utf-8"
+    );
+  }
 }
+
 
 main().catch((err) => {
   console.error("Demo run failed:", err);

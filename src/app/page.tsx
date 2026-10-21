@@ -1,22 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
   Clock,
-  DollarSign,
   Sparkles,
   AlertTriangle,
   ShieldCheck,
-  FileCheck,
-  History,
-  Sliders,
-  Building2,
+  ShieldAlert,
+  Lock,
+  Plus,
   Inbox,
+  Sliders,
+  ChevronRight,
+  ExternalLink,
+  History,
+  FileText,
 } from "lucide-react";
-import { AgGridLedger, LedgerRowData } from "@/components/ledger/AgGridLedger";
+import { SignatureCheckpointRoute } from "@/components/pipeline/SignatureCheckpointRoute";
+import { GuidedDemoScenarios } from "@/components/demo/GuidedDemoScenarios";
+import { maskEmail } from "@/lib/ledger-display";
 
 interface Job {
   id: string;
@@ -26,67 +31,58 @@ interface Job {
   currency: string;
   status: string;
   freelancerEmail: string;
+  clientEmail: string;
   createdAt: string;
 }
 
-export default function DashboardPage() {
+export default function HomePage() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [ledgerEvents, setLedgerEvents] = useState<LedgerRowData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creatingSeed, setCreatingSeed] = useState(false);
+  const [currentRole, setCurrentRole] = useState<"client" | "freelancer" | "reviewer">("client");
+  const demoSectionRef = useRef<HTMLDivElement>(null);
 
-  const fetchDashboardData = async () => {
+  const fetchHomeData = async () => {
     try {
-      const [jobsRes, ledgerRes] = await Promise.all([
+      const [jobsRes, roleRes] = await Promise.all([
         fetch("/api/jobs"),
-        fetch("/api/ledger?limit=50"),
+        fetch("/api/auth/role"),
       ]);
       const jobsData = await jobsRes.json();
-      const ledgerData = await ledgerRes.json();
+      const roleData = await roleRes.json();
 
       if (jobsData.jobs) {
         setJobs(jobsData.jobs);
       }
-      if (ledgerData.events) {
-        setLedgerEvents(ledgerData.events);
+      if (roleData.user?.role) {
+        setCurrentRole(roleData.user.role);
       }
     } catch (err) {
-      console.error("Failed to load dashboard data", err);
+      console.error("Failed to load home data", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchHomeData();
   }, []);
 
-  const createSeedJob = async () => {
-    setCreatingSeed(true);
+  const handleQuickRoleSwitch = async (role: "client" | "freelancer" | "reviewer") => {
     try {
-      const res = await fetch("/api/jobs", {
+      await fetch("/api/auth/role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Social Media Banner (Summer Sale)",
-          description: "1080x1080 PNG, <= 2MB, contains 'SUMMER SALE', warm brand palette.",
-          clientEmail: "sb-dmohp53303471@business.example.com",
-          freelancerEmail: "sb-ft17i53364262@personal.example.com",
-          amount: "5.00",
-          currency: "USD",
-        }),
+        body: JSON.stringify({ role }),
       });
-      const data = await res.json();
-      if (data.job?.id) {
-        window.location.href = `/jobs/${data.job.id}`;
-      } else {
-        await fetchDashboardData();
-      }
+      setCurrentRole(role);
+      window.location.reload();
     } catch (err) {
-      console.error("Failed to seed job", err);
-    } finally {
-      setCreatingSeed(false);
+      console.error("Failed to switch role:", err);
     }
+  };
+
+  const scrollToDemo = () => {
+    demoSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const getStatusBadge = (status: string) => {
@@ -94,175 +90,315 @@ export default function DashboardPage() {
       case "SETTLED":
       case "PAID":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Settled (Paid Out)
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+            <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Settled (Paid Out)
           </span>
         );
       case "FUNDED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-            <DollarSign className="w-3.5 h-3.5 text-blue-600" /> Funded (In Escrow)
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-950/80 text-blue-400 border border-blue-800">
+            <Lock className="w-3 h-3 text-blue-400" /> Funded (In Escrow)
           </span>
         );
       case "SUBMITTED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-            <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Submitted
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-950/80 text-purple-400 border border-purple-800">
+            <Sparkles className="w-3 h-3 text-purple-400" /> Submitted
           </span>
         );
       case "VERIFYING":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200 animate-pulse">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" /> Verifying (K=3)
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-900/60 text-blue-300 border border-blue-700 animate-pulse">
+            <Sparkles className="w-3 h-3" /> Verifying
           </span>
         );
       case "MANUAL_REVIEW":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Human Review Queue
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-950/80 text-amber-400 border border-amber-800">
+            <AlertTriangle className="w-3 h-3 text-amber-400" /> Human Review Queue
           </span>
         );
       case "REJECTED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-950/80 text-rose-400 border border-rose-800">
             Rejected
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            <Clock className="w-3.5 h-3.5" /> {status}
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#21262D] text-slate-300 border border-[#30363D]">
+            <Clock className="w-3 h-3" /> {status}
           </span>
         );
     }
   };
 
   return (
-    <div className="space-y-8">
-      {/* Hero Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 rounded-3xl p-8 sm:p-10 text-white shadow-lg relative overflow-hidden">
-        <div className="max-w-3xl space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 text-blue-200 text-xs font-bold px-3 py-1 rounded-full">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Zero-LLM Guarded Escrow • PayPal AI Hackathon
+    <div className="space-y-12">
+      {/* 1. Hero Section */}
+      <section className="space-y-6">
+        <div className="max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 bg-[#161B22] border border-[#30363D] text-blue-400 text-xs font-semibold px-3 py-1 rounded-full">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Autonomous Escrow • PayPal AI Hackathon</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
-            ProofPay: AI-Verified Autonomous Escrow &amp; Instant Settlements
+
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+            Autonomous milestone escrow that pays freelancers the second work passes.
           </h1>
-          <p className="text-blue-100 text-sm sm:text-base leading-relaxed">
-            Eliminating 30-day payment delays for freelancers like Priya. Clients fund escrow via <strong>PayPal Orders v2</strong>, deliverables are checked by multimodal models, and a <strong>pure TypeScript Policy Guard</strong> authorizes instant PayPal Payouts or routes borderline cases to human review.
+
+          <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
+            Priya gets paid in seconds without waiting 30 days for an invoice. Alice funds with confidence, knowing funds never leave PayPal escrow until deliverables strictly pass the contract rules.
           </p>
 
-          <div className="pt-2 flex flex-wrap gap-3">
+          <div className="pt-2 flex flex-wrap items-center gap-3">
             <button
-              onClick={createSeedJob}
-              disabled={creatingSeed}
-              className="bg-white hover:bg-slate-100 text-blue-900 font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all text-sm flex items-center gap-2"
+              type="button"
+              onClick={scrollToDemo}
+              className="bg-[#0070BA] hover:bg-[#005ea6] text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all text-xs sm:text-sm flex items-center gap-2"
             >
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              {creatingSeed ? "Seeding..." : "Launch Demo Seed Job"}
+              <Sparkles className="w-4 h-4 fill-current text-white" />
+              <span>Try the 60-Second Guided Demo</span>
             </button>
-            <Link
-              href="/inbox"
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-sm transition-all flex items-center gap-1.5 shadow-sm"
-            >
-              <Inbox className="w-4 h-4" />
-              <span>Review Inbox</span>
-            </Link>
-            <Link
-              href="/policy"
-              className="bg-blue-700/60 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-xl border border-blue-400/40 text-sm transition-all flex items-center gap-1.5"
-            >
-              <Sliders className="w-4 h-4" />
-              <span>Policy Guard</span>
-            </Link>
+
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 ml-2">
+              <span>Or explore as:</span>
+              <button
+                type="button"
+                onClick={() => handleQuickRoleSwitch("freelancer")}
+                className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+                  currentRole === "freelancer"
+                    ? "bg-emerald-950 text-emerald-300 border-emerald-700"
+                    : "bg-[#161B22] text-slate-300 border-[#30363D] hover:border-slate-500"
+                }`}
+              >
+                Priya (Freelancer)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickRoleSwitch("client")}
+                className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+                  currentRole === "client"
+                    ? "bg-blue-950 text-blue-300 border-blue-700"
+                    : "bg-[#161B22] text-slate-300 border-[#30363D] hover:border-slate-500"
+                }`}
+              >
+                Alice (Client)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickRoleSwitch("reviewer")}
+                className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+                  currentRole === "reviewer"
+                    ? "bg-purple-950 text-purple-300 border-purple-700"
+                    : "bg-[#161B22] text-slate-300 border-[#30363D] hover:border-slate-500"
+                }`}
+              >
+                Alex (Reviewer)
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Active Milestones Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+        {/* The Signature Checkpoint Route Component */}
+        <SignatureCheckpointRoute currentStep="settled" />
+      </section>
+
+      {/* 2. Guided Demo Section */}
+      <section ref={demoSectionRef} className="space-y-4 pt-4 border-t border-[#30363D]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Milestone Escrow Pipeline</h2>
-            <p className="text-xs text-slate-500">Live status of active escrow milestones and payouts</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Guided 60-Second Sandbox Demo
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Run real end-to-end sandbox scenarios with pre-loaded deliverables. No file upload or PayPal account needed.
+            </p>
           </div>
-          <button
-            onClick={fetchDashboardData}
-            className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
-          >
-            Refresh List
-          </button>
+          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2.5 py-1 rounded self-start sm:self-auto">
+            Live Sandbox Environment
+          </span>
         </div>
 
-        {loading ? (
-          <div className="p-8 text-center text-slate-400 text-sm">Loading milestones...</div>
-        ) : jobs.length === 0 ? (
-          <div className="p-12 text-center space-y-4">
-            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-              <FileCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="font-semibold text-slate-800">No milestones found</p>
-              <p className="text-xs text-slate-500 mt-1">Get started by launching the hackathon demo seed job.</p>
-            </div>
-            <button
-              onClick={createSeedJob}
-              disabled={creatingSeed}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all shadow-sm"
-            >
-              Launch Seed Job
-            </button>
+        <GuidedDemoScenarios />
+      </section>
+
+      {/* 3. Role-Specific Dashboard Section */}
+      <section className="space-y-4 pt-4 border-t border-[#30363D]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              {currentRole === "freelancer" && "Priya's Milestones & Payouts"}
+              {currentRole === "client" && "Alice's Funded Milestones in Escrow"}
+              {currentRole === "reviewer" && "Alex's Milestone Triage Queue"}
+            </h2>
+            <p className="text-xs text-slate-400">
+              {currentRole === "freelancer" && "Track automated payouts and submit required deliverables."}
+              {currentRole === "client" && "Inspect active escrow balances and review cryptographically enforced mandates."}
+              {currentRole === "reviewer" && "Triaging borderline deliverables routed by the Policy Guard."}
+            </p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-3">Milestone Title</th>
-                  <th className="px-6 py-3">Payee (Freelancer)</th>
-                  <th className="px-6 py-3">Amount</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {jobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-slate-900">
-                      <Link href={`/jobs/${job.id}`} className="hover:text-blue-600">
-                        {job.title}
-                      </Link>
-                      <div className="text-xs text-slate-400 font-mono mt-0.5">ID: {job.id.slice(0, 8)}...</div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600 font-mono text-xs">
-                      {job.freelancerEmail}
-                    </td>
-                    <td className="px-6 py-4 font-bold text-slate-900">
-                      ${job.amount} {job.currency}
-                    </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(job.status)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
+
+          <div className="flex items-center gap-2">
+            {currentRole === "client" && (
+              <Link
+                href="/jobs/new"
+                className="bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Fund New Milestone</span>
+              </Link>
+            )}
+            {currentRole === "reviewer" && (
+              <Link
+                href="/inbox"
+                className="bg-[#D29922] hover:bg-[#BB8009] text-black text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Inbox className="w-3.5 h-3.5" />
+                <span>Open Review Inbox</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Milestones List */}
+        <div className="bg-[#161B22] border border-[#30363D] rounded-xl overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="p-6 space-y-3">
+              <div className="h-10 rounded skeleton-shimmer" />
+              <div className="h-10 rounded skeleton-shimmer" />
+              <div className="h-10 rounded skeleton-shimmer" />
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="p-8 text-center space-y-3">
+              <FileText className="w-8 h-8 text-slate-500 mx-auto" />
+              <p className="text-sm text-slate-400">No active milestones found in the sandbox.</p>
+              <Link
+                href="/jobs/new"
+                className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold"
+              >
+                <span>Fund your first milestone</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#30363D]">
+              {jobs.slice(0, 5).map((job) => (
+                <div
+                  key={job.id}
+                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#1C2128] transition-colors"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2.5">
                       <Link
                         href={`/jobs/${job.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                        className="font-bold text-sm text-white hover:text-blue-400 transition-colors truncate"
                       >
-                        <span>View Details</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        {job.title}
                       </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                      {getStatusBadge(job.status)}
+                    </div>
+                    <p className="text-xs text-slate-400 line-clamp-1">
+                      {job.description}
+                    </p>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                      <span>Freelancer: {maskEmail(job.freelancerEmail)}</span>
+                      <span>•</span>
+                      <span>Client: {maskEmail(job.clientEmail)}</span>
+                    </div>
+                  </div>
 
-      {/* Global AG Grid Interactive Audit Ledger */}
-      <AgGridLedger events={ledgerEvents} onRefresh={fetchDashboardData} />
+                  <div className="flex items-center justify-between sm:justify-end gap-4 flex-shrink-0">
+                    <div className="text-right">
+                      <div className="font-mono font-bold text-sm text-white">
+                        ${parseFloat(job.amount).toFixed(2)} {job.currency}
+                      </div>
+                      <div className="text-[10px] text-slate-400">Milestone Escrow</div>
+                    </div>
+
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      className="p-2 rounded-lg bg-[#21262D] hover:bg-[#30363D] text-slate-300 hover:text-white transition-colors"
+                      title="View milestone checkpoint route"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 4. "How It Is Protected" — Technical Credibility */}
+      <section className="space-y-4 pt-4 border-t border-[#30363D]">
+        <div>
+          <h2 className="text-xl font-bold text-white tracking-tight">
+            How It Is Protected
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400">
+            Engineered with fail-closed security. Artificial intelligence never touches the payment trigger.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Pillar 1 */}
+          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-5 space-y-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-950/80 border border-blue-800 text-blue-400 flex items-center justify-center font-bold">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <h3 className="font-semibold text-sm text-white">Zero AI in Policy Guard</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Multimodal models only act as passive sensory readers. The final payout decision is rendered by a deterministic, pure TypeScript Policy Guard that has zero AI imports.
+            </p>
+          </div>
+
+          {/* Pillar 2 */}
+          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-5 space-y-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-800 text-emerald-400 flex items-center justify-center font-bold">
+              <Lock className="w-4 h-4" />
+            </div>
+            <h3 className="font-semibold text-sm text-white">HMAC Signed Mandates</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Every milestone signs an immutable HMAC-SHA256 mandate at creation. The Policy Guard verifies that payee, scope, and maximum payout cap strictly match before releasing funds.
+            </p>
+          </div>
+
+          {/* Pillar 3 */}
+          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-5 space-y-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-950/80 border border-purple-800 text-purple-400 flex items-center justify-center font-bold">
+              <History className="w-4 h-4" />
+            </div>
+            <h3 className="font-semibold text-sm text-white">Tamper-Evident Ledger</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              PostgreSQL row-level triggers enforce forward SHA-256 hash chaining on all ledger rows. Every event seals the previous hash, creating a mathematical audit trail.
+            </p>
+          </div>
+        </div>
+
+        {/* Real Benchmark Stats Box */}
+        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-xs text-white">Evaluation Benchmark: 100.0% Accuracy</span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                28 / 28 Fixtures
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Evaluated on Gemini 3.8 Flash across 28 multi-aspect visual fixtures. 0.0% False-Approval Rate; Wilson 95% Confidence Interval: [87.9%, 100.0%] (Sample size: N=28).
+            </p>
+          </div>
+          <Link
+            href="/eval"
+            className="flex-shrink-0 text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>Inspect Benchmark Data</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

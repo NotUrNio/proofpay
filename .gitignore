@@ -38,3 +38,6 @@ data/
 postgres-data/
 .cache/*
 !.cache/eval_responses/
+test-results/
+playwright-report/
+*.tsbuildinfo
